@@ -22,11 +22,25 @@ export default function Sleep() {
   const tonightKey = nightKey(Date.now());
   const pendingBed = nights[tonightKey]?.bed != null && nights[tonightKey]?.wake == null && tonightKey !== today;
   const evening = hour >= 17 || hour < 4;
+  const pending = pendingBed ? nights[tonightKey] : null;
+  // Sleep you'll get if you're up on time, counted from when you tapped "Going to sleep".
+  const projected = pending?.bed ? Math.max(0, Math.round((atOn(tonightKey, settings.wakeTarget) - pending.bed) / 60_000)) : null;
 
   return (
     <main>
       <Head over={`Up at ${clock12(settings.wakeTarget)} · lights out ${clock12(settings.bedtime)}`} title="Sleep" right={<ProfileLink />} />
       <div className="page">
+        {pending?.bed && (
+          <section className="card night stack" style={{ gap: 10 }} aria-label="Tonight">
+            <span className="small bold" style={{ color: 'var(--sleep-ink)' }}>Tonight</span>
+            <p className="num" style={{ fontSize: 44, lineHeight: 1 }}>Asleep</p>
+            <p className="small" style={{ color: 'var(--sleep-ink)' }}>
+              Since {clockOf(pending.bed)}. Up at {clock12(settings.wakeTarget)} gives you {projected != null ? hm(projected) : '–'}. Tap “I’m up” in the morning.
+            </p>
+          </section>
+        )}
+
+        {(last || !pending) && (
         <section className="card night stack" style={{ gap: 14 }} aria-label="Last night">
           <div className="between" style={{ alignItems: 'flex-end' }}>
             <div>
@@ -57,12 +71,18 @@ export default function Sleep() {
             <p className="small" style={{ color: 'var(--sleep-ink)' }}>Tap “Going to sleep” tonight and “I’m up” in the morning, or add the night by hand.</p>
           )}
         </section>
+        )}
 
         <div className="row">
           {pendingBed ? (
-            <button className="btn sleep" style={{ flex: 1 }} onClick={() => (wokeUp(), toast('Morning. Logged.'))}>
-              <Icon name="sun" size={20} /> I’m up
-            </button>
+            <>
+              <button className="btn sleep" style={{ flex: 1 }} onClick={() => (wokeUp(), toast('Morning. Logged.'))}>
+                <Icon name="sun" size={20} /> I’m up
+              </button>
+              <button className="btn ghost" onClick={() => (useStore.getState().deleteNight(tonightKey), toast('Undone. Tap “Going to sleep” when you go.'))}>
+                <Icon name="undo" size={18} /> Undo
+              </button>
+            </>
           ) : evening ? (
             <button className="btn sleep" style={{ flex: 1 }} onClick={() => (goingToSleep(), toast(`Sleep well. Up at ${clock12(settings.wakeTarget)}.`))}>
               <Icon name="moon" size={20} /> Going to sleep
@@ -72,9 +92,11 @@ export default function Sleep() {
               <Icon name="sun" size={20} /> I’m up
             </button>
           ) : null}
-          <button className="btn ghost" style={{ flex: pendingBed || evening || last?.wake == null ? undefined : 1 }} onClick={() => setEdit(today)}>
-            <Icon name="plus" size={18} /> {last ? 'Edit night' : 'Add night'}
-          </button>
+          {!pendingBed && (
+            <button className="btn ghost" style={{ flex: evening || last?.wake == null ? undefined : 1 }} onClick={() => setEdit(today)}>
+              <Icon name="plus" size={18} /> {last ? 'Edit last night' : 'Add last night'}
+            </button>
+          )}
         </div>
 
         <Tonight />
