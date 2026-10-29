@@ -4,7 +4,7 @@ import { DEFAULT_PROGRAM, minutes, moveSlot, plannedDay, slotsFor, weekdayOf } f
 import { EX, EXERCISES, easier, harder } from '../src/lib/exercises';
 import { applySession, deloadDue, diffPrograms, guardProgram, newRecords, progressSlot, records, trendOf, moveSession, weeklySets } from '../src/lib/progress';
 import { readiness } from '../src/lib/readiness';
-import { computeGame, workoutWeeks } from '../src/lib/game';
+import { computeGame, weekSummary, workoutWeeks } from '../src/lib/game';
 import { addDays, atOn, weekStart } from '../src/lib/dates';
 import type { Night, Session, SetLog, Slot } from '../src/lib/types';
 
@@ -103,6 +103,17 @@ describe('records', () => {
     const all = { [a.id]: a, [b.id]: b };
     expect(records(all)['pack-row']).toMatchObject({ loadKg: 8, reps: 10 });
     expect(newRecords(b, all).map((x) => x.exerciseId)).toEqual(['pack-row']);
+  });
+});
+
+describe('weekSummary', () => {
+  it('counts days trained, sets and minutes inside the week only', () => {
+    const a = sess('2026-10-26', 'upper-a', [['pushup', 10], ['pushup', 9]]);
+    const b = sess('2026-10-26', 'lower-a', [['squat', 12]]);
+    const c = sess('2026-10-28', 'upper-b', [['pushup', 8]]);
+    const old = sess('2026-10-25', 'upper-a', [['pushup', 8]]);
+    const w = weekSummary({ sessions: { [a.id]: a, [b.id]: b, [c.id]: c, [old.id]: old }, program: DEFAULT_PROGRAM }, '2026-10-26');
+    expect(w).toEqual({ done: 2, planned: DEFAULT_PROGRAM.week.filter(Boolean).length, sets: 4, minutes: 120 });
   });
 });
 

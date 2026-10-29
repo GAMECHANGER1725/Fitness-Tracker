@@ -5,6 +5,7 @@ import { WEEKDAYS, inDeload, minutes, plannedDay, slotsFor } from '../lib/progra
 import { addDays, dateOf, fmtDate, weekStart } from '../lib/dates';
 import { QUALITY, clock12, clockOf, durationMin, hm, nightKey, onTime, toBedtime, wakeOffset } from '../lib/sleep';
 import { BAND_LABEL } from '../lib/readiness';
+import { weekSummary } from '../lib/game';
 import { currentAi, morningBriefing, useCoach } from '../lib/coach';
 import { friendlyError, hasAi } from '../lib/ai';
 import { Head, Icon, ProfileLink, go, toast, useGame, useNow, useToday } from '../components/ui';
@@ -261,8 +262,17 @@ function WeekStrip() {
   const today = useToday();
   const program = useStore((s) => s.program);
   const sessions = useStore((s) => s.sessions);
+  const [pick, setPick] = useState<string | null>(null);
   const ws = weekStart(today);
   const done = new Set(Object.values(sessions).map((s) => s.date));
+  const sum = weekSummary({ sessions, program }, ws);
+  const detail = (k: string) => {
+    const xs = Object.values(sessions).filter((s) => s.date === k);
+    const day = fmtDate(k, { weekday: 'long' });
+    if (xs.length) return `${day}: ${xs.map((s) => `${s.name}, ${Math.max(1, Math.round((s.end - s.start) / 60_000))} min, ${s.sets.length} sets`).join(' · ')}`;
+    const plan = plannedDay(program, k);
+    return `${day}: ${plan ? `${plan.name}${k < today ? ', missed' : ' planned'}` : 'rest day'}`;
+  };
   return (
     <section className="card stack" style={{ gap: 12 }} aria-label="This week">
       <div className="between">
@@ -275,15 +285,18 @@ function WeekStrip() {
           const plan = program.week[i];
           const cls = done.has(k) ? 'done' : plan && k >= today ? 'plan' : '';
           return (
-            <div key={w}>
+            <button key={w} onClick={() => setPick(pick === k ? null : k)} aria-pressed={pick === k} style={{ background: 'none', border: 0, padding: 0, fontFamily: 'inherit' }}>
               <i className={`${cls}${k === today ? ' today' : ''}`} aria-label={`${w}: ${done.has(k) ? 'done' : plan ? 'planned' : 'rest'}`}>
                 {done.has(k) ? <Icon name="check" size={18} stroke={3} /> : dateOf(k).getDate()}
               </i>
               {w}
-            </div>
+            </button>
           );
         })}
       </div>
+      <p className="small mut">
+        {pick ? detail(pick) : `${sum.done} of ${sum.planned} workouts${sum.sets ? ` · ${sum.sets} sets · ${sum.minutes < 60 ? `${sum.minutes} min` : hm(sum.minutes)}` : ''}. Tap a day for more.`}
+      </p>
     </section>
   );
 }

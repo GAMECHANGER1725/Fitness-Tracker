@@ -13,6 +13,7 @@ const NEWS: [title: string, body: string, href?: string][] = [
   ['Your progress per move', 'Open a move in Exercises to see your last 8 sessions as a chart.', '#/train?tab=moves'],
   ['Edit and back-fill workouts', 'Edit a saved workout’s day, feel and note, or log one you did without the app.', '#/train?tab=history'],
   ['Reorder your plan', 'Tap Reorder on a plan day to move exercises up or down. Changing only the rest time now saves too.', '#/train'],
+  ['Your week at a glance', 'This week on Today now totals workouts, sets and time. Tap a day to see what you did or what’s planned.'],
   ['30 nights of sleep', 'The sleep chart can show 7, 14 or 30 nights.', '#/sleep'],
 ];
 

@@ -23,6 +23,27 @@ export function workoutWeeks(d: Pick<AppData, 'sessions'>, today: string, per = 
   return n;
 }
 
+export interface WeekSummary {
+  /** Days in the week with at least one workout. */
+  done: number;
+  /** Days the plan has a workout on. */
+  planned: number;
+  sets: number;
+  minutes: number;
+}
+
+/** Totals for the Monday-to-Sunday week starting `ws`. */
+export function weekSummary(d: Pick<AppData, 'sessions' | 'program'>, ws: string): WeekSummary {
+  const end = addDays(ws, 6);
+  const xs = Object.values(d.sessions).filter((s) => s.date >= ws && s.date <= end);
+  return {
+    done: new Set(xs.map((s) => s.date)).size,
+    planned: d.program.week.filter(Boolean).length,
+    sets: xs.reduce((t, s) => t + s.sets.length, 0),
+    minutes: Math.round(xs.reduce((t, s) => t + Math.max(0, s.end - s.start), 0) / 60_000),
+  };
+}
+
 /** Longest run of nights at or over the sleep goal. */
 function bestSleepRun(d: Pick<AppData, 'nights' | 'settings'>): number {
   const keys = Object.keys(d.nights).sort();
