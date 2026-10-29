@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { useStore } from '../lib/store';
 import { EX, EXERCISES, PATTERN_LABEL, targetText, usable } from '../lib/exercises';
 import { WEEKDAYS, minutes, moveSlot } from '../lib/program';
-import { records, trendOf, weeklySets } from '../lib/progress';
+import { records, sessionText, trendOf, weeklySets } from '../lib/progress';
 import { addDays, daysBetween, fmtDate } from '../lib/dates';
-import { Head, Icon, ProfileLink, Sheet, Stepper, go, toast, useGame, useRoute, useToday } from '../components/ui';
+import { Head, Icon, ProfileLink, Sheet, Stepper, go, shareText, toast, useGame, useRoute, useToday } from '../components/ui';
 import { useReadiness } from '../components/data';
 import type { Exercise, Pattern, PlanDay, Program, Session, Slot } from '../lib/types';
 
@@ -308,6 +308,9 @@ function History() {
                 <div className="row">
                   <button className="btn sm" onClick={() => setEdit(s)}>
                     <Icon name="pencil" size={16} /> Edit
+                  </button>
+                  <button className="btn sm" onClick={() => shareText(sessionText(s, fmtDate(s.date, { weekday: 'short', day: 'numeric', month: 'short' })))}>
+                    <Icon name="out" size={16} /> Share
                   </button>
                   <button className="btn sm danger" onClick={() => confirm('Delete this workout?') && del(s.id)}>
                     <Icon name="trash" size={16} /> Delete

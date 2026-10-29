@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../lib/store';
 import { EX, EXERCISES, PATTERN_LABEL, targetText, usable } from '../lib/exercises';
-import { historyOf, newRecords } from '../lib/progress';
+import { historyOf, newRecords, sessionText } from '../lib/progress';
 import { currentAi, postWorkout, suggestSwap } from '../lib/coach';
 import { friendlyError, hasAi } from '../lib/ai';
 import { beep, holdWakeLock, primeAudio, usePlayer } from '../lib/player';
 import { fmtDate, todayKey } from '../lib/dates';
-import { Icon, Ring, Sheet, Stepper, go, toast, useNow } from '../components/ui';
+import { Icon, Ring, Sheet, Stepper, go, shareText, toast, useNow } from '../components/ui';
 import type { Session, SetLog, Slot } from '../lib/types';
 
 const FEEL = ['Rough', 'Meh', 'OK', 'Good', 'Great'];
@@ -533,7 +533,12 @@ function Summary({ session, lines, records }: { session: Session; lines: string[
           <p>{busy ? 'Looking at your sets…' : text}</p>
         </section>
       )}
-      <a href="#/today" className="btn primary block">Done</a>
+      <div className="row">
+        <button className="btn" onClick={() => shareText(sessionText(session, fmtDate(session.date, { weekday: 'short', day: 'numeric', month: 'short' })))}>
+          <Icon name="out" size={18} /> Share
+        </button>
+        <a href="#/today" className="btn primary block" style={{ flex: 1 }}>Done</a>
+      </div>
     </main>
   );
 }

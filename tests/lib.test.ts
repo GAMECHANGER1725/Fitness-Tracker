@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_DATA, exportCsv, exportJson, importJson, normalize } from '../src/lib/backup';
 import { DEFAULT_PROGRAM, minutes, moveSlot, plannedDay, slotsFor, weekdayOf } from '../src/lib/program';
 import { EX, EXERCISES, easier, harder } from '../src/lib/exercises';
-import { applySession, deloadDue, diffPrograms, guardProgram, newRecords, progressSlot, records, trendOf, moveSession, weeklySets } from '../src/lib/progress';
+import { applySession, deloadDue, diffPrograms, guardProgram, newRecords, progressSlot, records, trendOf, moveSession, sessionText, weeklySets } from '../src/lib/progress';
 import { readiness } from '../src/lib/readiness';
 import { computeGame, weekSummary, workoutWeeks } from '../src/lib/game';
 import { addDays, atOn, weekStart } from '../src/lib/dates';
@@ -152,6 +152,13 @@ describe('moveSession', () => {
     expect(m.end - m.start).toBe(a.end - a.start);
     expect(m.sets[0].at - m.start).toBe(a.sets[0].at - a.start);
     expect(moveSession(a, a.date)).toBe(a);
+  });
+});
+
+describe('sessionText', () => {
+  it('summarises a workout per exercise with load and note', () => {
+    const a = sess('2026-10-26', 'Upper A', [['pushup', 12], ['pushup', 10], ['pack-row', 10, 6], ['pack-row', 9, 6], ['superman', 30]], { note: 'Felt good' });
+    expect(sessionText(a, 'Mon 26 Oct')).toBe(['Upper A · Mon 26 Oct · 40 min · 5 sets', 'Push-up: 12, 10', 'Backpack row: 10, 9 @ 6 kg', 'Superman hold: 30 s', 'Note: Felt good'].join('\n'));
   });
 });
 

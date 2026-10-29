@@ -287,3 +287,16 @@ export function deloadDue(sessions: Record<string, Session>, program: Program, t
   for (let i = 0; i < 5; i++, wk = addDays(wk, -7)) if ((counts.get(wk) ?? 0) < 3) return false;
   return true;
 }
+
+/** A plain-text summary of a workout for sharing: one line per exercise with its sets. */
+export function sessionText(s: Session, when: string): string {
+  const by = new Map<string, SetLog[]>();
+  for (const x of s.sets) by.set(x.exerciseId, [...(by.get(x.exerciseId) ?? []), x]);
+  const mins = Math.max(1, Math.round((s.end - s.start) / 60_000));
+  const lines = [...by.entries()].map(([id, xs]) => {
+    const e = EX[id];
+    const kg = [...new Set(xs.map((x) => x.loadKg))].filter(Boolean);
+    return `${e?.name ?? id}: ${xs.map((x) => x.reps).join(', ')}${e?.unit === 'secs' ? ' s' : ''}${kg.length ? ` @ ${kg.join('/')} kg` : ''}`;
+  });
+  return [`${s.name} · ${when} · ${mins} min · ${s.sets.length} set${s.sets.length === 1 ? '' : 's'}`, ...lines, ...(s.note ? [`Note: ${s.note}`] : [])].join('\n');
+}

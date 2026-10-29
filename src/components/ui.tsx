@@ -225,3 +225,18 @@ export const ProfileLink = () => {
     </a>
   );
 };
+
+/** Opens the phone's share sheet, or copies to the clipboard where there isn't one. */
+export async function shareText(text: string) {
+  try {
+    if (navigator.share) return void (await navigator.share({ text }));
+  } catch (e) {
+    if (e instanceof DOMException && e.name === 'AbortError') return;
+  }
+  try {
+    await navigator.clipboard.writeText(text);
+    toast('Copied');
+  } catch {
+    toast('Couldn’t share from here');
+  }
+}
