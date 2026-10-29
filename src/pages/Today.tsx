@@ -155,6 +155,8 @@ function WakeCard() {
       </button>
     );
   }
+  // Evenings belong to the Going to sleep card; this morning's summary is still on Sleep.
+  if (hour >= 18) return null;
   const off = wakeOffset(night, wakeTarget) ?? 0;
   const dur = durationMin(night);
   const rate = night.quality == null && hour < 12;
