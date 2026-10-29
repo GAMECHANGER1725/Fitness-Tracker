@@ -100,13 +100,13 @@ export default function Today() {
             {slots.map((s) => {
               const e = EX[s.exerciseId];
               return (
-                <div className="item" key={s.exerciseId}>
+                <a className="item" key={s.exerciseId} href={`#/train?tab=moves&open=${s.exerciseId}`} style={{ color: 'var(--ink)', textDecoration: 'none' }}>
                   <span className="grow bold">{e?.name ?? s.exerciseId}</span>
                   <span className="small mut" style={{ textAlign: 'right' }}>
                     {s.sets} × {targetText(e, s.low, s.high)}
                     {s.loadKg ? ` · ${s.loadKg} kg` : ''}
                   </span>
-                </div>
+                </a>
               );
             })}
           </section>

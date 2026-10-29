@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useStore } from '../lib/store';
 import { EX, EXERCISES, PATTERN_LABEL, easier, harder, targetText, usable } from '../lib/exercises';
 import { WEEKDAYS, minutes, moveSlot } from '../lib/program';
@@ -428,7 +428,15 @@ function Moves() {
   const notes = useStore((s) => s.profile.exNotes);
   const hasGrip = useStore((s) => s.profile.hasGrip);
   const best = records(sessions);
-  const [open, setOpen] = useState<string | null>(null);
+  const { params } = useRoute();
+  const [open, setOpen] = useState<string | null>(params.get('open'));
+  // Opened from a link (Today's list or a ladder chip): bring it into view.
+  useEffect(() => {
+    // After App's scroll-to-top on a page change, which runs after this effect.
+    if (!open) return;
+    const t = setTimeout(() => document.getElementById(`move-${open}`)?.scrollIntoView({ block: 'start', behavior: 'smooth' }), 80);
+    return () => clearTimeout(t);
+  }, [open]);
   return (
     <>
       {(Object.keys(PATTERN_LABEL) as Pattern[]).map((p) => (
@@ -439,7 +447,7 @@ function Moves() {
             .map((e) => {
               const b = best[e.id];
               return (
-                <div key={e.id} className="item" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 6 }}>
+                <div key={e.id} id={`move-${e.id}`} className="item" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 6, scrollMarginTop: 16 }}>
                   <button className="row" style={{ background: 'none', border: 0, padding: 0, color: 'var(--ink)', textAlign: 'left' }} onClick={() => setOpen(open === e.id ? null : e.id)} aria-expanded={open === e.id}>
                     <span className="grow">
                       <span className="bold" style={{ display: 'block' }}>{e.name}</span>
