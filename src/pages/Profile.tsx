@@ -7,7 +7,7 @@ import { currentAi } from '../lib/coach';
 import { exportCsv, exportJson, importJson } from '../lib/backup';
 import { remindersOn, remindersSupported, setReminders } from '../lib/reminders';
 import { usePlayer } from '../lib/player';
-import { TODAY_CARDS, useLayout } from '../lib/layout';
+import { ACCENTS, TODAY_CARDS, useLayout } from '../lib/layout';
 import { TOKEN_URL, connect, disconnect, fuelLogToken, syncNow, useSync } from '../lib/sync';
 import { clock12, idealBedtime } from '../lib/sleep';
 import { todayKey } from '../lib/dates';
@@ -317,7 +317,7 @@ function Reminders() {
 function Look() {
   const theme = useStore((s) => s.settings.theme);
   const set = useStore((s) => s.setSettings);
-  const { hidden, toggle } = useLayout();
+  const { hidden, toggle, accent, setAccent } = useLayout();
   return (
     <section className="card stack" style={{ gap: 10 }}>
       <h2 className="h2">Look</h2>
@@ -325,6 +325,14 @@ function Look() {
         {(['auto', 'dark', 'light'] as const).map((t) => (
           <button key={t} aria-pressed={theme === t} onClick={() => set({ theme: t })}>
             {t === 'auto' ? 'Auto' : t === 'dark' ? 'Dark' : 'Light'}
+          </button>
+        ))}
+      </div>
+      <span className="label" style={{ marginTop: 6 }}>Training colour</span>
+      <div className="seg" role="group" aria-label="Training colour">
+        {ACCENTS.map(([id, name]) => (
+          <button key={id} aria-pressed={accent === id} onClick={() => setAccent(id)}>
+            {name}
           </button>
         ))}
       </div>

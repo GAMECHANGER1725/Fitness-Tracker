@@ -15,6 +15,7 @@ import { autoDue, checkIn, currentAi, useCoach } from './lib/coach';
 import { hasAi } from './lib/ai';
 import { startReminders } from './lib/reminders';
 import { WhatsNewOnce } from './components/WhatsNew';
+import { useLayout } from './lib/layout';
 
 export default function App() {
   const theme = useStore((s) => s.settings.theme);
@@ -28,6 +29,13 @@ export default function App() {
     const bg = getComputedStyle(root).getPropertyValue('--bg').trim();
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', bg || '#0C1013');
   }, [theme]);
+
+  const accent = useLayout((l) => l.accent);
+  useEffect(() => {
+    const root = document.documentElement;
+    if (accent === 'mint') root.removeAttribute('data-accent');
+    else root.setAttribute('data-accent', accent);
+  }, [accent]);
 
   useEffect(() => {
     navigator.storage?.persist?.().catch(() => {});

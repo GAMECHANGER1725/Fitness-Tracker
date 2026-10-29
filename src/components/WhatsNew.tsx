@@ -15,7 +15,7 @@ const NEWS: [title: string, body: string, href?: string][] = [
   ['Reorder your plan', 'Tap Reorder on a plan day to move exercises up or down. Changing only the rest time now saves too.', '#/train'],
   ['Your week at a glance', 'This week on Today now totals workouts, sets and time. Tap a day to see what you did or what’s planned.'],
   ['Personal bests', 'Badges now lists your best set for every move, newest first, with this week’s marked.', '#/train?tab=badges'],
-  ['Choose what Today shows', 'Hide Today’s exercises, the Fuel Log card or This week under Look in Profile.', '#/profile'],
+  ['Make it yours', 'Under Look in Profile: pick a training colour (mint, sky, rose or lime) and hide Today’s exercises, the Fuel Log card or This week.', '#/profile'],
   ['Why this readiness?', 'Tap Readiness on Today to see how sleep, food and recovery add up.'],
   ['Spreadsheets', 'Download your workouts or sleep as CSV from Backup in Profile.', '#/profile'],
   ['Notes per exercise', 'In a workout, tap Add a note under the cues to remember a setup, like which strap or step. It shows every time and syncs.'],
