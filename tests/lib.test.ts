@@ -265,6 +265,9 @@ describe('badges', () => {
     const g = computeGame({ ...DEFAULT_DATA, sessions: { [s.id]: s }, nights }, '2026-10-26');
     expect(g.wake).toBe(7);
     expect(g.badges.filter((b) => b.earned).map((b) => b.id)).toEqual(['first', 'wake7']);
+    expect(g.badges.find((b) => b.id === 'ten')).toMatchObject({ have: 1, need: 10, earned: false });
+    expect(g.badges.find((b) => b.id === 'wake7')).toMatchObject({ have: 7, need: 7 });
+    expect(g.badges.find((b) => b.id === 'wake30')).toMatchObject({ have: 7, need: 30 });
   });
 });
 

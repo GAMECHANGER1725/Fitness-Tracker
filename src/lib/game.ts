@@ -10,6 +10,9 @@ export interface Badge {
   name: string;
   how: string;
   earned: boolean;
+  /** Progress toward it: what you have now (capped at need) and what it takes. */
+  have: number;
+  need: number;
 }
 
 /** Weeks in a row (ending this week or last) with at least `per` workouts. This week counts once it reaches `per`. */
@@ -68,17 +71,17 @@ export function computeGame(d: AppData, today: string) {
   const heaviest = Math.max(0, ...Object.values(recs).map((r) => r.loadKg));
   const sleepRun = bestSleepRun(d);
   const imported = Object.values(d.nights).some((n) => n.source === 'samsung');
-  const b = (id: string, name: string, how: string, earned: boolean): Badge => ({ id, name, how, earned });
+  const b = (id: string, name: string, how: string, have: number, need: number): Badge => ({ id, name, how, earned: have >= need, have: Math.min(have, need), need });
   const badges = [
-    b('first', 'First rep', 'Finish your first workout', sessions.length >= 1),
-    b('ten', 'Ten down', 'Finish 10 workouts', sessions.length >= 10),
-    b('fifty', 'Half century', 'Finish 50 workouts', sessions.length >= 50),
-    b('week4', 'Habit', '4 weeks in a row with 3+ workouts', weeks >= 4),
-    b('loaded', 'Loaded', 'Use 10 kg in the backpack', heaviest >= 10),
-    b('wake7', 'Early bird', 'Up on time 7 days in a row', wake >= 7),
-    b('wake30', 'Like clockwork', 'Up on time 30 days in a row', wake >= 30),
-    b('sleep7', 'Well rested', 'Sleep your goal 7 nights in a row', sleepRun >= 7),
-    b('watch', 'Synced up', 'Import sleep from Samsung Health', imported),
+    b('first', 'First rep', 'Finish your first workout', sessions.length, 1),
+    b('ten', 'Ten down', 'Finish 10 workouts', sessions.length, 10),
+    b('fifty', 'Half century', 'Finish 50 workouts', sessions.length, 50),
+    b('week4', 'Habit', '4 weeks in a row with 3+ workouts', weeks, 4),
+    b('loaded', 'Loaded', 'Use 10 kg in the backpack', heaviest, 10),
+    b('wake7', 'Early bird', 'Up on time 7 days in a row', wake, 7),
+    b('wake30', 'Like clockwork', 'Up on time 30 days in a row', wake, 30),
+    b('sleep7', 'Well rested', 'Sleep your goal 7 nights in a row', sleepRun, 7),
+    b('watch', 'Synced up', 'Import sleep from Samsung Health', imported ? 1 : 0, 1),
   ];
   return { wake, weeks, sessions: sessions.length, badges };
 }

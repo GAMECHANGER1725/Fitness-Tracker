@@ -4,7 +4,7 @@ import { EX, EXERCISES, PATTERN_LABEL, easier, harder, targetText, usable } from
 import { WEEKDAYS, minutes, moveSlot } from '../lib/program';
 import { records, sessionText, trendOf, weeklySets } from '../lib/progress';
 import { addDays, daysBetween, fmtDate } from '../lib/dates';
-import { Head, Icon, ProfileLink, Sheet, Stepper, go, shareText, toast, useGame, useRoute, useToday } from '../components/ui';
+import { Bar, Head, Icon, ProfileLink, Sheet, Stepper, go, shareText, toast, useGame, useRoute, useToday } from '../components/ui';
 import { useReadiness } from '../components/data';
 import type { Exercise, Pattern, PlanDay, Program, Session, Slot } from '../lib/types';
 
@@ -571,6 +571,12 @@ function BadgeGrid() {
             </span>
             <span className="small bold">{b.name}</span>
             <span className="small mut" style={{ fontSize: 12 }}>{b.how}</span>
+            {!b.earned && b.need > 1 && (
+              <span className="stack" style={{ gap: 3, width: '100%', alignItems: 'center' }}>
+                <span style={{ width: '80%' }}><Bar value={b.have} max={b.need} height={5} label={`${b.name} progress`} /></span>
+                <span className="small mut" style={{ fontSize: 11 }}>{Math.floor(b.have)} / {b.need}{b.id === 'loaded' ? ' kg' : ''}</span>
+              </span>
+            )}
           </div>
         ))}
       </section>
