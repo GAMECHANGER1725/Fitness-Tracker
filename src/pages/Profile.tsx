@@ -6,6 +6,7 @@ import { fuelAi, FUEL_STORE } from '../lib/fuel';
 import { currentAi } from '../lib/coach';
 import { exportJson, importJson } from '../lib/backup';
 import { remindersOn, remindersSupported, setReminders } from '../lib/reminders';
+import { usePlayer } from '../lib/player';
 import { TOKEN_URL, connect, disconnect, fuelLogToken, syncNow, useSync } from '../lib/sync';
 import { clock12, idealBedtime } from '../lib/sleep';
 import { todayKey } from '../lib/dates';
@@ -29,6 +30,7 @@ export default function ProfilePage() {
         <SleepGoals />
         <AiCard />
         <SyncCard />
+        <PlayerPrefs />
         <Reminders />
         <Look />
         <Backup />
@@ -254,6 +256,30 @@ function SyncCard() {
           </div>
         </>
       )}
+    </section>
+  );
+}
+
+function PlayerPrefs() {
+  const { beep, awake, set } = usePlayer();
+  return (
+    <section className="card stack" style={{ gap: 10 }}>
+      <h2 className="h2">During a workout</h2>
+      <div className="row" style={{ justifyContent: 'space-between' }}>
+        <span className="grow">
+          <span className="bold" style={{ display: 'block' }}>Beep when rest ends</span>
+          <span className="small mut">As well as the buzz</span>
+        </span>
+        <Switch on={beep} label="Beep when rest ends" onChange={(v) => set({ beep: v })} />
+      </div>
+      <div className="row" style={{ justifyContent: 'space-between' }}>
+        <span className="grow">
+          <span className="bold" style={{ display: 'block' }}>Keep the screen on</span>
+          <span className="small mut">So the timer stays in view</span>
+        </span>
+        <Switch on={awake} label="Keep the screen on" onChange={(v) => set({ awake: v })} />
+      </div>
+      <p className="small mut">These are for this device only.</p>
     </section>
   );
 }

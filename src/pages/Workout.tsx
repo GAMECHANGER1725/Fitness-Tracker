@@ -4,6 +4,7 @@ import { EX, EXERCISES, PATTERN_LABEL, targetText, usable } from '../lib/exercis
 import { historyOf, newRecords } from '../lib/progress';
 import { currentAi, postWorkout, suggestSwap } from '../lib/coach';
 import { friendlyError, hasAi } from '../lib/ai';
+import { beep, holdWakeLock, primeAudio, usePlayer } from '../lib/player';
 import { Icon, Ring, Sheet, Stepper, go, toast, useNow } from '../components/ui';
 import type { Session, Slot } from '../lib/types';
 
@@ -55,18 +56,23 @@ function Player({ onDone }: { onDone: (r: { session: Session; lines: string[]; r
     setRpe(null);
   }, [a.idx, slot.exerciseId, done.length]);
 
+  const prefs = usePlayer();
+  useEffect(() => holdWakeLock(prefs.awake), [prefs.awake]);
+
   const rest = a.restEnd ? Math.max(0, Math.ceil((a.restEnd - now) / 1000)) : 0;
   const buzzed = useRef(false);
   useEffect(() => {
     if (a.restEnd && rest === 0 && !buzzed.current) {
       buzzed.current = true;
       navigator.vibrate?.([200, 100, 200]);
+      if (prefs.beep) beep();
       setRest(null);
     }
     if (rest > 0) buzzed.current = false;
   }, [rest, a.restEnd]);
 
   const log = () => {
+    if (prefs.beep) primeAudio();
     logSet({ exerciseId: slot.exerciseId, reps, loadKg: ex?.loadable ? load : 0, rpe: rpe ?? undefined });
     const nowDone = done.length + 1;
     if (nowDone < slot.sets || a.idx < a.slots.length - 1) setRest(Date.now() + slot.restS * 1000);
