@@ -76,3 +76,23 @@ export function moveSlot(p: Program, dayId: string, idx: number, dir: -1 | 1): P
     }),
   };
 }
+
+const WARMUP: Record<string, string> = {
+  any: '1 min marching on the spot or easy jumping jacks',
+  push: '10 arm circles each way, then 5 slow push-ups on the wall',
+  pull: '10 shoulder blade squeezes and 10 arm swings across your chest',
+  legs: '10 slow bodyweight squats and 5 lunges each leg',
+  hinge: '10 hip hinges with hands on hips and 10 glute bridges',
+  core: '5 slow cat-cows and a 15 s plank',
+  grip: '10 wrist circles each way and 10 open-close fists',
+};
+
+/** A short warm-up for the patterns in today's slots: a general start, then one line per pattern (in slot order). */
+export function warmupFor(slots: Slot[]): string[] {
+  const seen = new Set<string>();
+  for (const s of slots) {
+    const p = EX[s.exerciseId]?.pattern;
+    if (p) seen.add(p);
+  }
+  return [WARMUP.any, ...[...seen].map((p) => WARMUP[p]).filter(Boolean)].slice(0, 4);
+}

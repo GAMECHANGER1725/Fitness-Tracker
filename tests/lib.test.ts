@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_DATA, exportCsv, exportJson, importJson, normalize } from '../src/lib/backup';
-import { DEFAULT_PROGRAM, minutes, moveSlot, plannedDay, slotsFor, weekdayOf } from '../src/lib/program';
+import { DEFAULT_PROGRAM, minutes, moveSlot, plannedDay, slotsFor, warmupFor, weekdayOf } from '../src/lib/program';
 import { EX, EXERCISES, easier, harder } from '../src/lib/exercises';
 import { applySession, deloadDue, diffPrograms, guardProgram, newRecords, progressSlot, records, trendOf, moveSession, sessionText, weeklySets } from '../src/lib/progress';
 import { readiness } from '../src/lib/readiness';
@@ -116,6 +116,15 @@ describe('exportCsv', () => {
     expect(rows[2]).toBe('2026-10-26,upper-a,Push-up,2,9,0,,4,"Wrist, a bit sore"');
     expect(rows[3]).toMatch(/^2026-10-26,upper-a,Backpack row,1,12,6,/);
     expect(sleep.trim().split('\n')[1]).toBe('2026-10-26,21:30,06:00,510,4,tap');
+  });
+});
+
+describe('warmupFor', () => {
+  it('starts general, then one line per pattern in order, at most four', () => {
+    expect(warmupFor([slot('pushup'), slot('diamond-pushup'), slot('pack-row')])).toHaveLength(3);
+    expect(warmupFor([slot('squat')])[1]).toMatch(/squat/);
+    expect(warmupFor(DEFAULT_PROGRAM.days.flatMap((d) => d.slots)).length).toBeLessThanOrEqual(4);
+    expect(warmupFor([])).toHaveLength(1);
   });
 });
 

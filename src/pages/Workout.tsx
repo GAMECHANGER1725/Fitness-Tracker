@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../lib/store';
+import { warmupFor } from '../lib/program';
 import { EX, EXERCISES, PATTERN_LABEL, targetText, usable } from '../lib/exercises';
 import { historyOf, newRecords, sessionText } from '../lib/progress';
 import { currentAi, postWorkout, suggestSwap } from '../lib/coach';
@@ -53,6 +54,7 @@ function Player({ onDone }: { onDone: (r: { session: Session; lines: string[]; r
   const [noteOpen, setNoteOpen] = useState(false);
   const note = useStore((s) => s.profile.exNotes[slot.exerciseId]);
   const [extra, setExtra] = useState(false);
+  const [warmed, setWarmed] = useState(false);
   const allDone = done.length >= slot.sets && !extra;
 
   // New exercise or new set: start from last time's numbers.
@@ -124,6 +126,17 @@ function Player({ onDone }: { onDone: (r: { session: Session; lines: string[]; r
         })}
       </div>
 
+      {!a.sets.length && !past && !warmed && (
+        <section className="card soft stack" style={{ gap: 8 }} aria-label="Warm-up">
+          <span className="label">Warm up first, about 3 min</span>
+          <ul className="small" style={{ margin: 0, paddingLeft: 18 }}>
+            {warmupFor(a.slots).map((w) => <li key={w}>{w}</li>)}
+          </ul>
+          <button className="btn sm" style={{ alignSelf: 'flex-start' }} onClick={() => setWarmed(true)}>
+            <Icon name="check" size={16} stroke={3} /> Warmed up
+          </button>
+        </section>
+      )}
       {past && <p className="small bold acc">Logging for {fmtDate(a.date, { weekday: 'long', day: 'numeric', month: 'long' })}</p>}
       <section className="stack" style={{ gap: 6, marginTop: 8 }}>
         <div className="between" style={{ alignItems: 'flex-start' }}>
