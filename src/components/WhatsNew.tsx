@@ -12,6 +12,7 @@ const NEWS: [title: string, body: string, href?: string][] = [
   ['Beep and screen on', 'A beep when rest ends and the screen stays on during a workout. Both can be turned off.', '#/profile'],
   ['Your progress per move', 'Open a move in Exercises to see your last 8 sessions as a chart.', '#/train?tab=moves'],
   ['Edit and back-fill workouts', 'Edit a saved workout’s day, feel and note, or log one you did without the app.', '#/train?tab=history'],
+  ['Reorder your plan', 'Tap Reorder on a plan day to move exercises up or down. Changing only the rest time now saves too.', '#/train'],
   ['30 nights of sleep', 'The sleep chart can show 7, 14 or 30 nights.', '#/sleep'],
 ];
 
