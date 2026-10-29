@@ -14,6 +14,7 @@ const NEWS: [title: string, body: string, href?: string][] = [
   ['Edit and back-fill workouts', 'Edit a saved workout’s day, feel and note, or log one you did without the app.', '#/train?tab=history'],
   ['Reorder your plan', 'Tap Reorder on a plan day to move exercises up or down. Changing only the rest time now saves too.', '#/train'],
   ['Your week at a glance', 'This week on Today now totals workouts, sets and time. Tap a day to see what you did or what’s planned.'],
+  ['Personal bests', 'Badges now lists your best set for every move, newest first, with this week’s marked.', '#/train?tab=badges'],
   ['30 nights of sleep', 'The sleep chart can show 7, 14 or 30 nights.', '#/sleep'],
 ];
 

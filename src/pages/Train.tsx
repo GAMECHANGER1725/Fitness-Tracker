@@ -474,6 +474,44 @@ function Trend({ ex, sessions }: { ex: Exercise; sessions: Record<string, Sessio
   );
 }
 
+/** Best set per move, newest first, with the ones set this week marked. */
+function Bests() {
+  const today = useToday();
+  const sessions = useStore((s) => s.sessions);
+  const [all, setAll] = useState(false);
+  const list = Object.entries(records(sessions)).sort((a, b) => (a[1].date < b[1].date ? 1 : a[1].date > b[1].date ? -1 : 0));
+  if (!list.length) return null;
+  const shown = all ? list : list.slice(0, 5);
+  return (
+    <section className="card stack" style={{ gap: 4 }} aria-label="Personal bests">
+      <div className="between">
+        <h2 className="h2">Personal bests</h2>
+        <span className="small mut">{list.length} moves</span>
+      </div>
+      {shown.map(([id, b]) => {
+        const e = EX[id];
+        const fresh = daysBetween(b.date, today) < 7;
+        return (
+          <div key={id} className="item">
+            <span className="grow">
+              <span className="bold" style={{ display: 'block' }}>{e?.name ?? id}</span>
+              <span className="small mut">{fmtDate(b.date, { weekday: 'short', day: 'numeric', month: 'short' })}{fresh ? ' · this week' : ''}</span>
+            </span>
+            <span className={fresh ? 'pill' : 'bold'}>
+              {b.reps}{e?.unit === 'secs' ? ' s' : ''}{b.loadKg ? ` @ ${b.loadKg} kg` : ''}
+            </span>
+          </div>
+        );
+      })}
+      {list.length > 5 && (
+        <button className="btn sm" style={{ alignSelf: 'flex-start', background: 'transparent', color: 'var(--acc)', padding: 0 }} onClick={() => setAll(!all)}>
+          {all ? 'Show fewer' : `Show all ${list.length}`}
+        </button>
+      )}
+    </section>
+  );
+}
+
 function BadgeGrid() {
   const g = useGame();
   return (
@@ -492,6 +530,7 @@ function BadgeGrid() {
           <span className="small mut">on-time wakes</span>
         </div>
       </div>
+      <Bests />
       <section className="card grid3" style={{ rowGap: 18 }}>
         {g.badges.map((b) => (
           <div key={b.id} className={`badge ${b.earned ? '' : 'locked'}`}>
