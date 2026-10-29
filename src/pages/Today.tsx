@@ -24,7 +24,9 @@ export default function Today() {
   const doneToday = Object.values(sessions).filter((s) => s.date === today);
   const [pick, setPick] = useState(false);
   const [why, setWhy] = useState(false);
-  const easy = ready.band === 'easy';
+  // Readiness picks the lighter version on an Easy day; you can flip it either way (until you leave Today).
+  const [choice, setChoice] = useState<boolean | null>(null);
+  const easy = choice ?? ready.band === 'easy';
   const hidden = useLayout((l) => l.hidden);
 
   const start = (day: PlanDay) => {
@@ -70,9 +72,14 @@ export default function Today() {
           ) : doneToday.length ? (
             <p className="bold">{doneToday.map((s) => s.name).join(' and ')} done. Eat well and get to bed on time.</p>
           ) : day ? (
-            <button className="btn block" onClick={() => start(day)}>
-              <Icon name="play" size={18} fill /> Start workout · {minutes(slots)} min{easy ? ', lighter' : ''}
-            </button>
+            <>
+              <button className="btn block" onClick={() => start(day)}>
+                <Icon name="play" size={18} fill /> Start workout · {minutes(slots)} min{easy ? ', lighter' : ''}
+              </button>
+              <button className="small bold" onClick={() => setChoice(!easy)} style={{ background: 'none', border: 0, padding: 0, color: 'inherit', opacity: 0.85, textDecoration: 'underline', alignSelf: 'center' }}>
+                {easy ? 'Do the full workout instead' : 'Do a lighter version (about a quarter fewer sets)'}
+              </button>
+            </>
           ) : (
             <button className="btn block" onClick={() => setPick(!pick)}>
               Rest day. Train anyway?
