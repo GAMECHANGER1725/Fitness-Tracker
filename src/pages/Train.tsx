@@ -410,6 +410,7 @@ function EditSessionSheet({ session, onClose }: { session: Session; onClose: () 
 
 function Moves() {
   const sessions = useStore((s) => s.sessions);
+  const notes = useStore((s) => s.profile.exNotes);
   const hasGrip = useStore((s) => s.profile.hasGrip);
   const best = records(sessions);
   const [open, setOpen] = useState<string | null>(null);
@@ -434,6 +435,7 @@ function Moves() {
                   {open === e.id && (
                     <>
                       <Trend ex={e} sessions={sessions} />
+                      {notes[e.id] && <p className="small"><span className="bold">Your note:</span> {notes[e.id]}</p>}
                       <ul className="small mut" style={{ margin: 0, paddingLeft: 18 }}>
                         {e.cues.map((c) => <li key={c}>{c}</li>)}
                       </ul>

@@ -11,7 +11,7 @@ import { durationMin } from './sleep';
 // Personal app: starts set up for its one user (same stats as Fuel Log).
 export const DEFAULT_DATA: AppData = {
   v: 1,
-  profile: { name: 'Vaidik', age: 15, sex: 'male', heightCm: 182, weightKg: 58.3, packMaxKg: 15, hasGrip: true },
+  profile: { name: 'Vaidik', age: 15, sex: 'male', heightCm: 182, weightKg: 58.3, packMaxKg: 15, hasGrip: true, exNotes: {} },
   settings: {
     wakeTarget: '06:00',
     sleepGoalH: 8.5,
@@ -161,6 +161,7 @@ export function normalize(v: unknown): AppData {
       weightKg: num(p.weightKg, D.profile.weightKg, 25, 250),
       packMaxKg: num(p.packMaxKg, D.profile.packMaxKg, 0, 40),
       hasGrip: typeof p.hasGrip === 'boolean' ? p.hasGrip : D.profile.hasGrip,
+      exNotes: Object.fromEntries(Object.entries(obj(p.exNotes)).filter(([id]) => EX[id]).map(([id, t]) => [id, str(t, 200).trim()]).filter(([, t]) => t)),
     },
     settings: {
       wakeTarget: time(s.wakeTarget, D.settings.wakeTarget),

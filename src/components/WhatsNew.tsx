@@ -18,6 +18,7 @@ const NEWS: [title: string, body: string, href?: string][] = [
   ['Choose what Today shows', 'Hide Today’s exercises, the Fuel Log card or This week under Look in Profile.', '#/profile'],
   ['Why this readiness?', 'Tap Readiness on Today to see how sleep, food and recovery add up.'],
   ['Spreadsheets', 'Download your workouts or sleep as CSV from Backup in Profile.', '#/profile'],
+  ['Notes per exercise', 'In a workout, tap Add a note under the cues to remember a setup, like which strap or step. It shows every time and syncs.'],
   ['30 nights of sleep', 'The sleep chart can show 7, 14 or 30 nights.', '#/sleep'],
 ];
 

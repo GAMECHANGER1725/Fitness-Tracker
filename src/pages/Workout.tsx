@@ -50,6 +50,8 @@ function Player({ onDone }: { onDone: (r: { session: Session; lines: string[]; r
   const [finish, setFinish] = useState(false);
   const [fix, setFix] = useState<SetLog | null>(null);
   const [list, setList] = useState(false);
+  const [noteOpen, setNoteOpen] = useState(false);
+  const note = useStore((s) => s.profile.exNotes[slot.exerciseId]);
   const [extra, setExtra] = useState(false);
   const allDone = done.length >= slot.sets && !extra;
 
@@ -123,6 +125,10 @@ function Player({ onDone }: { onDone: (r: { session: Session; lines: string[]; r
         <ul className="small mut" style={{ margin: 0, paddingLeft: 18 }}>
           {ex?.cues.map((c) => <li key={c}>{c}</li>)}
         </ul>
+        <button className="small" onClick={() => setNoteOpen(true)} style={{ background: 'none', border: 0, padding: '4px 0', textAlign: 'left', color: note ? 'var(--ink)' : 'var(--acc)', display: 'flex', gap: 6, alignItems: 'flex-start' }}>
+          <Icon name="pencil" size={16} />
+          {note ? <span><span className="bold">Your note:</span> {note}</span> : <span className="bold">Add a note for this exercise</span>}
+        </button>
       </section>
 
       {rest > 0 ? (
@@ -226,6 +232,7 @@ function Player({ onDone }: { onDone: (r: { session: Session; lines: string[]; r
         </button>
       </div>
 
+      {noteOpen && <NoteSheet exerciseId={slot.exerciseId} onClose={() => setNoteOpen(false)} />}
       {list && (
         <Sheet onClose={() => setList(false)} label="Exercises">
           <h2 className="h2">{a.name}</h2>
@@ -303,6 +310,25 @@ function HoldTimer({ low, high, onStop }: { low: number; high: number; onStop: (
         </button>
       </div>
     </div>
+  );
+}
+
+function NoteSheet({ exerciseId, onClose }: { exerciseId: string; onClose: () => void }) {
+  const cur = useStore((s) => s.profile.exNotes[exerciseId] ?? '');
+  const setExNote = useStore((s) => s.setExNote);
+  const [text, setText] = useState(cur);
+  return (
+    <Sheet onClose={onClose} label="Exercise note">
+      <h2 className="h2">Note for {EX[exerciseId]?.name}</h2>
+      <label className="field">
+        <span>Shown every time you do this exercise</span>
+        <textarea className="input" maxLength={200} value={text} onChange={(e) => setText(e.target.value)} placeholder="Blue strap, feet on the second step, left wrist tape…" autoFocus />
+      </label>
+      <div className="grid2">
+        <button className="btn" onClick={() => (setExNote(exerciseId, ''), onClose())} disabled={!cur}>Clear</button>
+        <button className="btn primary" onClick={() => (setExNote(exerciseId, text), onClose())}>Save</button>
+      </div>
+    </Sheet>
   );
 }
 

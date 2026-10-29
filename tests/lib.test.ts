@@ -252,6 +252,14 @@ describe('badges', () => {
   });
 });
 
+describe('exercise notes', () => {
+  it('keeps notes for real exercises, trims them, and drops unknown or empty ones', () => {
+    const d = normalize({ profile: { exNotes: { pushup: '  blue strap  ', nope: 'x', squat: '   ', 'pack-row': 'a'.repeat(300) } } });
+    expect(d.profile.exNotes).toEqual({ pushup: 'blue strap', 'pack-row': 'a'.repeat(200) });
+    expect(normalize({}).profile.exNotes).toEqual({});
+  });
+});
+
 describe('backup', () => {
   it('round-trips without the AI keys', () => {
     const d = { ...DEFAULT_DATA, settings: { ...DEFAULT_DATA.settings, aiKey: 'secret', geminiKey: 'g' } };

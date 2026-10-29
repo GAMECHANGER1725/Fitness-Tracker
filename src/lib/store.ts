@@ -43,6 +43,8 @@ interface Actions {
   undoProgram: () => boolean;
   setSettings: (patch: Partial<Settings>) => void;
   setProfile: (patch: Partial<Profile>) => void;
+  /** Set (or with empty text, clear) your note for an exercise. */
+  setExNote: (exerciseId: string, text: string) => void;
   markSeen: (badges: string[]) => void;
   applySynced: (doc: SyncDoc) => void;
   importData: (d: AppData) => void;
@@ -149,6 +151,12 @@ export const useStore = create<Store>()(
           set((s) => ({ settings: { ...s.settings, ...patch }, ...(synced ? { mod: Date.now() } : {}) }));
         },
         setProfile: (patch) => set((s) => ({ profile: { ...s.profile, ...patch }, mod: Date.now() })),
+        setExNote: (id, text) =>
+          set((s) => {
+            const { [id]: _old, ...rest } = s.profile.exNotes;
+            const t = text.trim().slice(0, 200);
+            return { profile: { ...s.profile, exNotes: t ? { ...rest, [id]: t } : rest }, mod: Date.now() };
+          }),
         markSeen: (badges) => set({ seen: { badges } }),
         applySynced: (doc) => set((s) => applyDoc(dataOf(s), doc)),
         importData: (d) =>

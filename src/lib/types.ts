@@ -125,6 +125,8 @@ export interface Profile {
   /** Heaviest the backpack can be packed, kg. */
   packMaxKg: number;
   hasGrip: boolean;
+  /** Your own reminder per exercise id ("blue strap", "feet on the second step"), shown in the player. */
+  exNotes: Record<string, string>;
 }
 
 export interface Settings {
