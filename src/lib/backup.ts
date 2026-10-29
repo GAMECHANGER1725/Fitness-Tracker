@@ -11,7 +11,7 @@ import { durationMin } from './sleep';
 // Personal app: starts set up for its one user (same stats as Fuel Log).
 export const DEFAULT_DATA: AppData = {
   v: 1,
-  profile: { name: 'Vaidik', age: 15, sex: 'male', heightCm: 182, weightKg: 58.3, packMaxKg: 15, hasGrip: true, exNotes: {} },
+  profile: { name: 'Vaidik', age: 15, sex: 'male', heightCm: 182, weightKg: 58.3, packMaxKg: 15, hasGrip: true, exNotes: {}, windDown: ['Screens off', 'Bag packed for tomorrow', 'Teeth brushed'] },
   settings: {
     wakeTarget: '06:00',
     sleepGoalH: 8.5,
@@ -107,6 +107,8 @@ function night(k: string, v: unknown): Night | null {
     const val = opt(n[f], 0, f === 'quality' ? 5 : 1000);
     if (val != null) out[f] = Math.round(val);
   }
+  const done = arr(n.done).map((x) => str(x, 40)).filter(Boolean).slice(0, 10);
+  if (done.length) out.done = done;
   return out;
 }
 
@@ -161,6 +163,7 @@ export function normalize(v: unknown): AppData {
       weightKg: num(p.weightKg, D.profile.weightKg, 25, 250),
       packMaxKg: num(p.packMaxKg, D.profile.packMaxKg, 0, 40),
       hasGrip: typeof p.hasGrip === 'boolean' ? p.hasGrip : D.profile.hasGrip,
+      windDown: Array.isArray(p.windDown) ? [...new Set(arr(p.windDown).map((x) => str(x, 40).trim()).filter(Boolean))].slice(0, 6) : D.profile.windDown,
       exNotes: Object.fromEntries(Object.entries(obj(p.exNotes)).filter(([id]) => EX[id]).map(([id, t]) => [id, str(t, 200).trim()]).filter(([, t]) => t)),
     },
     settings: {

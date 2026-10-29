@@ -279,6 +279,16 @@ describe('exercise notes', () => {
   });
 });
 
+describe('wind-down', () => {
+  it('defaults the list, cleans it, and keeps ticks on a night', () => {
+    expect(normalize({}).profile.windDown).toHaveLength(3);
+    expect(normalize({ profile: { windDown: [' Read ', 'Read', '', 5, 'Stretch'] } }).profile.windDown).toEqual(['Read', 'Stretch']);
+    expect(normalize({ profile: { windDown: [] } }).profile.windDown).toEqual([]);
+    const d = normalize({ nights: { '2026-10-29': { bed: null, wake: null, done: ['Read', 7, ''], m: 1 } } });
+    expect(d.nights['2026-10-29'].done).toEqual(['Read']);
+  });
+});
+
 describe('backup', () => {
   it('round-trips without the AI keys', () => {
     const d = { ...DEFAULT_DATA, settings: { ...DEFAULT_DATA.settings, aiKey: 'secret', geminiKey: 'g' } };

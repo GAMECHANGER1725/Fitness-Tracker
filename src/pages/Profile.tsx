@@ -31,6 +31,7 @@ export default function ProfilePage() {
         <SleepGoals />
         <AiCard />
         <SyncCard />
+        <WindDownEdit />
         <PlayerPrefs />
         <Reminders />
         <Look />
@@ -257,6 +258,26 @@ function SyncCard() {
           </div>
         </>
       )}
+    </section>
+  );
+}
+
+function WindDownEdit() {
+  const list = useStore((s) => s.profile.windDown);
+  const setProfile = useStore((s) => s.setProfile);
+  const [text, setText] = useState(list.join('\n'));
+  const lines = [...new Set(text.split('\n').map((l) => l.trim().slice(0, 40)).filter(Boolean))].slice(0, 6);
+  const changed = lines.join('\n') !== list.join('\n');
+  return (
+    <section className="card stack" style={{ gap: 10 }}>
+      <h2 className="h2">Wind-down checklist</h2>
+      <label className="field">
+        <span>One step per line, up to 6. You tick them on Today in the evening.</span>
+        <textarea className="input" rows={4} value={text} onChange={(e) => setText(e.target.value)} placeholder={'Screens off\nBag packed for tomorrow\nTeeth brushed'} />
+      </label>
+      <button className="btn sm primary" style={{ alignSelf: 'flex-start' }} disabled={!changed} onClick={() => (setProfile({ windDown: lines }), toast(lines.length ? 'Checklist saved' : 'Checklist turned off'))}>
+        Save checklist
+      </button>
     </section>
   );
 }

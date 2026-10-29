@@ -220,22 +220,47 @@ function BedCard() {
     );
   }
   return (
-    <button
-      className="card"
-      style={{ display: 'flex', alignItems: 'center', gap: 14, border: 0, textAlign: 'left', color: 'var(--ink)', width: '100%' }}
-      onClick={() => (goingToSleep(), toast(`Sleep well. Up at ${clock12(wakeTarget)}.`))}
-    >
-      <span style={{ width: 52, height: 52, borderRadius: 18, background: 'var(--sleep)', color: 'var(--on-sleep)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
-        <Icon name="moon" size={26} />
-      </span>
-      <span className="grow">
-        <span className="h2" style={{ display: 'block' }}>Going to sleep</span>
-        <span className="small mut">
-          Lights out {clock12(bedtime)} · {left > 0 ? `in ${left < 60 ? `${left} min` : hm(left)}` : left === 0 ? 'now' : `${-left} min past`}
+    <div className="card stack" style={{ gap: 12 }}>
+      <WindDown nightDone={night?.done ?? []} />
+      <button
+        style={{ display: 'flex', alignItems: 'center', gap: 14, border: 0, padding: 0, background: 'none', textAlign: 'left', color: 'var(--ink)', width: '100%' }}
+        onClick={() => (goingToSleep(), toast(`Sleep well. Up at ${clock12(wakeTarget)}.`))}
+      >
+        <span style={{ width: 52, height: 52, borderRadius: 18, background: 'var(--sleep)', color: 'var(--on-sleep)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
+          <Icon name="moon" size={26} />
         </span>
-      </span>
-      <Icon name="right" />
-    </button>
+        <span className="grow">
+          <span className="h2" style={{ display: 'block' }}>Going to sleep</span>
+          <span className="small mut">
+            Lights out {clock12(bedtime)} · {left > 0 ? `in ${left < 60 ? `${left} min` : hm(left)}` : left === 0 ? 'now' : `${-left} min past`}
+          </span>
+        </span>
+        <Icon name="right" />
+      </button>
+    </div>
+  );
+}
+
+/** Tonight's wind-down steps from Profile, ticked one tap at a time (saved on tonight's night). */
+function WindDown({ nightDone }: { nightDone: string[] }) {
+  const list = useStore((s) => s.profile.windDown);
+  const toggle = useStore((s) => s.toggleWindDown);
+  if (!list.length) return null;
+  const n = list.filter((l) => nightDone.includes(l)).length;
+  return (
+    <div className="stack" style={{ gap: 6 }}>
+      <div className="between small">
+        <span className="bold">Wind down · {n} of {list.length}</span>
+        <a href="#/profile" className="mut" style={{ fontSize: 12 }}>Edit</a>
+      </div>
+      <div className="row" style={{ flexWrap: 'wrap', gap: 6 }} role="group" aria-label="Wind-down steps">
+        {list.map((l) => (
+          <button key={l} className="chip" aria-pressed={nightDone.includes(l)} onClick={() => toggle(l)} style={{ fontSize: 13, minHeight: 36 }}>
+            {nightDone.includes(l) && <Icon name="check" size={14} stroke={3} />} {l}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 

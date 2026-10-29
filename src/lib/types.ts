@@ -111,6 +111,8 @@ export interface Night {
   light?: number;
   awake?: number;
   score?: number;
+  /** Wind-down steps ticked that evening (labels from Profile.windDown). */
+  done?: string[];
   /** Last change, for syncing. */
   m: number;
 }
@@ -127,6 +129,8 @@ export interface Profile {
   hasGrip: boolean;
   /** Your own reminder per exercise id ("blue strap", "feet on the second step"), shown in the player. */
   exNotes: Record<string, string>;
+  /** Your evening wind-down steps, ticked on Today before Going to sleep. */
+  windDown: string[];
 }
 
 export interface Settings {

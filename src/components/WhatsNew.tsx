@@ -6,7 +6,7 @@ export const NEWS_ID = '2026-10-29a';
 const KEY = 'fitness-news';
 
 const NEWS: [title: string, body: string, href?: string][] = [
-  ['Going to sleep from Today', 'In the evening Today counts down to lights out with a Going to sleep button, and Undo if you tap it by mistake. In the morning, rate your sleep in one tap.'],
+  ['Going to sleep from Today', 'In the evening Today counts down to lights out, with your own wind-down checklist to tick and a Going to sleep button (Undo if you tap it by mistake). In the morning, rate your sleep in one tap.'],
   ['Time your holds', 'Hold exercises get a timer: 3 s to get in position, a buzz at the bottom and top of the range, and Stop fills in the seconds.'],
   ['Fix sets, add sets', 'Tap a logged set to change or remove it, add an extra set with + Set, and tap the workout name to jump to any exercise.'],
   ['Beep and screen on', 'A beep when rest ends and the screen stays on during a workout. Both can be turned off.', '#/profile'],

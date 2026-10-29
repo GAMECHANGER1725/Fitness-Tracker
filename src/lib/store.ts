@@ -37,6 +37,8 @@ interface Actions {
   /** "I'm up" now (or at `at`). */
   wokeUp: (at?: number) => void;
   setNight: (date: string, patch: Partial<Night>) => void;
+  /** Tick or untick a wind-down step for tonight. */
+  toggleWindDown: (label: string, at?: number) => void;
   deleteNight: (date: string) => void;
   importNights: (nights: Night[]) => number;
   setProgram: (p: Program, by: ProgramChange['by'], why: string) => string[];
@@ -121,6 +123,13 @@ export const useStore = create<Store>()(
           }),
         setNight: (date, patch) =>
           set((s) => ({ nights: { ...s.nights, [date]: { ...(s.nights[date] ?? { bed: null, wake: null, source: 'manual' as const }), ...patch, date, m: Date.now() } } })),
+        toggleWindDown: (label, at = Date.now()) => {
+          const k = nightKey(at);
+          const night = get().nights[k];
+          const cur = night?.done ?? [];
+          // A night started by a tick counts as tapped, not typed in, so a Samsung import can still fill it.
+          get().setNight(k, { done: cur.includes(label) ? cur.filter((x) => x !== label) : [...cur, label], ...(night ? {} : { source: 'tap' as const }) });
+        },
         deleteNight: (date) =>
           set((s) => {
             const { [date]: _gone, ...rest } = s.nights;
