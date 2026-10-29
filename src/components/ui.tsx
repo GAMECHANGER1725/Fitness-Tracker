@@ -138,31 +138,42 @@ interface ToastAction {
   run: () => void;
 }
 
-export const useToast = create<{ msg: string | null; action: ToastAction | null; n: number; show: (msg: string, action?: ToastAction) => void }>((set) => ({
-  msg: null,
-  action: null,
+interface ToastMsg {
+  msg: string;
+  action: ToastAction | null;
+  n: number;
+}
+
+/** Messages wait their turn, so a badge or a sync note never covers an Undo. */
+export const useToast = create<{ queue: ToastMsg[]; n: number; show: (msg: string, action?: ToastAction) => void; next: () => void }>((set) => ({
+  queue: [],
   n: 0,
-  show: (msg, action) => set((s) => ({ msg, action: action ?? null, n: s.n + 1 })),
+  // A plain message replaces other plain ones (the newest is what matters) but waits behind any with an action.
+  show: (msg, action) =>
+    set((s) => {
+      const t = { msg, action: action ?? null, n: s.n + 1 };
+      return { queue: [...s.queue.filter((x) => x.action), t].slice(-3), n: t.n };
+    }),
+  next: () => set((s) => ({ queue: s.queue.slice(1) })),
 }));
 /** A short message; with `action` (like Undo) it stays a little longer and shows a button. */
 export const toast = (msg: string, action?: ToastAction) => useToast.getState().show(msg, action);
 
 export function Toast() {
-  const { msg, action, n } = useToast();
-  const [shown, setShown] = useState(false);
+  const head = useToast((s) => s.queue[0]);
+  const next = useToast((s) => s.next);
   useEffect(() => {
-    if (!msg) return;
-    setShown(true);
-    const t = setTimeout(() => setShown(false), action ? 6000 : 2600);
+    if (!head) return;
+    const t = setTimeout(next, head.action ? 6000 : 2600);
     return () => clearTimeout(t);
-  }, [msg, n]);
-  if (!shown || !msg) return null;
+  }, [head?.n]);
+  if (!head) return null;
   return (
-    <div className="toast" role="status" aria-live="polite" key={n}>
-      {msg}
-      {action && (
-        <button onClick={() => (action.run(), setShown(false))} style={{ background: 'none', border: 0, padding: 0, color: 'inherit', font: 'inherit', fontWeight: 800, textDecoration: 'underline' }}>
-          {action.label}
+    <div className="toast" role="status" aria-live="polite" key={head.n}>
+      {head.msg}
+      {head.action && (
+        <button onClick={() => (head.action!.run(), next())} style={{ background: 'none', border: 0, padding: 0, color: 'inherit', font: 'inherit', fontWeight: 800, textDecoration: 'underline' }}>
+          {head.action.label}
         </button>
       )}
     </div>
