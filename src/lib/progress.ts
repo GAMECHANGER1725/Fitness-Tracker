@@ -118,6 +118,27 @@ export function records(sessions: Record<string, Session>): Record<string, Best>
   return out;
 }
 
+export interface TrendPoint {
+  date: string;
+  /** Best set that session (heaviest, then most reps). */
+  top: { reps: number; loadKg: number };
+  /** Reps (or seconds) across all its sets. */
+  total: number;
+}
+
+/** The last `n` sessions of one exercise, oldest first, for a small chart. */
+export function trendOf(sessions: Record<string, Session>, exerciseId: string, n = 8): TrendPoint[] {
+  return Object.values(sessions)
+    .sort((a, b) => a.start - b.start)
+    .flatMap((s) => {
+      const xs = s.sets.filter((x) => x.exerciseId === exerciseId);
+      if (!xs.length) return [];
+      const top = xs.reduce<SetLog>((b, x) => (better(x, b) ? x : b), xs[0]);
+      return [{ date: s.date, top: { reps: top.reps, loadKg: top.loadKg }, total: xs.reduce((t, x) => t + x.reps, 0) }];
+    })
+    .slice(-n);
+}
+
 /** Sets in a session that beat everything before it. */
 export function newRecords(session: Session, before: Record<string, Session>): SetLog[] {
   const prev = records(Object.fromEntries(Object.entries(before).filter(([id, s]) => id !== session.id && s.start < session.start)));

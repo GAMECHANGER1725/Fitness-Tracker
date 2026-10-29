@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_DATA, exportJson, importJson, normalize } from '../src/lib/backup';
 import { DEFAULT_PROGRAM, minutes, plannedDay, slotsFor, weekdayOf } from '../src/lib/program';
 import { EX, EXERCISES, easier, harder } from '../src/lib/exercises';
-import { applySession, deloadDue, diffPrograms, guardProgram, newRecords, progressSlot, records, weeklySets } from '../src/lib/progress';
+import { applySession, deloadDue, diffPrograms, guardProgram, newRecords, progressSlot, records, trendOf, weeklySets } from '../src/lib/progress';
 import { readiness } from '../src/lib/readiness';
 import { computeGame, workoutWeeks } from '../src/lib/game';
 import { addDays, atOn, weekStart } from '../src/lib/dates';
@@ -103,6 +103,21 @@ describe('records', () => {
     const all = { [a.id]: a, [b.id]: b };
     expect(records(all)['pack-row']).toMatchObject({ loadKg: 8, reps: 10 });
     expect(newRecords(b, all).map((x) => x.exerciseId)).toEqual(['pack-row']);
+  });
+});
+
+describe('trendOf', () => {
+  it('lists the best set and total per session, oldest first, last n only', () => {
+    const a = sess('2026-10-20', 'upper-a', [['pushup', 10], ['pushup', 8], ['squat', 20]]);
+    const b = sess('2026-10-22', 'upper-a', [['squat', 15]]);
+    const c = sess('2026-10-24', 'upper-a', [['pushup', 12], ['pushup', 9]]);
+    const all = { [c.id]: c, [a.id]: a, [b.id]: b };
+    expect(trendOf(all, 'pushup')).toEqual([
+      { date: '2026-10-20', top: { reps: 10, loadKg: 0 }, total: 18 },
+      { date: '2026-10-24', top: { reps: 12, loadKg: 0 }, total: 21 },
+    ]);
+    expect(trendOf(all, 'pushup', 1).map((x) => x.date)).toEqual(['2026-10-24']);
+    expect(trendOf(all, 'pike-pushup')).toEqual([]);
   });
 });
 

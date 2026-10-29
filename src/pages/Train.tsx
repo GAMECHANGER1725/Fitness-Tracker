@@ -2,11 +2,11 @@ import { useState } from 'react';
 import { useStore } from '../lib/store';
 import { EX, EXERCISES, PATTERN_LABEL, targetText, usable } from '../lib/exercises';
 import { WEEKDAYS, minutes } from '../lib/program';
-import { records, weeklySets } from '../lib/progress';
-import { fmtDate } from '../lib/dates';
-import { Head, Icon, ProfileLink, Sheet, Stepper, go, toast, useGame, useRoute } from '../components/ui';
+import { records, trendOf, weeklySets } from '../lib/progress';
+import { daysBetween, fmtDate } from '../lib/dates';
+import { Head, Icon, ProfileLink, Sheet, Stepper, go, toast, useGame, useRoute, useToday } from '../components/ui';
 import { useReadiness } from '../components/data';
-import type { Pattern, PlanDay, Program, Slot } from '../lib/types';
+import type { Exercise, Pattern, PlanDay, Program, Session, Slot } from '../lib/types';
 
 const TABS = [
   ['plan', 'Plan'],
@@ -299,9 +299,12 @@ function Moves() {
                     {b && <span className="pill">{b.reps}{e.unit === 'secs' ? ' s' : ''}{b.loadKg ? ` @ ${b.loadKg} kg` : ''}</span>}
                   </button>
                   {open === e.id && (
-                    <ul className="small mut" style={{ margin: 0, paddingLeft: 18 }}>
-                      {e.cues.map((c) => <li key={c}>{c}</li>)}
-                    </ul>
+                    <>
+                      <Trend ex={e} sessions={sessions} />
+                      <ul className="small mut" style={{ margin: 0, paddingLeft: 18 }}>
+                        {e.cues.map((c) => <li key={c}>{c}</li>)}
+                      </ul>
+                    </>
                   )}
                 </div>
               );
@@ -309,6 +312,32 @@ function Moves() {
         </section>
       ))}
     </>
+  );
+}
+
+/** Last few sessions of one move: bars for total reps, the best set under each. */
+function Trend({ ex, sessions }: { ex: Exercise; sessions: Record<string, Session> }) {
+  const today = useToday();
+  const pts = trendOf(sessions, ex.id);
+  if (!pts.length) return <p className="small mut">Not done yet.</p>;
+  const max = Math.max(...pts.map((p) => p.total));
+  const ago = daysBetween(pts.at(-1)!.date, today);
+  const u = ex.unit === 'secs' ? ' s' : '';
+  return (
+    <div className="stack" style={{ gap: 6 }}>
+      <div className="trend" role="img" aria-label={`Last ${pts.length} sessions, total ${ex.unit === 'secs' ? 'seconds' : 'reps'}: ${pts.map((p) => p.total).join(', ')}`}>
+        {pts.map((p, i) => (
+          <div key={p.date + i} className="trend-col">
+            <span className="small mut" style={{ fontSize: 11 }}>{p.total}</span>
+            <i style={{ height: `${Math.max(8, (p.total / max) * 70)}%` }} className={i === pts.length - 1 ? 'now' : ''} />
+            <span className="small" style={{ fontSize: 11 }}>{fmtDate(p.date, { day: 'numeric', month: 'numeric' })}</span>
+          </div>
+        ))}
+      </div>
+      <p className="small mut">
+        Total {ex.unit === 'secs' ? 'seconds' : 'reps'} per session · last best set {pts.at(-1)!.top.reps}{u}{pts.at(-1)!.top.loadKg ? ` @ ${pts.at(-1)!.top.loadKg} kg` : ''} · {ago === 0 ? 'done today' : ago === 1 ? 'yesterday' : `${ago} days ago`}
+      </p>
+    </div>
   );
 }
 
