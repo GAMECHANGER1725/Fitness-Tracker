@@ -389,7 +389,21 @@ function FixSetSheet({ set, loadable, secs, onClose }: { set: SetLog; loadable: 
         )}
       </div>
       <div className="grid2">
-        <button className="btn danger" onClick={() => (editSet(set.id, null), onClose())}>
+        <button
+          className="btn danger"
+          onClick={() => {
+            const at = useStore.getState().active?.sets.findIndex((x) => x.id === set.id) ?? -1;
+            editSet(set.id, null);
+            onClose();
+            toast('Set removed', {
+              label: 'Undo',
+              run: () => {
+                const a = useStore.getState().active;
+                if (a && at >= 0) useStore.setState({ active: { ...a, sets: [...a.sets.slice(0, at), set, ...a.sets.slice(at)] } });
+              },
+            });
+          }}
+        >
           <Icon name="trash" size={18} /> Remove
         </button>
         <button className="btn primary" onClick={() => (editSet(set.id, { reps, loadKg: loadable ? load : 0 }), onClose())}>

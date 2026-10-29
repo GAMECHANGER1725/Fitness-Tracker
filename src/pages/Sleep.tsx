@@ -484,7 +484,17 @@ function NightSheet({ date, onClose }: { date: string; onClose: () => void }) {
       </div>
       <div className="row">
         {n && (
-          <button className="btn danger" aria-label="Delete night" onClick={() => (deleteNight(date), onClose())}>
+          <button
+            className="btn danger"
+            aria-label="Delete night"
+            onClick={() => {
+              const was = n;
+              deleteNight(date);
+              onClose();
+              // A night brought back is newer than its tombstone, so sync keeps it.
+              toast('Night deleted', { label: 'Undo', run: () => useStore.getState().setNight(date, { ...was }) });
+            }}
+          >
             <Icon name="trash" size={18} />
           </button>
         )}
