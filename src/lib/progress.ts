@@ -8,6 +8,7 @@
 //    than set in Profile, at most 20 hard sets a week per movement pattern, and total weekly volume up by
 //    at most 20% at a time.
 
+import { daysBetween } from './dates';
 import type { Exercise, Pattern, PlanDay, Profile, Program, Session, SetLog, Slot } from './types';
 import { EX, easier, harder, usable } from './exercises';
 
@@ -98,6 +99,19 @@ export function applySession(program: Program, session: Session, sessions: Recor
     };
   });
   return { program: lines.length ? { ...program, days } : program, lines };
+}
+
+/** Moves a session to another day, keeping its clock times (and set order) so sorting by start still works. */
+export function moveSession(s: Session, date: string): Session {
+  const n = daysBetween(s.date, date);
+  if (!n) return s;
+  // Calendar days, not 24 h steps, so a move across a daylight-saving change keeps the clock time.
+  const shift = (ms: number) => {
+    const d = new Date(ms);
+    d.setDate(d.getDate() + n);
+    return d.getTime();
+  };
+  return { ...s, date, start: shift(s.start), end: shift(s.end), sets: s.sets.map((x) => ({ ...x, at: shift(x.at) })) };
 }
 
 // ----- Records -----------------------------------------------------------------

@@ -7,7 +7,7 @@ import { persist } from 'zustand/middleware';
 import type { ActiveWorkout, AppData, Night, PlanDay, Profile, Program, ProgramChange, Session, SetLog, Settings } from './types';
 import { DEFAULT_DATA, normalize } from './backup';
 import { applyDoc, nightTomb, type SyncDoc } from './syncdoc';
-import { applySession, diffPrograms } from './progress';
+import { applySession, diffPrograms, moveSession } from './progress';
 import { dayById, slotsFor } from './program';
 import { mergeImported, nightKey } from './sleep';
 import { keyOf, todayKey } from './dates';
@@ -30,6 +30,8 @@ interface Actions {
   /** Saves the session and runs progression. Returns the session and what progression changed. */
   finishWorkout: (feel?: number, note?: string) => { session: Session; lines: string[] } | null;
   deleteSession: (id: string) => void;
+  /** Change a saved session's day, feel or note. */
+  editSession: (id: string, patch: { date?: string; feel?: number; note?: string }) => void;
   /** "Going to sleep" now (or at `at`). */
   goingToSleep: (at?: number) => void;
   /** "I'm up" now (or at `at`). */
@@ -88,6 +90,14 @@ export const useStore = create<Store>()(
           });
           return { session, lines };
         },
+        editSession: (id, { date, ...rest }) =>
+          set((s) => {
+            const cur = s.sessions[id];
+            if (!cur) return {};
+            const next = { ...(date ? moveSession(cur, date) : cur), ...rest, upd: Date.now() };
+            if (next.note !== undefined) next.note = next.note.trim() || undefined;
+            return { sessions: { ...s.sessions, [id]: next } };
+          }),
         deleteSession: (id) =>
           set((s) => {
             const { [id]: _gone, ...rest } = s.sessions;

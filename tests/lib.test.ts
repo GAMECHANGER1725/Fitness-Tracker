@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_DATA, exportJson, importJson, normalize } from '../src/lib/backup';
 import { DEFAULT_PROGRAM, minutes, plannedDay, slotsFor, weekdayOf } from '../src/lib/program';
 import { EX, EXERCISES, easier, harder } from '../src/lib/exercises';
-import { applySession, deloadDue, diffPrograms, guardProgram, newRecords, progressSlot, records, trendOf, weeklySets } from '../src/lib/progress';
+import { applySession, deloadDue, diffPrograms, guardProgram, newRecords, progressSlot, records, trendOf, moveSession, weeklySets } from '../src/lib/progress';
 import { readiness } from '../src/lib/readiness';
 import { computeGame, workoutWeeks } from '../src/lib/game';
 import { addDays, atOn, weekStart } from '../src/lib/dates';
@@ -103,6 +103,19 @@ describe('records', () => {
     const all = { [a.id]: a, [b.id]: b };
     expect(records(all)['pack-row']).toMatchObject({ loadKg: 8, reps: 10 });
     expect(newRecords(b, all).map((x) => x.exerciseId)).toEqual(['pack-row']);
+  });
+});
+
+describe('moveSession', () => {
+  it('moves the date and keeps clock times, across a daylight-saving change too', () => {
+    const a = sess('2026-10-02', 'upper-a', [['pushup', 10]]);
+    const m = moveSession(a, '2026-10-06');
+    expect(m.date).toBe('2026-10-06');
+    expect(new Date(m.start).getHours()).toBe(16);
+    expect(new Date(m.start).getMinutes()).toBe(30);
+    expect(m.end - m.start).toBe(a.end - a.start);
+    expect(m.sets[0].at - m.start).toBe(a.sets[0].at - a.start);
+    expect(moveSession(a, a.date)).toBe(a);
   });
 });
 

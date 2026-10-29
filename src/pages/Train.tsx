@@ -231,6 +231,7 @@ function History() {
   const sessions = useStore((s) => s.sessions);
   const del = useStore((s) => s.deleteSession);
   const [open, setOpen] = useState<string | null>(null);
+  const [edit, setEdit] = useState<Session | null>(null);
   const list = Object.values(sessions).sort((a, b) => b.start - a.start);
   if (!list.length) return <p className="empty">No workouts yet. Your finished workouts show up here.</p>;
   return (
@@ -245,7 +246,7 @@ function History() {
               <span className="grow">
                 <span className="bold" style={{ display: 'block' }}>{s.name}</span>
                 <span className="small mut">
-                  {fmtDate(s.date, { weekday: 'short', day: 'numeric', month: 'short' })} · {Math.max(1, Math.round((s.end - s.start) / 60_000))} min · {s.sets.length} sets
+                  {fmtDate(s.date, { weekday: 'short', day: 'numeric', month: 'short' })} · {Math.max(1, Math.round((s.end - s.start) / 60_000))} min · {s.sets.length} set{s.sets.length === 1 ? '' : 's'}
                 </span>
               </span>
               <Icon name={isOpen ? 'minus' : 'plus'} size={18} />
@@ -262,16 +263,66 @@ function History() {
                     </span>
                   </p>
                 ))}
+                {s.feel && <p className="small mut">Felt {FEEL[s.feel - 1].toLowerCase()}</p>}
                 {s.note && <p className="small mut">“{s.note}”</p>}
-                <button className="btn sm danger" style={{ alignSelf: 'flex-start' }} onClick={() => confirm('Delete this workout?') && del(s.id)}>
-                  <Icon name="trash" size={16} /> Delete
-                </button>
+                <div className="row">
+                  <button className="btn sm" onClick={() => setEdit(s)}>
+                    <Icon name="pencil" size={16} /> Edit
+                  </button>
+                  <button className="btn sm danger" onClick={() => confirm('Delete this workout?') && del(s.id)}>
+                    <Icon name="trash" size={16} /> Delete
+                  </button>
+                </div>
               </>
             )}
           </section>
         );
       })}
+      {edit && <EditSessionSheet session={edit} onClose={() => setEdit(null)} />}
     </>
+  );
+}
+
+const FEEL = ['Rough', 'Meh', 'OK', 'Good', 'Great'];
+
+function EditSessionSheet({ session, onClose }: { session: Session; onClose: () => void }) {
+  const today = useToday();
+  const editSession = useStore((s) => s.editSession);
+  const [date, setDate] = useState(session.date);
+  const [feel, setFeel] = useState(session.feel);
+  const [note, setNote] = useState(session.note ?? '');
+  return (
+    <Sheet onClose={onClose} label="Edit workout">
+      <h2 className="h2">Edit {session.name}</h2>
+      <label className="field">
+        <span>Day</span>
+        <input className="input" type="date" value={date} max={today} onChange={(e) => e.target.value && setDate(e.target.value)} />
+      </label>
+      <div className="stack" style={{ gap: 6 }}>
+        <span className="label">How did it feel?</span>
+        <div className="row" style={{ flexWrap: 'wrap' }} role="group" aria-label="Feel">
+          {FEEL.map((l, i) => (
+            <button key={l} className="chip" style={{ flex: '1 0 auto' }} aria-pressed={feel === i + 1} onClick={() => setFeel(feel === i + 1 ? undefined : i + 1)}>
+              {l}
+            </button>
+          ))}
+        </div>
+      </div>
+      <label className="field">
+        <span>Note</span>
+        <textarea className="input" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Anything sore, easy or worth remembering" />
+      </label>
+      <button
+        className="btn primary block"
+        onClick={() => {
+          editSession(session.id, { date, feel, note });
+          toast('Saved');
+          onClose();
+        }}
+      >
+        Save
+      </button>
+    </Sheet>
   );
 }
 
