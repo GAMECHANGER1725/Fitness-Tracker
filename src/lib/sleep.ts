@@ -253,3 +253,21 @@ export function mergeImported(cur: Record<string, Night>, add: Night[]): { night
   }
   return { nights: out, count };
 }
+
+/** Average minutes slept on nights with every wind-down step ticked vs nights with some missed, over the last 28.
+ * Null until each side has 3 nights. Nights with no ticks at all count as missed only once you've ever ticked. */
+export function windDownEffect(nights: Record<string, Night>, steps: string[], today: string): { full: number; partial: number } | null {
+  if (!steps.length) return null;
+  const recent = Object.values(nights).filter((n) => n.date > addDays(today, -28) && n.date <= today);
+  if (!recent.some((n) => n.done?.length)) return null;
+  const full: number[] = [];
+  const partial: number[] = [];
+  for (const n of recent) {
+    const m = durationMin(n);
+    if (m == null) continue;
+    (steps.every((s) => n.done?.includes(s)) ? full : partial).push(m);
+  }
+  if (full.length < 3 || partial.length < 3) return null;
+  const avg = (xs: number[]) => Math.round(xs.reduce((a, b) => a + b, 0) / xs.length);
+  return { full: avg(full), partial: avg(partial) };
+}

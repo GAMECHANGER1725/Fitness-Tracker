@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useStore } from '../lib/store';
 import { addDays, atOn, fmtDate, hhmmOf } from '../lib/dates';
-import { QUALITY, clock12, clockOf, nightPos, durationMin, hm, idealBedtime, minsOf, nightKey, onTime, samsungNights, sleepStats, wakeOffset } from '../lib/sleep';
+import { QUALITY, clock12, clockOf, nightPos, durationMin, hm, idealBedtime, minsOf, windDownEffect, nightKey, onTime, samsungNights, sleepStats, wakeOffset } from '../lib/sleep';
 import { currentAi, tonightPlan, useCoach } from '../lib/coach';
 import { friendlyError, hasAi } from '../lib/ai';
 import { Head, Icon, ProfileLink, Sheet, toast, useGame, useToday } from '../components/ui';
@@ -297,6 +297,7 @@ function Insights() {
   const { sleepGoalH: goal, wakeTarget: wake, bedtime } = useStore((s) => s.settings);
   const fuel = useFuelData();
   const g = useGame();
+  const steps = useStore((s) => s.profile.windDown);
   const lines = useMemo(() => {
     const st = sleepStats(nights, today, 14, goal, wake);
     const out: string[] = [];
@@ -324,10 +325,12 @@ function Insights() {
       const d = Math.round(after.reduce((a, b) => a + b, 0) / after.length - rest.reduce((a, b) => a + b, 0) / rest.length);
       if (Math.abs(d) >= 20) out.push(d > 0 ? `You sleep ${d} min longer after a workout. Your body is using it.` : `You sleep ${-d} min less after workouts. Train earlier or wind down longer on those days.`);
     }
+    const wd = windDownEffect(nights, steps, today);
+    if (wd && Math.abs(wd.full - wd.partial) >= 15) out.push(wd.full > wd.partial ? `On nights you finish your wind-down you sleep ${wd.full - wd.partial} min longer. Worth keeping up.` : `Your wind-down doesn’t seem to add sleep yet (${hm(wd.full)} vs ${hm(wd.partial)}). Try swapping a step.`);
     const ideal = idealBedtime(wake, goal);
     if (ideal !== bedtime) out.push(`For ${goal} h before ${clock12(wake)}, lights out at ${clock12(ideal)}. Your coach set ${clock12(bedtime)}.`);
     return out;
-  }, [nights, sessions, fuel, today, goal, wake, bedtime, g.wake]);
+  }, [nights, sessions, fuel, today, goal, wake, bedtime, g.wake, steps]);
   return (
     <section className="card stack" style={{ gap: 10 }} aria-label="Insights">
       <h2 className="h2">Insights</h2>
@@ -388,6 +391,7 @@ function SamsungImport() {
 
 function Recent({ onPick }: { onPick: (d: string) => void }) {
   const nights = useStore((s) => s.nights);
+  const steps = useStore((s) => s.profile.windDown);
   const wake = useStore((s) => s.settings.wakeTarget);
   const list = Object.values(nights).sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 14);
   if (!list.length) return null;
@@ -405,6 +409,7 @@ function Recent({ onPick }: { onPick: (d: string) => void }) {
                 {n.bed ? clockOf(n.bed) : '?'} → {n.wake ? clockOf(n.wake) : '?'}
                 {n.quality ? ` · ${QUALITY[n.quality - 1]}` : ''}
                 {n.source === 'samsung' ? ' · watch' : ''}
+                {n.done?.length && steps.length ? ` · wind-down ${steps.filter((x) => n.done!.includes(x)).length}/${steps.length}` : ''}
               </span>
             </span>
             <span className="stack" style={{ gap: 2, alignItems: 'flex-end' }}>

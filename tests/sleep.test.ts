@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clock12, durationMin, guardBedtime, idealBedtime, mergeImported, nightKey, onTime, readCsv, samsungNights, samsungTime, sleepStats, wakeStreak, nightPos, toBedtime } from '../src/lib/sleep';
+import { clock12, durationMin, guardBedtime, idealBedtime, mergeImported, nightKey, onTime, readCsv, samsungNights, samsungTime, sleepStats, wakeStreak, nightPos, toBedtime, windDownEffect } from '../src/lib/sleep';
 import { addDays, atOn } from '../src/lib/dates';
 import type { Night } from '../src/lib/types';
 
@@ -132,5 +132,19 @@ describe('nightPos', () => {
     expect(nightPos(at(6))).toBe(600);
     expect(nightPos(at(9))).toBe(720);
     expect(nightPos(at(18))).toBe(0);
+  });
+});
+
+describe('windDownEffect', () => {
+  const n = (date: string, hours: number, done?: string[]): Night => ({ date, bed: atOn(date, '06:00') - hours * 3_600_000, wake: atOn(date, '06:00'), done, source: 'tap', m: 1 });
+  it('compares nights with the whole checklist ticked against the rest, once each side has 3', () => {
+    const steps = ['Screens off', 'Teeth'];
+    const all: Record<string, Night> = {};
+    ['2026-10-20', '2026-10-21', '2026-10-22'].forEach((d) => (all[d] = n(d, 9, steps)));
+    ['2026-10-23', '2026-10-24'].forEach((d) => (all[d] = n(d, 7.5, ['Teeth'])));
+    expect(windDownEffect(all, steps, '2026-10-29')).toBeNull();
+    all['2026-10-25'] = n('2026-10-25', 7.5);
+    expect(windDownEffect(all, steps, '2026-10-29')).toEqual({ full: 540, partial: 450 });
+    expect(windDownEffect({ a: n('2026-10-25', 8) }, steps, '2026-10-29')).toBeNull();
   });
 });
