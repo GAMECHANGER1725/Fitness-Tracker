@@ -22,6 +22,8 @@ interface Actions {
   startWorkout: (day: PlanDay, easy?: boolean, date?: string) => void;
   logSet: (set: Omit<SetLog, 'id' | 'at'>) => void;
   undoSet: () => void;
+  /** Fix (or with null, remove) a set already logged in the workout in progress. */
+  editSet: (id: string, patch: Pick<SetLog, 'reps' | 'loadKg'> | null) => void;
   goTo: (idx: number) => void;
   setRest: (end: number | null) => void;
   cancelWorkout: () => void;
@@ -64,6 +66,7 @@ export const useStore = create<Store>()(
           set((s) => ({ active: { dayId: day.id, name: day.name, date, start: Date.now(), slots: slotsFor(s.program, day, date, easy), sets: [], idx: 0, restEnd: null } })),
         logSet: (x) => patchActive((a) => ({ sets: [...a.sets, { ...x, id: uid(), at: Date.now() }] })),
         undoSet: () => patchActive((a) => ({ sets: a.sets.slice(0, -1), restEnd: null })),
+        editSet: (id, patch) => patchActive((a) => ({ sets: patch ? a.sets.map((x) => (x.id === id ? { ...x, ...patch } : x)) : a.sets.filter((x) => x.id !== id) })),
         goTo: (idx) => patchActive((a) => ({ idx: Math.max(0, Math.min(a.slots.length - 1, idx)), restEnd: null })),
         setRest: (end) => patchActive(() => ({ restEnd: end })),
         cancelWorkout: () => set({ active: null }),

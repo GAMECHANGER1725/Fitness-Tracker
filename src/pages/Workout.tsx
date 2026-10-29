@@ -6,7 +6,7 @@ import { currentAi, postWorkout, suggestSwap } from '../lib/coach';
 import { friendlyError, hasAi } from '../lib/ai';
 import { beep, holdWakeLock, primeAudio, usePlayer } from '../lib/player';
 import { Icon, Ring, Sheet, Stepper, go, toast, useNow } from '../components/ui';
-import type { Session, Slot } from '../lib/types';
+import type { Session, SetLog, Slot } from '../lib/types';
 
 const FEEL = ['Rough', 'Meh', 'OK', 'Good', 'Great'];
 const EFFORT: [number, string][] = [
@@ -47,6 +47,7 @@ function Player({ onDone }: { onDone: (r: { session: Session; lines: string[]; r
   const [rpe, setRpe] = useState<number | null>(null);
   const [swap, setSwap] = useState(false);
   const [finish, setFinish] = useState(false);
+  const [fix, setFix] = useState<SetLog | null>(null);
   const allDone = done.length >= slot.sets;
 
   // New exercise or new set: start from last time's numbers.
@@ -136,12 +137,17 @@ function Player({ onDone }: { onDone: (r: { session: Session; lines: string[]; r
         {Array.from({ length: Math.max(slot.sets, done.length) }, (_, i) => {
           const x = done[i];
           return (
-            <div key={i} className={`setrow ${x ? 'done' : i === done.length ? 'next' : ''}`}>
+            <div
+              key={i}
+              className={`setrow ${x ? 'done' : i === done.length ? 'next' : ''}`}
+              {...(x ? { role: 'button', tabIndex: 0, 'aria-label': `Edit set ${i + 1}`, onClick: () => setFix(x), onKeyDown: (e: { key: string }) => e.key === 'Enter' && setFix(x), style: { cursor: 'pointer' } } : {})}
+            >
               <span className={`dot ${x ? 'on' : ''}`}>{x && <Icon name="check" size={14} stroke={3} />}</span>
               <span className="grow bold">Set {i + 1}</span>
               <span className={x ? 'bold' : 'mut'}>
                 {x ? `${x.reps}${ex?.unit === 'secs' ? ' s' : ' reps'}${x.loadKg ? ` · ${x.loadKg} kg` : ''}` : targetText(ex, slot.low, slot.high)}
               </span>
+              {x && <Icon name="pencil" size={16} />}
             </div>
           );
         })}
@@ -203,6 +209,7 @@ function Player({ onDone }: { onDone: (r: { session: Session; lines: string[]; r
         </button>
       </div>
 
+      {fix && <FixSetSheet set={fix} loadable={!!ex?.loadable} secs={ex?.unit === 'secs'} onClose={() => setFix(null)} />}
       {swap && <SwapSheet slot={slot} onClose={() => setSwap(false)} />}
       {finish && (
         <FinishSheet
@@ -260,6 +267,37 @@ function HoldTimer({ low, high, onStop }: { low: number; high: number; onStop: (
         </button>
       </div>
     </div>
+  );
+}
+
+function FixSetSheet({ set, loadable, secs, onClose }: { set: SetLog; loadable: boolean; secs: boolean; onClose: () => void }) {
+  const editSet = useStore((s) => s.editSet);
+  const [reps, setReps] = useState(set.reps);
+  const [load, setLoad] = useState(set.loadKg);
+  return (
+    <Sheet onClose={onClose} label="Edit set">
+      <h2 className="h2">Fix this set</h2>
+      <div className={loadable ? 'grid2' : 'stack'}>
+        <label className="field">
+          <span>{secs ? 'Seconds' : 'Reps'}</span>
+          <Stepper value={reps} onChange={setReps} label={secs ? 'seconds' : 'reps'} step={secs ? 5 : 1} min={0} max={300} />
+        </label>
+        {loadable && (
+          <label className="field">
+            <span>Backpack kg</span>
+            <Stepper value={load} onChange={setLoad} label="backpack kilograms" step={0.5} min={0} max={40} />
+          </label>
+        )}
+      </div>
+      <div className="grid2">
+        <button className="btn danger" onClick={() => (editSet(set.id, null), onClose())}>
+          <Icon name="trash" size={18} /> Remove
+        </button>
+        <button className="btn primary" onClick={() => (editSet(set.id, { reps, loadKg: loadable ? load : 0 }), onClose())}>
+          Save
+        </button>
+      </div>
+    </Sheet>
   );
 }
 
