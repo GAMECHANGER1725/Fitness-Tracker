@@ -67,6 +67,20 @@ function Player({ onDone }: { onDone: (r: { session: Session; lines: string[]; r
   useEffect(() => holdWakeLock(prefs.awake), [prefs.awake]);
 
   const rest = a.restEnd ? Math.max(0, Math.ceil((a.restEnd - now) / 1000)) : 0;
+  // How much this rest was lengthened or shortened, so it can become the slot's rest.
+  const [adj, setAdj] = useState(0);
+  useEffect(() => setAdj(0), [a.sets.length, a.idx]);
+  const restFor = slot;
+  const keep = slot.restS + adj;
+  const saveRest = () => {
+    const st = useStore.getState();
+    const fix = (x: Slot): Slot => (x.exerciseId === restFor.exerciseId ? { ...x, restS: keep } : x);
+    useStore.setState({ active: st.active && { ...st.active, slots: st.active.slots.map(fix) } });
+    const p = st.program;
+    st.setProgram({ ...p, days: p.days.map((d) => (d.id === a.dayId ? { ...d, slots: d.slots.map(fix) } : d)) }, 'me', `Rest for ${EX[restFor.exerciseId]?.name}`);
+    setAdj(0);
+    toast(`Rest set to ${keep} s`);
+  };
   const buzzed = useRef(false);
   useEffect(() => {
     if (a.restEnd && rest === 0 && !buzzed.current) {
@@ -139,9 +153,15 @@ function Player({ onDone }: { onDone: (r: { session: Session; lines: string[]; r
             <span className="small mut" style={{ maxWidth: 120, textAlign: 'center', lineHeight: 1.25 }}>{allDone ? (a.idx < a.slots.length - 1 ? `next: ${EX[a.slots[a.idx + 1].exerciseId]?.name ?? 'next exercise'}` : 'last one done') : `next: set ${done.length + 1}`}</span>
           </Ring>
           <div className="row">
-            <button className="btn sm" onClick={() => setRest((a.restEnd ?? Date.now()) + 30_000)}>+30 s</button>
+            <button className="btn sm" disabled={rest <= 15} onClick={() => (setRest((a.restEnd ?? Date.now()) - 15_000), setAdj(adj - 15))}>−15 s</button>
+            <button className="btn sm" onClick={() => (setRest((a.restEnd ?? Date.now()) + 30_000), setAdj(adj + 30))}>+30 s</button>
             <button className="btn sm" onClick={() => setRest(null)}>Skip rest</button>
           </div>
+          {adj !== 0 && keep >= 15 && keep <= 300 && keep !== slot.restS && (
+            <button className="btn sm" style={{ background: 'transparent', color: 'var(--acc)' }} onClick={saveRest}>
+              Rest {keep} s for {EX[restFor.exerciseId]?.name ?? 'this'} from now on
+            </button>
+          )}
         </section>
       ) : null}
 
