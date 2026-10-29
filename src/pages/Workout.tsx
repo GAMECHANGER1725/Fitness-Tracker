@@ -6,7 +6,9 @@ import { historyOf, newRecords, sessionText } from '../lib/progress';
 import { currentAi, postWorkout, suggestSwap } from '../lib/coach';
 import { friendlyError, hasAi } from '../lib/ai';
 import { beep, holdWakeLock, primeAudio, usePlayer } from '../lib/player';
-import { fmtDate, keyOf } from '../lib/dates';
+import { fmtDate, keyOf, todayKey } from '../lib/dates';
+import { FUEL_URL } from '../lib/fuel';
+import { useFuelData } from '../components/data';
 import { Icon, Ring, Sheet, Stepper, go, shareText, toast, useNow } from '../components/ui';
 import type { Session, SetLog, Slot } from '../lib/types';
 
@@ -488,6 +490,21 @@ function FinishSheet({ onClose, onSave }: { onClose: () => void; onSave: (feel: 
   );
 }
 
+/** After a workout: protein still to go today from Fuel Log, with a way to log a snack there. */
+function RefuelCard({ date }: { date: string }) {
+  const fuel = useFuelData();
+  const t = fuel?.targets;
+  if (!fuel || !t || date !== todayKey()) return null;
+  const left = Math.max(0, Math.round(t.protein - (fuel.days[date]?.protein ?? 0)));
+  return (
+    <section className="card tight stack" style={{ gap: 8, boxShadow: 'inset 4px 0 0 var(--fuel)' }} aria-label="Refuel">
+      <span className="bold">{left > 0 ? `${left} g protein to go today` : 'Protein done for today'}</span>
+      <span className="small mut">{left > 0 ? `A snack with about ${Math.min(30, left)} g in the next hour helps you recover.` : 'Still eat a proper meal tonight.'}</span>
+      <a className="btn sm fuel" href={FUEL_URL} style={{ alignSelf: 'flex-start' }}>Log it in Fuel Log</a>
+    </section>
+  );
+}
+
 function Summary({ session, lines, records }: { session: Session; lines: string[]; records: string[] }) {
   const [text, setText] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -540,6 +557,7 @@ function Summary({ session, lines, records }: { session: Session; lines: string[
           ))}
         </section>
       )}
+      <RefuelCard date={session.date} />
       {ai && (
         <section className="card stack">
           <span className="row label">
