@@ -20,7 +20,7 @@ const NEWS: [title: string, body: string, href?: string][] = [
   ['Spreadsheets', 'Download your workouts or sleep as CSV from Backup in Profile.', '#/profile'],
   ['Notes per exercise', 'In a workout, tap Add a note under the cues to remember a setup, like which strap or step. It shows every time and syncs.'],
   ['Warm up first', 'Each workout starts with a 3-minute warm-up matched to the day’s moves. Tap Warmed up to hide it.'],
-  ['30 nights of sleep', 'The sleep chart can show 7, 14 or 30 nights.', '#/sleep'],
+  ['30 nights of sleep', 'The sleep chart can show 7, 14 or 30 nights, as hours slept or as bed and wake times against your targets.', '#/sleep'],
 ];
 
 const seen = () => {

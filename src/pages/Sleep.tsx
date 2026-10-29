@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useStore } from '../lib/store';
 import { addDays, atOn, fmtDate, hhmmOf } from '../lib/dates';
-import { QUALITY, clock12, clockOf, durationMin, hm, idealBedtime, minsOf, nightKey, onTime, samsungNights, sleepStats, wakeOffset } from '../lib/sleep';
+import { QUALITY, clock12, clockOf, nightPos, durationMin, hm, idealBedtime, minsOf, nightKey, onTime, samsungNights, sleepStats, wakeOffset } from '../lib/sleep';
 import { currentAi, tonightPlan, useCoach } from '../lib/coach';
 import { friendlyError, hasAi } from '../lib/ai';
 import { Head, Icon, ProfileLink, Sheet, toast, useGame, useToday } from '../components/ui';
@@ -206,6 +206,8 @@ function Week({ onPick }: { onPick: (d: string) => void }) {
   const goal = useStore((s) => s.settings.sleepGoalH);
   const wake = useStore((s) => s.settings.wakeTarget);
   const [span, setSpanState] = useState(readSpan);
+  const [times, setTimes] = useState(false);
+  const bedtime = useStore((s) => s.settings.bedtime);
   const setSpan = (n: number) => {
     setSpanState(n);
     try {
@@ -231,17 +233,39 @@ function Week({ onPick }: { onPick: (d: string) => void }) {
           </button>
         ))}
       </div>
-      <div className="bars" style={cols}>
-        <div className="goal" style={{ bottom: `${((goal * 60) / max) * 100}%` }} aria-hidden="true" />
-        {days.map((d) => {
-          const m = nights[d] ? durationMin(nights[d]) : null;
-          return (
-            <button key={d} onClick={() => onPick(d)} aria-label={`${fmtDate(d)}: ${m != null ? hm(m) : 'no data'}`} style={{ background: 'none', border: 0, padding: 0, height: '100%', display: 'flex', alignItems: 'flex-end', minWidth: 0 }}>
-              <i className={m != null && m < goal * 60 - 30 ? 'short' : ''} style={{ width: '100%', borderRadius: span > 14 ? 3 : undefined, height: `${m != null ? Math.min(100, (m / max) * 100) : 3}%` }} />
-            </button>
-          );
-        })}
+      <div className="seg" role="group" aria-label="Chart">
+        <button aria-pressed={!times} onClick={() => setTimes(false)}>Hours slept</button>
+        <button aria-pressed={times} onClick={() => setTimes(true)}>Bed and wake times</button>
       </div>
+      {times ? (
+        <div className="bars" style={{ ...cols, height: 180 }} aria-label="Bed and wake times, 8 pm at the top to 8 am at the bottom">
+          {([[bedtime, 'lights out'], [wake, 'wake']] as const).map(([t, l]) => (
+            <div key={l} className="goal" style={{ top: `${(nightPos(atOn(today, t)) / 720) * 100}%`, bottom: 'auto' }} aria-hidden="true" />
+          ))}
+          {days.map((d) => {
+            const n = nights[d];
+            const top = n?.bed ? nightPos(n.bed) : null;
+            const end = n?.wake ? nightPos(n.wake) : null;
+            return (
+              <button key={d} onClick={() => onPick(d)} aria-label={`${fmtDate(d)}: ${n?.bed ? clockOf(n.bed) : '?'} to ${n?.wake ? clockOf(n.wake) : '?'}`} style={{ background: 'none', border: 0, padding: 0, height: '100%', position: 'relative', minWidth: 0 }}>
+                {top != null && end != null && end > top && <i style={{ position: 'absolute', left: 0, right: 0, top: `${(top / 720) * 100}%`, height: `${((end - top) / 720) * 100}%`, borderRadius: span > 14 ? 3 : undefined }} />}
+              </button>
+            );
+          })}
+        </div>
+      ) : (
+      <div className="bars" style={cols}>
+          <div className="goal" style={{ bottom: `${((goal * 60) / max) * 100}%` }} aria-hidden="true" />
+          {days.map((d) => {
+            const m = nights[d] ? durationMin(nights[d]) : null;
+            return (
+              <button key={d} onClick={() => onPick(d)} aria-label={`${fmtDate(d)}: ${m != null ? hm(m) : 'no data'}`} style={{ background: 'none', border: 0, padding: 0, height: '100%', display: 'flex', alignItems: 'flex-end', minWidth: 0 }}>
+                <i className={m != null && m < goal * 60 - 30 ? 'short' : ''} style={{ width: '100%', borderRadius: span > 14 ? 3 : undefined, height: `${m != null ? Math.min(100, (m / max) * 100) : 3}%` }} />
+              </button>
+            );
+          })}
+        </div>
+      )}
       {span <= 14 ? (
         <div className="week" style={cols}>
           {days.map((d) => {
@@ -260,7 +284,7 @@ function Week({ onPick }: { onPick: (d: string) => void }) {
         </div>
       )}
       <p className="small mut">
-        Dashed line: your {goal} h goal.{span <= 14 ? ' Green days: up on time.' : ` Up on time ${st.onTime} of ${st.withWake} mornings.`}
+        {times ? `8 pm at the top, 8 am at the bottom. Dashed lines: lights out ${clock12(bedtime)} and up at ${clock12(wake)}.` : `Dashed line: your ${goal} h goal.`}{span <= 14 ? ' Green days: up on time.' : ` Up on time ${st.onTime} of ${st.withWake} mornings.`}
       </p>
     </section>
   );

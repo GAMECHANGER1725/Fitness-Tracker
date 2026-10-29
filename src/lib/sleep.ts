@@ -47,6 +47,13 @@ export const clockOf = (ms: number) => {
 };
 
 /** Lights-out time that gives `goalH` hours before the wake target. */
+/** Where a clock time sits on a night chart running from `fromHour` (default 8 pm) for 12 h: 0–720 minutes, clamped. */
+export function nightPos(ms: number, fromHour = 20): number {
+  const d = new Date(ms);
+  const m = (((d.getHours() - fromHour) * 60 + d.getMinutes()) % 1440 + 1440) % 1440;
+  return m > 1080 ? 0 : Math.min(720, m);
+}
+
 /** Minutes from `now` until lights out (negative once it's past), within half a day either side. */
 export function toBedtime(now: number, bedtime: string): number {
   const d = new Date(now);

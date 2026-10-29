@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clock12, durationMin, guardBedtime, idealBedtime, mergeImported, nightKey, onTime, readCsv, samsungNights, samsungTime, sleepStats, wakeStreak, toBedtime } from '../src/lib/sleep';
+import { clock12, durationMin, guardBedtime, idealBedtime, mergeImported, nightKey, onTime, readCsv, samsungNights, samsungTime, sleepStats, wakeStreak, nightPos, toBedtime } from '../src/lib/sleep';
 import { addDays, atOn } from '../src/lib/dates';
 import type { Night } from '../src/lib/types';
 
@@ -121,5 +121,16 @@ describe('toBedtime', () => {
     expect(toBedtime(at(22, 20), '22:00')).toBe(-20);
     expect(toBedtime(at(0, 30), '22:00')).toBe(-150);
     expect(toBedtime(at(23, 0), '00:30')).toBe(90);
+  });
+});
+
+describe('nightPos', () => {
+  const at = (h: number, m = 0) => new Date(2026, 9, 29, h, m).getTime();
+  it('places times on an 8 pm to 8 am axis and clamps the rest', () => {
+    expect(nightPos(at(20))).toBe(0);
+    expect(nightPos(at(21, 30))).toBe(90);
+    expect(nightPos(at(6))).toBe(600);
+    expect(nightPos(at(9))).toBe(720);
+    expect(nightPos(at(18))).toBe(0);
   });
 });
