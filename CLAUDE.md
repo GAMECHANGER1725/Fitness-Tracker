@@ -64,7 +64,7 @@ Per-device fields (AI keys and models, `aiFirst`, theme, `active` workout, `seen
 
 **Reminders.** `reminders.ts` handles wind-down, workout and wake nudges via the service worker (`public/sw-extra.js` opens the tab named in `data.path`). They only fire while the app is alive. The on/off flag is per device.
 
-**UI.** A hash router (`useRoute` in `components/ui.tsx`) serves Today, Train (tabs Plan/History/Exercises/Badges), Workout (player), Sleep, Fuel, Coach and Profile, plus `Lock`. Lock uses the same passcode hash as Fuel Log, and an unlocked Fuel Log on the same phone counts. `components/data.ts` has the shared hooks (`useReadiness`, `useFuelData`, `useWeight`).
+**UI.** A hash router (`useRoute` in `components/ui.tsx`) serves Today, Train (tabs Plan/History/Exercises/Badges), Workout (player), Sleep, Fuel, Coach and Profile, plus `Lock`. Lock uses the same passcode hash as Fuel Log, and an unlocked Fuel Log on the same phone counts. `components/data.ts` has the shared hooks (`useReadiness`, `useFuelData`, `useWeight`). `components/WhatsNew.tsx` opens once per device for each `NEWS_ID`; add a line and bump the id when shipping something worth telling.
 
 **Look.** `styles.css` comes from the Claude Design canvas "Fuel Log + Fitness Tracker redesign". The "Shared base" section is identical in Fuel Log's `styles.css`, so keep the two in step. Tokens: mint `--acc` for training, indigo `--sleep*` for sleep, ember `--fuel*` for anything from Fuel Log.
 

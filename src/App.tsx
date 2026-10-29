@@ -14,6 +14,7 @@ import { startSync, useSync } from './lib/sync';
 import { autoDue, checkIn, currentAi, useCoach } from './lib/coach';
 import { hasAi } from './lib/ai';
 import { startReminders } from './lib/reminders';
+import { WhatsNewOnce } from './components/WhatsNew';
 
 export default function App() {
   const theme = useStore((s) => s.settings.theme);
@@ -72,6 +73,7 @@ export default function App() {
       {page}
       {path !== 'workout' && <Nav path={path} />}
       <Badges />
+      {path !== 'workout' && <WhatsNewOnce />}
       <Toast />
     </div>
   );
