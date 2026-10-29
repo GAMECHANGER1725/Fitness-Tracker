@@ -44,6 +44,13 @@ export const clockOf = (ms: number) => {
 };
 
 /** Lights-out time that gives `goalH` hours before the wake target. */
+/** Minutes from `now` until lights out (negative once it's past), within half a day either side. */
+export function toBedtime(now: number, bedtime: string): number {
+  const d = new Date(now);
+  const diff = minsOf(bedtime) - (d.getHours() * 60 + d.getMinutes());
+  return ((((diff + 720) % 1440) + 1440) % 1440) - 720;
+}
+
 export const idealBedtime = (wakeTarget: string, goalH: number) => hhmm(minsOf(wakeTarget) - goalH * 60 - FALL_ASLEEP_MIN);
 
 /** Minutes late (positive) or early (negative) against the wake target, for a night's wake time. */

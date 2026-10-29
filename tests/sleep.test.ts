@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clock12, durationMin, guardBedtime, idealBedtime, mergeImported, nightKey, onTime, readCsv, samsungNights, samsungTime, sleepStats, wakeStreak } from '../src/lib/sleep';
+import { clock12, durationMin, guardBedtime, idealBedtime, mergeImported, nightKey, onTime, readCsv, samsungNights, samsungTime, sleepStats, wakeStreak, toBedtime } from '../src/lib/sleep';
 import { addDays, atOn } from '../src/lib/dates';
 import type { Night } from '../src/lib/types';
 
@@ -111,5 +111,15 @@ describe('Samsung Health import', () => {
     expect(count).toBe(1);
     expect(nights.a.bed).toBe(1);
     expect(nights.b).toMatchObject({ bed: 5, quality: 4, source: 'samsung' });
+  });
+});
+
+describe('toBedtime', () => {
+  const at = (h: number, m = 0) => new Date(2026, 9, 29, h, m).getTime();
+  it('counts down to lights out and past it, across midnight', () => {
+    expect(toBedtime(at(21, 15), '22:00')).toBe(45);
+    expect(toBedtime(at(22, 20), '22:00')).toBe(-20);
+    expect(toBedtime(at(0, 30), '22:00')).toBe(-150);
+    expect(toBedtime(at(23, 0), '00:30')).toBe(90);
   });
 });

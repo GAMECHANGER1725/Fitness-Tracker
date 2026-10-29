@@ -3,11 +3,11 @@ import { useStore } from '../lib/store';
 import { EX, targetText } from '../lib/exercises';
 import { WEEKDAYS, inDeload, minutes, plannedDay, slotsFor } from '../lib/program';
 import { addDays, dateOf, fmtDate, weekStart } from '../lib/dates';
-import { clock12, clockOf, durationMin, hm, onTime, wakeOffset } from '../lib/sleep';
+import { clock12, clockOf, durationMin, hm, nightKey, onTime, toBedtime, wakeOffset } from '../lib/sleep';
 import { BAND_LABEL } from '../lib/readiness';
 import { currentAi, morningBriefing, useCoach } from '../lib/coach';
 import { friendlyError, hasAi } from '../lib/ai';
-import { Head, Icon, ProfileLink, go, toast, useGame, useToday } from '../components/ui';
+import { Head, Icon, ProfileLink, go, toast, useGame, useNow, useToday } from '../components/ui';
 import { useFuelData, useReadiness } from '../components/data';
 import type { PlanDay } from '../lib/types';
 
@@ -36,6 +36,7 @@ export default function Today() {
       <Head over={fmtDate(today, { weekday: 'long', day: 'numeric', month: 'long' })} title={doneToday.length ? 'Done for today' : day ? day.name : 'Rest day'} right={<ProfileLink />} />
       <div className="page">
         <WakeCard />
+        <BedCard />
 
         <section className="card hot stack" style={{ gap: 14 }} aria-label="Readiness">
           <div className="between" style={{ alignItems: 'flex-start' }}>
@@ -142,6 +143,53 @@ function WakeCard() {
         </span>
       </span>
     </a>
+  );
+}
+
+/** Evenings: one tap for "Going to sleep", counting down to lights out; afterwards a quiet line with Undo. */
+function BedCard() {
+  const now = useNow(60_000);
+  const bedtime = useStore((s) => s.settings.bedtime);
+  const wakeTarget = useStore((s) => s.settings.wakeTarget);
+  const key = nightKey(now);
+  const night = useStore((s) => s.nights[key]);
+  const left = toBedtime(now, bedtime);
+  // From 2 h before lights out until 6 h after it.
+  if (left > 120 || left <= -360) return null;
+  const { goingToSleep, deleteNight } = useStore.getState();
+  if (night?.bed != null && night.wake == null) {
+    return (
+      <div className="card tight" style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+        <span style={{ width: 46, height: 46, borderRadius: 16, background: 'var(--sleep-soft)', color: 'var(--sleep)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
+          <Icon name="moon" />
+        </span>
+        <span className="grow">
+          <span className="bold" style={{ display: 'block' }}>Asleep since {clockOf(night.bed)}</span>
+          <span className="small mut">Up at {clock12(wakeTarget)}</span>
+        </span>
+        <button className="btn sm ghost" onClick={() => (deleteNight(key), toast('Undone.'))}>
+          <Icon name="undo" size={16} /> Undo
+        </button>
+      </div>
+    );
+  }
+  return (
+    <button
+      className="card"
+      style={{ display: 'flex', alignItems: 'center', gap: 14, border: 0, textAlign: 'left', color: 'var(--ink)', width: '100%' }}
+      onClick={() => (goingToSleep(), toast(`Sleep well. Up at ${clock12(wakeTarget)}.`))}
+    >
+      <span style={{ width: 52, height: 52, borderRadius: 18, background: 'var(--sleep)', color: 'var(--on-sleep)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
+        <Icon name="moon" size={26} />
+      </span>
+      <span className="grow">
+        <span className="h2" style={{ display: 'block' }}>Going to sleep</span>
+        <span className="small mut">
+          Lights out {clock12(bedtime)} · {left > 0 ? `in ${left < 60 ? `${left} min` : hm(left)}` : left === 0 ? 'now' : `${-left} min past`}
+        </span>
+      </span>
+      <Icon name="right" />
+    </button>
   );
 }
 
