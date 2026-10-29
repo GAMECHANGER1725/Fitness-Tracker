@@ -5,7 +5,7 @@ import { historyOf, newRecords, sessionText } from '../lib/progress';
 import { currentAi, postWorkout, suggestSwap } from '../lib/coach';
 import { friendlyError, hasAi } from '../lib/ai';
 import { beep, holdWakeLock, primeAudio, usePlayer } from '../lib/player';
-import { fmtDate, todayKey } from '../lib/dates';
+import { fmtDate, keyOf } from '../lib/dates';
 import { Icon, Ring, Sheet, Stepper, go, shareText, toast, useNow } from '../components/ui';
 import type { Session, SetLog, Slot } from '../lib/types';
 
@@ -92,12 +92,13 @@ function Player({ onDone }: { onDone: (r: { session: Session; lines: string[]; r
     if (rest > 0) buzzed.current = false;
   }, [rest, a.restEnd]);
 
+  const past = a.date !== keyOf(new Date(a.start));
   const log = () => {
     if (prefs.beep) primeAudio();
     logSet({ exerciseId: slot.exerciseId, reps, loadKg: ex?.loadable ? load : 0, rpe: rpe ?? undefined });
     const nowDone = done.length + 1;
-    // No rest timer when filling in a past day. ponytail: a session running past midnight loses it too.
-    if (a.date === todayKey() && (nowDone < slot.sets || a.idx < a.slots.length - 1)) setRest(Date.now() + slot.restS * 1000);
+    // No rest timer when filling in a past day (a late workout running past midnight keeps it).
+    if (!past && (nowDone < slot.sets || a.idx < a.slots.length - 1)) setRest(Date.now() + slot.restS * 1000);
   };
 
   const total = a.slots.reduce((t, s) => t + s.sets, 0);
@@ -123,7 +124,7 @@ function Player({ onDone }: { onDone: (r: { session: Session; lines: string[]; r
         })}
       </div>
 
-      {a.date !== todayKey() && <p className="small bold acc">Logging for {fmtDate(a.date, { weekday: 'long', day: 'numeric', month: 'long' })}</p>}
+      {past && <p className="small bold acc">Logging for {fmtDate(a.date, { weekday: 'long', day: 'numeric', month: 'long' })}</p>}
       <section className="stack" style={{ gap: 6, marginTop: 8 }}>
         <div className="between" style={{ alignItems: 'flex-start' }}>
           <h1 className="title" style={{ fontSize: 32 }}>{ex?.name ?? slot.exerciseId}</h1>
