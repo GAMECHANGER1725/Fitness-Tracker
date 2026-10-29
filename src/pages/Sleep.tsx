@@ -422,13 +422,18 @@ function NightSheet({ date, onClose }: { date: string; onClose: () => void }) {
   const n = useStore((s) => s.nights[date]);
   const { setNight, deleteNight } = useStore.getState();
   const [d, setD] = useState(date);
-  const [bed, setBed] = useState(n?.bed ? hhmmOf(n.bed) : '21:30');
-  const [wake, setWake] = useState(n?.wake ? hhmmOf(n.wake) : '06:00');
+  const settings = useStore((s) => s.settings);
+  const nights = useStore((s) => s.nights);
+  // New nights start from your targets.
+  const [bed, setBed] = useState(n?.bed ? hhmmOf(n.bed) : settings.bedtime);
+  const [wake, setWake] = useState(n?.wake ? hhmmOf(n.wake) : settings.wakeTarget);
   const [q, setQ] = useState<number | undefined>(n?.quality);
+  // A bedtime after noon belongs to the evening before.
+  const bedAt = atOn(bed >= '12:00' ? addDays(d, -1) : d, bed);
+  const wakeAt = atOn(d, wake);
+  const mins = Math.round((wakeAt - bedAt) / 60_000);
+  const prev = nights[addDays(d, -1)];
   const save = () => {
-    // A bedtime after noon belongs to the evening before.
-    const bedAt = atOn(bed >= '12:00' ? addDays(d, -1) : d, bed);
-    const wakeAt = atOn(d, wake);
     if (wakeAt <= bedAt) return toast('Wake time has to be after bedtime.');
     if (d !== date && n) deleteNight(date);
     setNight(d, { bed: bedAt, wake: wakeAt, quality: q, source: n?.source === 'samsung' && d === date ? 'samsung' : 'manual' });
@@ -451,6 +456,16 @@ function NightSheet({ date, onClose }: { date: string; onClose: () => void }) {
           <span>Woke up</span>
           <input className="input" type="time" value={wake} onChange={(e) => setWake(e.target.value)} />
         </label>
+      </div>
+      <div className="between small">
+        <span className={mins > 0 ? 'bold' : ''} style={{ color: mins > 0 ? 'var(--sleep)' : 'var(--danger)' }}>
+          {mins > 0 ? `${hm(mins)} in bed` : 'Wake time has to be after bedtime'}
+        </span>
+        {prev?.bed && prev.wake && (
+          <button className="chip" style={{ fontSize: 13, minHeight: 34 }} onClick={() => (setBed(hhmmOf(prev.bed!)), setWake(hhmmOf(prev.wake!)))}>
+            Same as the night before
+          </button>
+        )}
       </div>
       <div className="stack" style={{ gap: 6 }}>
         <span className="label">How did you sleep?</span>
