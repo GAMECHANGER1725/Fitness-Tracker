@@ -90,6 +90,7 @@ function Player({ onDone }: { onDone: (r: { session: Session; lines: string[]; r
       navigator.vibrate?.([200, 100, 200]);
       if (prefs.beep) beep();
       setRest(null);
+      if (prefs.auto && allDone && a.idx < a.slots.length - 1) goTo(a.idx + 1);
     }
     if (rest > 0) buzzed.current = false;
   }, [rest, a.restEnd]);

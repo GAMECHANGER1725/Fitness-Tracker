@@ -1,5 +1,5 @@
-// Workout player options, per device (localStorage `fitness-player`, not synced): a beep when rest ends and
-// keeping the screen on during a workout.
+// Workout player options, per device (localStorage `fitness-player`, not synced): a beep when rest ends,
+// keeping the screen on during a workout, and moving on to the next exercise by itself.
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
@@ -7,11 +7,13 @@ import { persist } from 'zustand/middleware';
 interface PlayerPrefs {
   beep: boolean;
   awake: boolean;
-  set: (p: Partial<Pick<PlayerPrefs, 'beep' | 'awake'>>) => void;
+  /** Move to the next exercise when the rest after its last set ends. */
+  auto: boolean;
+  set: (p: Partial<Pick<PlayerPrefs, 'beep' | 'awake' | 'auto'>>) => void;
 }
 
 export const usePlayer = create<PlayerPrefs>()(
-  persist((set) => ({ beep: true, awake: true, set: (p) => set(p) }), { name: 'fitness-player', partialize: ({ beep, awake }) => ({ beep, awake }) }),
+  persist((set) => ({ beep: true, awake: true, auto: false, set: (p) => set(p) }), { name: 'fitness-player', partialize: ({ beep, awake, auto }) => ({ beep, awake, auto }) }),
 );
 
 let ctx: AudioContext | null = null;

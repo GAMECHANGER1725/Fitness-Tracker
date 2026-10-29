@@ -262,7 +262,7 @@ function SyncCard() {
 }
 
 function PlayerPrefs() {
-  const { beep, awake, set } = usePlayer();
+  const { beep, awake, auto, set } = usePlayer();
   return (
     <section className="card stack" style={{ gap: 10 }}>
       <h2 className="h2">During a workout</h2>
@@ -279,6 +279,13 @@ function PlayerPrefs() {
           <span className="small mut">So the timer stays in view</span>
         </span>
         <Switch on={awake} label="Keep the screen on" onChange={(v) => set({ awake: v })} />
+      </div>
+      <div className="row" style={{ justifyContent: 'space-between' }}>
+        <span className="grow">
+          <span className="bold" style={{ display: 'block' }}>Go to the next exercise by itself</span>
+          <span className="small mut">When the rest after the last set ends</span>
+        </span>
+        <Switch on={auto} label="Go to the next exercise by itself" onChange={(v) => set({ auto: v })} />
       </div>
       <p className="small mut">These are for this device only.</p>
     </section>
