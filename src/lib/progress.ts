@@ -262,6 +262,7 @@ export function diffPrograms(a: Program, b: Program): string[] {
     const added = bIds.filter((id) => !aIds.includes(id));
     gone.forEach((id, i) => lines.push(added[i] ? `${db.name}: ${name(id)} → ${name(added[i])}` : `${db.name}: drop ${name(id)}`));
     added.slice(gone.length).forEach((id) => lines.push(`${db.name}: add ${name(id)}`));
+    if (!gone.length && !added.length && aIds.join() !== bIds.join()) lines.push(`${db.name}: new order, ${bIds.map(name).join(', ')}`);
     for (const sb of db.slots) {
       const sa = da.slots.find((s) => s.exerciseId === sb.exerciseId);
       if (!sa) continue;
@@ -269,6 +270,7 @@ export function diffPrograms(a: Program, b: Program): string[] {
       if (sa.sets !== sb.sets) bits.push(`${sa.sets} → ${sb.sets} sets`);
       if (sa.low !== sb.low || sa.high !== sb.high) bits.push(`${sa.low}–${sa.high} → ${sb.low}–${sb.high}`);
       if (sa.loadKg !== sb.loadKg) bits.push(`${sa.loadKg} → ${sb.loadKg} kg`);
+      if (sa.restS !== sb.restS) bits.push(`rest ${sa.restS} → ${sb.restS} s`);
       if (bits.length) lines.push(`${name(sb.exerciseId)}: ${bits.join(', ')}`);
     }
   }

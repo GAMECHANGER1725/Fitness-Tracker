@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_DATA, exportJson, importJson, normalize } from '../src/lib/backup';
-import { DEFAULT_PROGRAM, minutes, plannedDay, slotsFor, weekdayOf } from '../src/lib/program';
+import { DEFAULT_PROGRAM, minutes, moveSlot, plannedDay, slotsFor, weekdayOf } from '../src/lib/program';
 import { EX, EXERCISES, easier, harder } from '../src/lib/exercises';
 import { applySession, deloadDue, diffPrograms, guardProgram, newRecords, progressSlot, records, trendOf, moveSession, weeklySets } from '../src/lib/progress';
 import { readiness } from '../src/lib/readiness';
@@ -103,6 +103,18 @@ describe('records', () => {
     const all = { [a.id]: a, [b.id]: b };
     expect(records(all)['pack-row']).toMatchObject({ loadKg: 8, reps: 10 });
     expect(newRecords(b, all).map((x) => x.exerciseId)).toEqual(['pack-row']);
+  });
+});
+
+describe('moveSlot and diffPrograms', () => {
+  it('reorders a day, stops at the ends, and reports order and rest changes', () => {
+    const d = DEFAULT_PROGRAM.days[0];
+    const moved = moveSlot(DEFAULT_PROGRAM, d.id, 0, 1);
+    expect(moved.days[0].slots.map((s) => s.exerciseId).slice(0, 2)).toEqual([d.slots[1].exerciseId, d.slots[0].exerciseId]);
+    expect(moveSlot(DEFAULT_PROGRAM, d.id, 0, -1)).toEqual(DEFAULT_PROGRAM);
+    expect(diffPrograms(DEFAULT_PROGRAM, moved)[0]).toMatch(/new order/);
+    const rest = { ...DEFAULT_PROGRAM, days: DEFAULT_PROGRAM.days.map((x, i) => (i ? x : { ...x, slots: x.slots.map((s, j) => (j ? s : { ...s, restS: s.restS + 30 })) })) };
+    expect(diffPrograms(DEFAULT_PROGRAM, rest)[0]).toMatch(/rest \d+ → \d+ s/);
   });
 });
 

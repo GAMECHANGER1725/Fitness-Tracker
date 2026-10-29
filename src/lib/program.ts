@@ -62,3 +62,17 @@ export function minutes(slots: Slot[]): number {
   }, 0);
   return Math.round(s / 60 / 5) * 5 || 5;
 }
+
+/** Swaps a slot with its neighbour (dir -1 = earlier, 1 = later); unchanged at either end. */
+export function moveSlot(p: Program, dayId: string, idx: number, dir: -1 | 1): Program {
+  return {
+    ...p,
+    days: p.days.map((d) => {
+      const j = idx + dir;
+      if (d.id !== dayId || j < 0 || j >= d.slots.length) return d;
+      const slots = [...d.slots];
+      [slots[idx], slots[j]] = [slots[j], slots[idx]];
+      return { ...d, slots };
+    }),
+  };
+}

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useStore } from '../lib/store';
 import { EX, EXERCISES, PATTERN_LABEL, targetText, usable } from '../lib/exercises';
-import { WEEKDAYS, minutes } from '../lib/program';
+import { WEEKDAYS, minutes, moveSlot } from '../lib/program';
 import { records, trendOf, weeklySets } from '../lib/progress';
 import { addDays, daysBetween, fmtDate } from '../lib/dates';
 import { Head, Icon, ProfileLink, Sheet, Stepper, go, toast, useGame, useRoute, useToday } from '../components/ui';
@@ -41,6 +41,7 @@ function Plan() {
   const { setProgram, undoProgram, startWorkout } = useStore.getState();
   const ready = useReadiness();
   const [edit, setEdit] = useState<{ day: string; idx: number | null } | null>(null);
+  const [order, setOrder] = useState<string | null>(null);
   const wk = weeklySets(program);
   const last = log.at(-1);
   const save = (p: Program, why: string) => setProgram(p, 'me', why);
@@ -111,6 +112,18 @@ function Plan() {
           <div style={{ marginTop: 6 }}>
             {d.slots.map((s, i) => {
               const e = EX[s.exerciseId];
+              if (order === d.id)
+                return (
+                  <div key={s.exerciseId} className="item" style={{ borderTop: i ? '1px solid var(--line)' : 0 }}>
+                    <span className="grow bold">{e?.name}</span>
+                    <button className="btn sm icon" aria-label={`Move ${e?.name} earlier`} disabled={i === 0} onClick={() => save(moveSlot(program, d.id, i, -1), `Reordered ${d.name}`)}>
+                      <Icon name="up" size={20} stroke={2.5} />
+                    </button>
+                    <button className="btn sm icon" aria-label={`Move ${e?.name} later`} disabled={i === d.slots.length - 1} onClick={() => save(moveSlot(program, d.id, i, 1), `Reordered ${d.name}`)}>
+                      <Icon name="down" size={20} stroke={2.5} />
+                    </button>
+                  </div>
+                );
               return (
                 <button key={s.exerciseId} className="item" style={{ width: '100%', background: 'none', border: 0, borderTop: i ? '1px solid var(--line)' : 0, color: 'var(--ink)', textAlign: 'left' }} onClick={() => setEdit({ day: d.id, idx: i })}>
                   <span className="grow">
@@ -124,9 +137,20 @@ function Plan() {
                 </button>
               );
             })}
-            <button className="btn sm" style={{ margin: '6px 0 10px', background: 'transparent', color: 'var(--acc)', padding: 0 }} onClick={() => setEdit({ day: d.id, idx: null })}>
-              <Icon name="plus" size={18} /> Add exercise
-            </button>
+            <div className="between" style={{ margin: '6px 0 10px' }}>
+              {order === d.id ? (
+                <span className="small mut">Saved as you go. Undo is above.</span>
+              ) : (
+                <button className="btn sm" style={{ background: 'transparent', color: 'var(--acc)', padding: 0 }} onClick={() => setEdit({ day: d.id, idx: null })}>
+                  <Icon name="plus" size={18} /> Add exercise
+                </button>
+              )}
+              {d.slots.length > 1 && (
+                <button className="btn sm" style={{ background: 'transparent', color: 'var(--acc)', padding: 0 }} onClick={() => setOrder(order === d.id ? null : d.id)}>
+                  {order === d.id ? 'Done' : 'Reorder'}
+                </button>
+              )}
+            </div>
           </div>
         </section>
       ))}
