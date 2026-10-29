@@ -16,6 +16,8 @@ const NEWS: [title: string, body: string, href?: string][] = [
   ['Your week at a glance', 'This week on Today now totals workouts, sets and time. Tap a day to see what you did or what’s planned.'],
   ['Personal bests', 'Badges now lists your best set for every move, newest first, with this week’s marked.', '#/train?tab=badges'],
   ['Choose what Today shows', 'Hide Today’s exercises, the Fuel Log card or This week under Look in Profile.', '#/profile'],
+  ['Why this readiness?', 'Tap Readiness on Today to see how sleep, food and recovery add up.'],
+  ['Spreadsheets', 'Download your workouts or sleep as CSV from Backup in Profile.', '#/profile'],
   ['30 nights of sleep', 'The sleep chart can show 7, 14 or 30 nights.', '#/sleep'],
 ];
 

@@ -23,6 +23,7 @@ export default function Today() {
   const planned = plannedDay(program, today);
   const doneToday = Object.values(sessions).filter((s) => s.date === today);
   const [pick, setPick] = useState(false);
+  const [why, setWhy] = useState(false);
   const easy = ready.band === 'easy';
   const hidden = useLayout((l) => l.hidden);
 
@@ -43,12 +44,24 @@ export default function Today() {
 
         <section className="card hot stack" style={{ gap: 14 }} aria-label="Readiness">
           <div className="between" style={{ alignItems: 'flex-start' }}>
-            <div>
-              <span className="small bold" style={{ opacity: 0.75 }}>Readiness</span>
+            <button onClick={() => setWhy(!why)} aria-expanded={why} style={{ background: 'none', border: 0, padding: 0, color: 'inherit', textAlign: 'left' }}>
+              <span className="small bold" style={{ opacity: 0.75 }}>Readiness · {why ? 'hide' : 'why?'}</span>
               <p className="num" style={{ fontSize: 48, lineHeight: 1 }}>{ready.score}</p>
-            </div>
+            </button>
             <span className="pill">{BAND_LABEL[ready.band]}</span>
           </div>
+          {why && (
+            <div className="stack" style={{ gap: 8 }}>
+              {([['Sleep last night', ready.sleep, 40], ['Food yesterday', ready.fuel, 30], ['Recovery from training', ready.load, 30]] as const).map(([l, v, max]) => (
+                <div key={l} className="stack" style={{ gap: 4 }}>
+                  <div className="between small"><span>{l}</span><span className="bold">{v} / {max}</span></div>
+                  <div className="bar" style={{ background: 'color-mix(in srgb, var(--on-acc) 22%, transparent)' }}><i style={{ width: `${(v / max) * 100}%`, background: 'var(--on-acc)' }} /></div>
+                </div>
+              ))}
+              {ready.notes.length > 0 && <p className="small" style={{ opacity: 0.9 }}>{ready.notes.join('. ')}.</p>}
+              <p className="small" style={{ opacity: 0.75 }}>Missing data counts as average. Under 55 plans about a quarter fewer sets.</p>
+            </div>
+          )}
           <Briefing fallback={ready.notes.slice(0, 2).join('. ') + (ready.notes.length ? '.' : '')} />
           {active ? (
             <button className="btn block" onClick={() => go('workout')}>
