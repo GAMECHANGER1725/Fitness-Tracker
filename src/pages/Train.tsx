@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useStore } from '../lib/store';
-import { EX, EXERCISES, PATTERN_LABEL, targetText, usable } from '../lib/exercises';
+import { EX, EXERCISES, PATTERN_LABEL, easier, harder, targetText, usable } from '../lib/exercises';
 import { WEEKDAYS, minutes, moveSlot } from '../lib/program';
 import { records, sessionText, trendOf, weeklySets } from '../lib/progress';
 import { addDays, daysBetween, fmtDate } from '../lib/dates';
@@ -439,6 +439,7 @@ function Moves() {
                     <>
                       <Trend ex={e} sessions={sessions} />
                       {notes[e.id] && <p className="small"><span className="bold">Your note:</span> {notes[e.id]}</p>}
+                      <Ladder id={e.id} onPick={setOpen} />
                       <ul className="small mut" style={{ margin: 0, paddingLeft: 18 }}>
                         {e.cues.map((c) => <li key={c}>{c}</li>)}
                       </ul>
@@ -450,6 +451,32 @@ function Moves() {
         </section>
       ))}
     </>
+  );
+}
+
+/** Easier and harder steps on the same ladder (tap to open them), and which plan days use this move. */
+function Ladder({ id, onPick }: { id: string; onPick: (id: string) => void }) {
+  const days = useStore((s) => s.program.days);
+  const hasGrip = useStore((s) => s.profile.hasGrip);
+  const down = easier(id);
+  const up = harder(id);
+  const inPlan = days.filter((d) => d.slots.some((x) => x.exerciseId === id)).map((d) => d.name);
+  const step = (e: Exercise | null, label: string) =>
+    e && usable(e, hasGrip) ? (
+      <button className="chip" style={{ fontSize: 13, minHeight: 36 }} onClick={() => onPick(e.id)}>
+        {label}: {e.name}
+      </button>
+    ) : null;
+  return (
+    <div className="stack" style={{ gap: 6 }}>
+      {(down || up) && (
+        <div className="row" style={{ flexWrap: 'wrap', gap: 6 }}>
+          {step(down, 'Easier')}
+          {step(up, 'Harder')}
+        </div>
+      )}
+      <p className="small mut">{inPlan.length ? `In your plan: ${inPlan.join(', ')}` : 'Not in your plan. Add it from Plan, or swap it in during a workout.'}</p>
+    </div>
   );
 }
 
