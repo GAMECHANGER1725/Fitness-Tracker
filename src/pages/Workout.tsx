@@ -48,13 +48,15 @@ function Player({ onDone }: { onDone: (r: { session: Session; lines: string[]; r
   const [swap, setSwap] = useState(false);
   const [finish, setFinish] = useState(false);
   const [fix, setFix] = useState<SetLog | null>(null);
-  const allDone = done.length >= slot.sets;
+  const [extra, setExtra] = useState(false);
+  const allDone = done.length >= slot.sets && !extra;
 
   // New exercise or new set: start from last time's numbers.
   useEffect(() => {
     setReps(suggest);
     setLoad(slot.loadKg);
     setRpe(null);
+    setExtra(false);
   }, [a.idx, slot.exerciseId, done.length]);
 
   const prefs = usePlayer();
@@ -110,7 +112,7 @@ function Player({ onDone }: { onDone: (r: { session: Session; lines: string[]; r
           </button>
         </div>
         <p className="mut">
-          {slot.sets} sets × {targetText(ex, slot.low, slot.high)}
+          {slot.sets} set{slot.sets === 1 ? '' : 's'} × {targetText(ex, slot.low, slot.high)}
           {ex?.loadable && slot.loadKg ? ` · ${slot.loadKg} kg in the backpack` : ''}
           {last ? ` · last time ${last.map((x) => x.reps).join(', ')}` : ''}
         </p>
@@ -134,7 +136,7 @@ function Player({ onDone }: { onDone: (r: { session: Session; lines: string[]; r
       ) : null}
 
       <section className="stack" style={{ gap: 8 }} aria-label="Sets">
-        {Array.from({ length: Math.max(slot.sets, done.length) }, (_, i) => {
+        {Array.from({ length: Math.max(slot.sets, done.length + (extra ? 1 : 0)) }, (_, i) => {
           const x = done[i];
           return (
             <div
@@ -179,24 +181,35 @@ function Player({ onDone }: { onDone: (r: { session: Session; lines: string[]; r
             </div>
           </div>
           <div className="row">
-            {done.length > 0 && (
+            {extra ? (
+              <button className="btn icon" aria-label="Don't add a set" onClick={() => setExtra(false)}>
+                <Icon name="close" size={20} />
+              </button>
+            ) : done.length > 0 && (
               <button className="btn icon" aria-label="Undo last set" onClick={undoSet}>
                 <Icon name="undo" size={20} />
               </button>
             )}
             <button className="btn primary block" style={{ flex: 1 }} onClick={log}>
-              Log set {done.length + 1}
+              Log {extra ? 'extra ' : ''}set {done.length + 1}
             </button>
           </div>
         </section>
-      ) : a.idx < a.slots.length - 1 ? (
-        <button className="btn primary block" onClick={() => goTo(a.idx + 1)}>
-          Next: {EX[a.slots[a.idx + 1].exerciseId]?.name} <Icon name="right" size={20} />
-        </button>
       ) : (
-        <button className="btn primary block" onClick={() => setFinish(true)}>
-          <Icon name="check" size={20} stroke={3} /> Finish workout
-        </button>
+        <div className="row">
+          <button className="btn" onClick={() => setExtra(true)} aria-label="Add a set">
+            <Icon name="plus" size={18} /> Set
+          </button>
+          {a.idx < a.slots.length - 1 ? (
+            <button className="btn primary block" style={{ flex: 1 }} onClick={() => goTo(a.idx + 1)}>
+              Next: {EX[a.slots[a.idx + 1].exerciseId]?.name} <Icon name="right" size={20} />
+            </button>
+          ) : (
+            <button className="btn primary block" style={{ flex: 1 }} onClick={() => setFinish(true)}>
+              <Icon name="check" size={20} stroke={3} /> Finish workout
+            </button>
+          )}
+        </div>
       )}
 
       <div className="row" style={{ justifyContent: 'space-between' }}>
