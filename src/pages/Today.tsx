@@ -6,6 +6,7 @@ import { addDays, dateOf, fmtDate, weekStart } from '../lib/dates';
 import { QUALITY, clock12, clockOf, durationMin, hm, nightKey, onTime, toBedtime, wakeOffset } from '../lib/sleep';
 import { BAND_LABEL } from '../lib/readiness';
 import { weekSummary } from '../lib/game';
+import { useLayout } from '../lib/layout';
 import { currentAi, morningBriefing, useCoach } from '../lib/coach';
 import { friendlyError, hasAi } from '../lib/ai';
 import { Head, Icon, ProfileLink, go, toast, useGame, useNow, useToday } from '../components/ui';
@@ -23,6 +24,7 @@ export default function Today() {
   const doneToday = Object.values(sessions).filter((s) => s.date === today);
   const [pick, setPick] = useState(false);
   const easy = ready.band === 'easy';
+  const hidden = useLayout((l) => l.hidden);
 
   const start = (day: PlanDay) => {
     startWorkout(day, easy);
@@ -72,7 +74,7 @@ export default function Today() {
           )}
         </section>
 
-        {day && !doneToday.length && (
+        {day && !doneToday.length && !hidden.includes('exercises') && (
           <section className="card" style={{ padding: '6px 18px' }} aria-label="Today's exercises">
             {inDeload(program, today) && <p className="small mut" style={{ paddingTop: 12 }}>Lighter week: fewer sets so your body can catch up.</p>}
             {slots.map((s) => {
@@ -90,8 +92,13 @@ export default function Today() {
           </section>
         )}
 
-        <FuelStrip />
-        <WeekStrip />
+        {!hidden.includes('fuel') && <FuelStrip />}
+        {!hidden.includes('week') && <WeekStrip />}
+        {hidden.length > 0 && (
+          <a href="#/profile" className="small mut" style={{ textAlign: 'center' }}>
+            {hidden.length} card{hidden.length === 1 ? '' : 's'} hidden · change in Profile
+          </a>
+        )}
       </div>
     </main>
   );

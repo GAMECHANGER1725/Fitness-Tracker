@@ -7,6 +7,7 @@ import { currentAi } from '../lib/coach';
 import { exportJson, importJson } from '../lib/backup';
 import { remindersOn, remindersSupported, setReminders } from '../lib/reminders';
 import { usePlayer } from '../lib/player';
+import { TODAY_CARDS, useLayout } from '../lib/layout';
 import { TOKEN_URL, connect, disconnect, fuelLogToken, syncNow, useSync } from '../lib/sync';
 import { clock12, idealBedtime } from '../lib/sleep';
 import { todayKey } from '../lib/dates';
@@ -309,6 +310,7 @@ function Reminders() {
 function Look() {
   const theme = useStore((s) => s.settings.theme);
   const set = useStore((s) => s.setSettings);
+  const { hidden, toggle } = useLayout();
   return (
     <section className="card stack" style={{ gap: 10 }}>
       <h2 className="h2">Look</h2>
@@ -319,6 +321,14 @@ function Look() {
           </button>
         ))}
       </div>
+      <span className="label" style={{ marginTop: 6 }}>Show on Today</span>
+      {TODAY_CARDS.map(([id, name]) => (
+        <div key={id} className="row" style={{ justifyContent: 'space-between' }}>
+          <span className="bold">{name}</span>
+          <Switch on={!hidden.includes(id)} label={`Show ${name} on Today`} onChange={() => toggle(id)} />
+        </div>
+      ))}
+      <p className="small mut">Readiness and the sleep cards always show. These are for this device only.</p>
     </section>
   );
 }
