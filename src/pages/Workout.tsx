@@ -48,6 +48,7 @@ function Player({ onDone }: { onDone: (r: { session: Session; lines: string[]; r
   const [swap, setSwap] = useState(false);
   const [finish, setFinish] = useState(false);
   const [fix, setFix] = useState<SetLog | null>(null);
+  const [list, setList] = useState(false);
   const [extra, setExtra] = useState(false);
   const allDone = done.length >= slot.sets && !extra;
 
@@ -90,9 +91,9 @@ function Player({ onDone }: { onDone: (r: { session: Session; lines: string[]; r
         <button className="btn icon" aria-label="Stop workout" onClick={() => confirm('Stop this workout without saving?') && (cancelWorkout(), go('today'))}>
           <Icon name="close" />
         </button>
-        <span className="label">
-          {a.name} · {a.idx + 1} of {a.slots.length} · {elapsed} min
-        </span>
+        <button className="label" style={{ background: 'none', border: 0, padding: '8px 4px', color: 'inherit', display: 'flex', alignItems: 'center', gap: 4 }} onClick={() => setList(true)} aria-label="All exercises in this workout">
+          {a.name} · {a.idx + 1} of {a.slots.length} · {elapsed} min <Icon name="right" size={14} />
+        </button>
         <button className="btn sm" onClick={() => setFinish(true)} disabled={!a.sets.length}>
           Finish
         </button>
@@ -126,7 +127,7 @@ function Player({ onDone }: { onDone: (r: { session: Session; lines: string[]; r
           <span className="label">Rest</span>
           <Ring size={176} width={10} frac={rest / slot.restS}>
             <span className="timer">{Math.floor(rest / 60)}:{String(rest % 60).padStart(2, '0')}</span>
-            <span className="small mut">{allDone ? 'next exercise' : `next: set ${done.length + 1}`}</span>
+            <span className="small mut" style={{ maxWidth: 120, textAlign: 'center', lineHeight: 1.25 }}>{allDone ? (a.idx < a.slots.length - 1 ? `next: ${EX[a.slots[a.idx + 1].exerciseId]?.name ?? 'next exercise'}` : 'last one done') : `next: set ${done.length + 1}`}</span>
           </Ring>
           <div className="row">
             <button className="btn sm" onClick={() => setRest((a.restEnd ?? Date.now()) + 30_000)}>+30 s</button>
@@ -222,6 +223,25 @@ function Player({ onDone }: { onDone: (r: { session: Session; lines: string[]; r
         </button>
       </div>
 
+      {list && (
+        <Sheet onClose={() => setList(false)} label="Exercises">
+          <h2 className="h2">{a.name}</h2>
+          <div className="stack" style={{ gap: 6 }}>
+            {a.slots.map((s, i) => {
+              const e = EX[s.exerciseId];
+              const n = a.sets.filter((x) => x.exerciseId === s.exerciseId).length;
+              return (
+                <button key={i} className={`setrow ${n >= s.sets ? 'done' : i === a.idx ? 'next' : ''}`} style={{ border: 0, color: 'var(--ink)', textAlign: 'left', width: '100%' }} onClick={() => (goTo(i), setList(false))}>
+                  <span className={`dot ${n >= s.sets ? 'on' : ''}`}>{n >= s.sets && <Icon name="check" size={14} stroke={3} />}</span>
+                  <span className="grow bold">{e?.name ?? s.exerciseId}</span>
+                  <span className="small mut">{n} of {s.sets}</span>
+                </button>
+              );
+            })}
+          </div>
+          <p className="small mut">Tap one to jump to it, in any order.</p>
+        </Sheet>
+      )}
       {fix && <FixSetSheet set={fix} loadable={!!ex?.loadable} secs={ex?.unit === 'secs'} onClose={() => setFix(null)} />}
       {swap && <SwapSheet slot={slot} onClose={() => setSwap(false)} />}
       {finish && (
