@@ -256,7 +256,11 @@ function History() {
   const del = useStore((s) => s.deleteSession);
   const [open, setOpen] = useState<string | null>(null);
   const [edit, setEdit] = useState<Session | null>(null);
-  const list = Object.values(sessions).sort((a, b) => b.start - a.start);
+  const [only, setOnly] = useState<string | null>(null);
+  const names = [...new Set(Object.values(sessions).map((x) => x.name))].sort();
+  const list = Object.values(sessions)
+    .filter((x) => !only || x.name === only)
+    .sort((a, b) => b.start - a.start);
   const [past, setPast] = useState(false);
   const add = (
     <button className="btn block" onClick={() => setPast(true)}>
@@ -276,6 +280,14 @@ function History() {
     <>
       {add}
       {sheet}
+      {names.length > 1 && (
+        <div className="row" style={{ flexWrap: 'wrap', gap: 6 }} role="group" aria-label="Show workouts">
+          <button className="chip" aria-pressed={!only} onClick={() => setOnly(null)}>All</button>
+          {names.map((n) => (
+            <button key={n} className="chip" aria-pressed={only === n} onClick={() => setOnly(only === n ? null : n)}>{n}</button>
+          ))}
+        </div>
+      )}
       {list.map((s) => {
         const by = new Map<string, typeof s.sets>();
         for (const x of s.sets) by.set(x.exerciseId, [...(by.get(x.exerciseId) ?? []), x]);
