@@ -81,7 +81,8 @@ export const useStore = create<Store>()(
             return null;
           }
           const now = Date.now();
-          const session: Session = { id: uid(), date: a.date, dayId: a.dayId, name: a.name, start: a.start, end: now, sets: a.sets, feel, note: note?.trim() || undefined, upd: now };
+          // A workout logged for an earlier day is moved there, keeping its clock times, so it sorts in its place.
+          const session: Session = moveSession({ id: uid(), date: keyOf(new Date(a.start)), dayId: a.dayId, name: a.name, start: a.start, end: now, sets: a.sets, feel, note: note?.trim() || undefined, upd: now }, a.date);
           const { program, lines } = dayById(s.program, a.dayId) ? applySession(s.program, session, s.sessions, s.profile) : { program: s.program, lines: [] };
           set({
             active: null,

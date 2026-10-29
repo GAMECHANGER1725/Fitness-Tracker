@@ -3,7 +3,7 @@ import { useStore } from '../lib/store';
 import { EX, EXERCISES, PATTERN_LABEL, targetText, usable } from '../lib/exercises';
 import { WEEKDAYS, minutes } from '../lib/program';
 import { records, trendOf, weeklySets } from '../lib/progress';
-import { daysBetween, fmtDate } from '../lib/dates';
+import { addDays, daysBetween, fmtDate } from '../lib/dates';
 import { Head, Icon, ProfileLink, Sheet, Stepper, go, toast, useGame, useRoute, useToday } from '../components/ui';
 import { useReadiness } from '../components/data';
 import type { Exercise, Pattern, PlanDay, Program, Session, Slot } from '../lib/types';
@@ -233,9 +233,25 @@ function History() {
   const [open, setOpen] = useState<string | null>(null);
   const [edit, setEdit] = useState<Session | null>(null);
   const list = Object.values(sessions).sort((a, b) => b.start - a.start);
-  if (!list.length) return <p className="empty">No workouts yet. Your finished workouts show up here.</p>;
+  const [past, setPast] = useState(false);
+  const add = (
+    <button className="btn block" onClick={() => setPast(true)}>
+      <Icon name="plus" size={18} /> Log a workout I already did
+    </button>
+  );
+  const sheet = past && <PastSheet onClose={() => setPast(false)} />;
+  if (!list.length)
+    return (
+      <>
+        <p className="empty">No workouts yet. Your finished workouts show up here.</p>
+        {add}
+        {sheet}
+      </>
+    );
   return (
     <>
+      {add}
+      {sheet}
       {list.map((s) => {
         const by = new Map<string, typeof s.sets>();
         for (const x of s.sets) by.set(x.exerciseId, [...(by.get(x.exerciseId) ?? []), x]);
@@ -284,6 +300,48 @@ function History() {
 }
 
 const FEEL = ['Rough', 'Meh', 'OK', 'Good', 'Great'];
+
+/** Pick a plan day and the day you did it, then fill in the sets in the player as usual. */
+function PastSheet({ onClose }: { onClose: () => void }) {
+  const today = useToday();
+  const days = useStore((s) => s.program.days);
+  const active = useStore((s) => s.active);
+  const startWorkout = useStore((s) => s.startWorkout);
+  const [date, setDate] = useState(addDays(today, -1));
+  const [dayId, setDayId] = useState(days[0]?.id ?? '');
+  const day = days.find((d) => d.id === dayId);
+  return (
+    <Sheet onClose={onClose} label="Log a past workout">
+      <h2 className="h2">Log a workout I already did</h2>
+      <label className="field">
+        <span>Day</span>
+        <input className="input" type="date" value={date} max={today} onChange={(e) => e.target.value && setDate(e.target.value)} />
+      </label>
+      <div className="stack" style={{ gap: 6 }}>
+        <span className="label">Which workout?</span>
+        <div className="row" style={{ flexWrap: 'wrap' }}>
+          {days.map((d) => (
+            <button key={d.id} className="chip" aria-pressed={dayId === d.id} onClick={() => setDayId(d.id)}>
+              {d.name}
+            </button>
+          ))}
+        </div>
+      </div>
+      <p className="small mut">You’ll enter the sets in the workout screen (no rest timers). It’s saved on the day you picked.</p>
+      {active && <p className="small" style={{ color: 'var(--danger)' }}>Finish or stop the workout in progress first.</p>}
+      <button
+        className="btn primary block"
+        disabled={!day || !!active}
+        onClick={() => {
+          startWorkout(day!, false, date);
+          go('workout');
+        }}
+      >
+        Enter the sets
+      </button>
+    </Sheet>
+  );
+}
 
 function EditSessionSheet({ session, onClose }: { session: Session; onClose: () => void }) {
   const today = useToday();
