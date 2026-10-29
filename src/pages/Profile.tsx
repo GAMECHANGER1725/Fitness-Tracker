@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useStore } from '../lib/store';
 import { useAuth } from '../lib/auth';
 import { AI_MODELS, GEMINI_MODELS, PROVIDER_NAME, friendlyError, hasAi, testKey, type Provider } from '../lib/ai';
@@ -14,6 +14,19 @@ import { todayKey } from '../lib/dates';
 import { Head, Icon, Stepper, Switch, go, toast } from '../components/ui';
 import { useWeight } from '../components/data';
 
+// Profile's cards in order, with the short names used by the jump chips at the top.
+const SECTIONS: [id: string, label: string, card: ReactNode][] = [
+  ['you', 'You', <Me />],
+  ['times', 'Times', <SleepGoals />],
+  ['coach', 'AI coach', <AiCard />],
+  ['sync', 'Sync', <SyncCard />],
+  ['wind', 'Wind-down', <WindDownEdit />],
+  ['workout', 'Workout', <PlayerPrefs />],
+  ['reminders', 'Reminders', <Reminders />],
+  ['look', 'Look', <Look />],
+  ['backup', 'Backup', <Backup />],
+];
+
 export default function ProfilePage() {
   return (
     <main>
@@ -27,15 +40,18 @@ export default function ProfilePage() {
         }
       />
       <div className="page">
-        <Me />
-        <SleepGoals />
-        <AiCard />
-        <SyncCard />
-        <WindDownEdit />
-        <PlayerPrefs />
-        <Reminders />
-        <Look />
-        <Backup />
+        <nav className="row" style={{ flexWrap: 'wrap', gap: 6 }} aria-label="Settings sections">
+          {SECTIONS.map(([id, label]) => (
+            <button key={id} className="chip" style={{ fontSize: 13, minHeight: 34 }} onClick={() => document.getElementById(`set-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>
+              {label}
+            </button>
+          ))}
+        </nav>
+        {SECTIONS.map(([id, , card]) => (
+          <div key={id} id={`set-${id}`} style={{ scrollMarginTop: 12 }}>
+            {card}
+          </div>
+        ))}
         <button className="btn block ghost" onClick={() => useAuth.getState().lock()}>
           Log out
         </button>
