@@ -133,26 +133,38 @@ export function Switch({ on, onChange, label }: { on: boolean; onChange: (v: boo
 
 // ----- Toast ---------------------------------------------------------------------
 
-export const useToast = create<{ msg: string | null; n: number; show: (msg: string) => void }>((set) => ({
+interface ToastAction {
+  label: string;
+  run: () => void;
+}
+
+export const useToast = create<{ msg: string | null; action: ToastAction | null; n: number; show: (msg: string, action?: ToastAction) => void }>((set) => ({
   msg: null,
+  action: null,
   n: 0,
-  show: (msg) => set((s) => ({ msg, n: s.n + 1 })),
+  show: (msg, action) => set((s) => ({ msg, action: action ?? null, n: s.n + 1 })),
 }));
-export const toast = (msg: string) => useToast.getState().show(msg);
+/** A short message; with `action` (like Undo) it stays a little longer and shows a button. */
+export const toast = (msg: string, action?: ToastAction) => useToast.getState().show(msg, action);
 
 export function Toast() {
-  const { msg, n } = useToast();
+  const { msg, action, n } = useToast();
   const [shown, setShown] = useState(false);
   useEffect(() => {
     if (!msg) return;
     setShown(true);
-    const t = setTimeout(() => setShown(false), 2600);
+    const t = setTimeout(() => setShown(false), action ? 6000 : 2600);
     return () => clearTimeout(t);
   }, [msg, n]);
   if (!shown || !msg) return null;
   return (
     <div className="toast" role="status" aria-live="polite" key={n}>
       {msg}
+      {action && (
+        <button onClick={() => (action.run(), setShown(false))} style={{ background: 'none', border: 0, padding: 0, color: 'inherit', font: 'inherit', fontWeight: 800, textDecoration: 'underline' }}>
+          {action.label}
+        </button>
+      )}
     </div>
   );
 }

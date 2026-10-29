@@ -324,7 +324,7 @@ function History() {
                   <button className="btn sm" onClick={() => shareText(sessionText(s, fmtDate(s.date, { weekday: 'short', day: 'numeric', month: 'short' })))}>
                     <Icon name="out" size={16} /> Share
                   </button>
-                  <button className="btn sm danger" onClick={() => confirm('Delete this workout?') && del(s.id)}>
+                  <button className="btn sm danger" onClick={() => (del(s.id), toast(`${s.name} deleted`, { label: 'Undo', run: () => useStore.getState().restoreSession(s) }))}>
                     <Icon name="trash" size={16} /> Delete
                   </button>
                 </div>

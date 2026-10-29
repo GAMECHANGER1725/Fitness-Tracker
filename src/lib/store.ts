@@ -30,6 +30,8 @@ interface Actions {
   /** Saves the session and runs progression. Returns the session and what progression changed. */
   finishWorkout: (feel?: number, note?: string) => { session: Session; lines: string[] } | null;
   deleteSession: (id: string) => void;
+  /** Bring back a deleted session (under a new id, since the old one is in `tomb` and may have synced). */
+  restoreSession: (s: Session) => void;
   /** Change a saved session's day, feel or note. */
   editSession: (id: string, patch: { date?: string; feel?: number; note?: string }) => void;
   /** "Going to sleep" now (or at `at`). */
@@ -95,6 +97,12 @@ export const useStore = create<Store>()(
           });
           return { session, lines };
         },
+        restoreSession: (old) =>
+          set((s) => {
+            const id = uid();
+            const now = Date.now();
+            return { sessions: { ...s.sessions, [id]: { ...old, id, upd: now, sets: old.sets.map((x) => ({ ...x, id: uid() })) } } };
+          }),
         editSession: (id, { date, ...rest }) =>
           set((s) => {
             const cur = s.sessions[id];
