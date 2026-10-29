@@ -4,7 +4,7 @@ import { useAuth } from '../lib/auth';
 import { AI_MODELS, GEMINI_MODELS, PROVIDER_NAME, friendlyError, hasAi, testKey, type Provider } from '../lib/ai';
 import { fuelAi, FUEL_STORE } from '../lib/fuel';
 import { currentAi } from '../lib/coach';
-import { exportJson, importJson } from '../lib/backup';
+import { exportCsv, exportJson, importJson } from '../lib/backup';
 import { remindersOn, remindersSupported, setReminders } from '../lib/reminders';
 import { usePlayer } from '../lib/player';
 import { TODAY_CARDS, useLayout } from '../lib/layout';
@@ -375,6 +375,24 @@ function Backup() {
             }}
           />
         </label>
+      </div>
+      <span className="label">For a spreadsheet (CSV)</span>
+      <div className="grid2">
+        {(['workouts', 'sleep'] as const).map((name) => (
+          <button
+            key={name}
+            className="btn sm"
+            onClick={() => {
+              const a = document.createElement('a');
+              a.href = URL.createObjectURL(new Blob([exportCsv(useStore.getState())[name]], { type: 'text/csv' }));
+              a.download = `fitness-${name}-${todayKey()}.csv`;
+              a.click();
+              URL.revokeObjectURL(a.href);
+            }}
+          >
+            <Icon name="out" size={16} /> {name === 'workouts' ? 'Workouts' : 'Sleep'}
+          </button>
+        ))}
       </div>
       <button className="btn danger" onClick={() => confirm('Delete all workouts, nights and plan changes? This syncs to your other devices.') && (reset(), toast('Reset'))}>
         Reset everything

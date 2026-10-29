@@ -5,7 +5,8 @@ import type { ActiveWorkout, AppData, Night, PlanDay, Program, ProgramChange, Se
 import { DEFAULT_GEMINI_MODEL, DEFAULT_MODEL } from './ai';
 import { DEFAULT_PROGRAM } from './program';
 import { EX } from './exercises';
-import { isKey } from './dates';
+import { hhmmOf, isKey } from './dates';
+import { durationMin } from './sleep';
 
 // Personal app: starts set up for its one user (same stats as Fuel Log).
 export const DEFAULT_DATA: AppData = {
@@ -199,4 +200,29 @@ export function importJson(text: string): AppData {
   }
   if (p.app !== 'fitness-tracker' || !p.data) throw new Error('That file isn’t a Fitness Tracker backup.');
   return normalize(p.data);
+}
+
+const csvCell = (v: string | number | undefined) => {
+  const t = v == null ? '' : String(v);
+  return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;
+};
+
+/** Workouts and nights as two CSV tables (one row per set, one per night), for a spreadsheet. Times are local. */
+export function exportCsv(d: Pick<AppData, 'sessions' | 'nights'>): { workouts: string; sleep: string } {
+  const hhmm = (ms: number | null) => (ms == null ? '' : hhmmOf(ms));
+  const rows = [['date', 'workout', 'exercise', 'set', 'reps_or_secs', 'backpack_kg', 'effort_rpe', 'feel_1_5', 'note']];
+  for (const s of Object.values(d.sessions).sort((a, b) => a.start - b.start)) {
+    const n = new Map<string, number>();
+    for (const x of s.sets) {
+      n.set(x.exerciseId, (n.get(x.exerciseId) ?? 0) + 1);
+      rows.push([s.date, s.name, EX[x.exerciseId]?.name ?? x.exerciseId, String(n.get(x.exerciseId)), String(x.reps), String(x.loadKg), x.rpe != null ? String(x.rpe) : '', s.feel != null ? String(s.feel) : '', s.note ?? '']);
+    }
+  }
+  const nights = [['date_woke', 'bed', 'wake', 'minutes', 'quality_1_5', 'source']];
+  for (const x of Object.values(d.nights).sort((a, b) => (a.date < b.date ? -1 : 1))) {
+    const m = durationMin(x);
+    nights.push([x.date, hhmm(x.bed), hhmm(x.wake), m != null ? String(Math.round(m)) : '', x.quality != null ? String(x.quality) : '', x.source]);
+  }
+  const out = (t: string[][]) => t.map((r) => r.map(csvCell).join(',')).join('\n') + '\n';
+  return { workouts: out(rows), sleep: out(nights) };
 }
