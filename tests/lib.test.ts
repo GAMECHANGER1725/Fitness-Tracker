@@ -148,6 +148,8 @@ describe('moveSlot and diffPrograms', () => {
     expect(diffPrograms(DEFAULT_PROGRAM, moved)[0]).toMatch(/new order/);
     const rest = { ...DEFAULT_PROGRAM, days: DEFAULT_PROGRAM.days.map((x, i) => (i ? x : { ...x, slots: x.slots.map((s, j) => (j ? s : { ...s, restS: s.restS + 30 })) })) };
     expect(diffPrograms(DEFAULT_PROGRAM, rest)[0]).toMatch(/rest \d+ → \d+ s/);
+    const named = { ...DEFAULT_PROGRAM, days: DEFAULT_PROGRAM.days.map((x, i) => (i ? x : { ...x, name: 'Push and pull' })) };
+    expect(diffPrograms(DEFAULT_PROGRAM, named)).toEqual([`${DEFAULT_PROGRAM.days[0].name} renamed to Push and pull`]);
   });
 });
 

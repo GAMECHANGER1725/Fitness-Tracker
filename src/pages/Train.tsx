@@ -42,6 +42,7 @@ function Plan() {
   const ready = useReadiness();
   const [edit, setEdit] = useState<{ day: string; idx: number | null } | null>(null);
   const [order, setOrder] = useState<string | null>(null);
+  const [rename, setRename] = useState<string | null>(null);
   const wk = weeklySets(program);
   const last = log.at(-1);
   const save = (p: Program, why: string) => setProgram(p, 'me', why);
@@ -94,7 +95,9 @@ function Plan() {
         <section key={d.id} className="card" style={{ padding: '16px 18px 8px' }} aria-label={d.name}>
           <div className="between" style={{ alignItems: 'center' }}>
             <div>
-              <h2 className="h2">{d.name}</h2>
+              <button className="h2" onClick={() => setRename(d.id)} aria-label={`Rename ${d.name}`} style={{ background: 'none', border: 0, padding: 0, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                {d.name} <Icon name="pencil" size={16} />
+              </button>
               <span className="small mut">
                 {program.week.map((x, i) => (x === d.id ? WEEKDAYS[i] : null)).filter(Boolean).join(', ') || 'Not scheduled'} · {minutes(d.slots)} min
               </span>
@@ -154,8 +157,37 @@ function Plan() {
           </div>
         </section>
       ))}
+      {rename && <RenameSheet program={program} dayId={rename} onClose={() => setRename(null)} onSave={save} />}
       {edit && <SlotSheet program={program} dayId={edit.day} idx={edit.idx} onClose={() => setEdit(null)} onSave={save} />}
     </>
+  );
+}
+
+function RenameSheet({ program, dayId, onClose, onSave }: { program: Program; dayId: string; onClose: () => void; onSave: (p: Program, why: string) => void }) {
+  const day = program.days.find((d) => d.id === dayId)!;
+  const [name, setName] = useState(day.name);
+  const clean = name.trim().slice(0, 30);
+  const taken = program.days.some((d) => d.id !== dayId && d.name.toLowerCase() === clean.toLowerCase());
+  return (
+    <Sheet onClose={onClose} label="Rename workout">
+      <h2 className="h2">Rename {day.name}</h2>
+      <label className="field">
+        <span>Name</span>
+        <input className="input" value={name} maxLength={30} onChange={(e) => setName(e.target.value)} placeholder="Push day, Legs and core…" autoFocus />
+      </label>
+      {taken && <p className="small" style={{ color: 'var(--danger)' }}>Another workout already has that name.</p>}
+      <button
+        className="btn primary block"
+        disabled={!clean || taken || clean === day.name}
+        onClick={() => {
+          onSave({ ...program, days: program.days.map((d) => (d.id === dayId ? { ...d, name: clean } : d)) }, `Renamed ${day.name}`);
+          onClose();
+        }}
+      >
+        Save
+      </button>
+      <p className="small mut">Past workouts keep the name they had on the day.</p>
+    </Sheet>
   );
 }
 

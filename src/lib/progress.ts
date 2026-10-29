@@ -256,6 +256,7 @@ export function diffPrograms(a: Program, b: Program): string[] {
   for (const db of b.days) {
     const da = a.days.find((d) => d.id === db.id);
     if (!da) continue;
+    if (da.name !== db.name) lines.push(`${da.name} renamed to ${db.name}`);
     const aIds = da.slots.map((s) => s.exerciseId);
     const bIds = db.slots.map((s) => s.exerciseId);
     const gone = aIds.filter((id) => !bIds.includes(id));
