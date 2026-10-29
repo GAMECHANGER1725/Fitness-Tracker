@@ -189,42 +189,79 @@ const minsToHhmm = (m: number) => {
   return `${String(Math.floor(x / 60)).padStart(2, '0')}:${String(x % 60).padStart(2, '0')}`;
 };
 
+const SPANS = [7, 14, 30] as const;
+const SPAN_KEY = 'fitness-sleep-span';
+const readSpan = (): number => {
+  try {
+    const v = Number(localStorage.getItem(SPAN_KEY));
+    return (SPANS as readonly number[]).includes(v) ? v : 7;
+  } catch {
+    return 7;
+  }
+};
+
 function Week({ onPick }: { onPick: (d: string) => void }) {
   const today = useToday();
   const nights = useStore((s) => s.nights);
   const goal = useStore((s) => s.settings.sleepGoalH);
   const wake = useStore((s) => s.settings.wakeTarget);
-  const days = Array.from({ length: 7 }, (_, i) => addDays(today, i - 6));
-  const st = sleepStats(nights, today, 7, goal, wake);
+  const [span, setSpanState] = useState(readSpan);
+  const setSpan = (n: number) => {
+    setSpanState(n);
+    try {
+      localStorage.setItem(SPAN_KEY, String(n));
+    } catch {
+      /* private mode: just this visit */
+    }
+  };
+  const days = Array.from({ length: span }, (_, i) => addDays(today, i - span + 1));
+  const st = sleepStats(nights, today, span, goal, wake);
   const max = 11 * 60;
+  const cols = { gridTemplateColumns: `repeat(${span}, minmax(0, 1fr))`, gap: span > 14 ? 2 : span > 7 ? 4 : 8 };
   return (
-    <section className="card stack" style={{ gap: 12 }} aria-label="Last 7 nights">
+    <section className="card stack" style={{ gap: 12 }} aria-label={`Last ${span} nights`}>
       <div className="between">
-        <h2 className="h2">Last 7 nights</h2>
+        <h2 className="h2">Last {span} nights</h2>
         <span className="small mut">{st.avgMin != null ? `avg ${hm(st.avgMin)}` : 'no nights yet'}</span>
       </div>
-      <div className="bars">
+      <div className="seg" role="group" aria-label="Nights to show">
+        {SPANS.map((n) => (
+          <button key={n} aria-pressed={span === n} onClick={() => setSpan(n)}>
+            {n} nights
+          </button>
+        ))}
+      </div>
+      <div className="bars" style={cols}>
         <div className="goal" style={{ bottom: `${((goal * 60) / max) * 100}%` }} aria-hidden="true" />
         {days.map((d) => {
           const m = nights[d] ? durationMin(nights[d]) : null;
           return (
-            <button key={d} onClick={() => onPick(d)} aria-label={`${fmtDate(d)}: ${m != null ? hm(m) : 'no data'}`} style={{ background: 'none', border: 0, padding: 0, height: '100%', display: 'flex', alignItems: 'flex-end' }}>
-              <i className={m != null && m < goal * 60 - 30 ? 'short' : ''} style={{ width: '100%', height: `${m != null ? Math.min(100, (m / max) * 100) : 3}%` }} />
+            <button key={d} onClick={() => onPick(d)} aria-label={`${fmtDate(d)}: ${m != null ? hm(m) : 'no data'}`} style={{ background: 'none', border: 0, padding: 0, height: '100%', display: 'flex', alignItems: 'flex-end', minWidth: 0 }}>
+              <i className={m != null && m < goal * 60 - 30 ? 'short' : ''} style={{ width: '100%', borderRadius: span > 14 ? 3 : undefined, height: `${m != null ? Math.min(100, (m / max) * 100) : 3}%` }} />
             </button>
           );
         })}
       </div>
-      <div className="week" style={{ gap: 8 }}>
-        {days.map((d) => {
-          const n = nights[d];
-          return (
-            <div key={d} style={{ color: n && onTime(n, wake) ? 'var(--acc)' : undefined }}>
-              {fmtDate(d, { weekday: 'narrow' })}
-            </div>
-          );
-        })}
-      </div>
-      <p className="small mut">Dashed line: your {goal} h goal. Green days: up on time.</p>
+      {span <= 14 ? (
+        <div className="week" style={cols}>
+          {days.map((d) => {
+            const n = nights[d];
+            return (
+              <div key={d} style={{ color: n && onTime(n, wake) ? 'var(--acc)' : undefined }}>
+                {fmtDate(d, { weekday: 'narrow' })}
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="between small mut">
+          <span>{fmtDate(days[0])}</span>
+          <span>Today</span>
+        </div>
+      )}
+      <p className="small mut">
+        Dashed line: your {goal} h goal.{span <= 14 ? ' Green days: up on time.' : ` Up on time ${st.onTime} of ${st.withWake} mornings.`}
+      </p>
     </section>
   );
 }
