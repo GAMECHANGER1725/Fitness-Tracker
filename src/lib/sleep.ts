@@ -8,6 +8,9 @@ import { addDays, atOn, keyOf } from './dates';
 const MIN = 60_000;
 const HOUR = 60 * MIN;
 /** Up within this long after the target counts as on time. */
+/** Labels for Night.quality 1–5. */
+export const QUALITY = ['Awful', 'Poor', 'OK', 'Good', 'Great'];
+
 export const ON_TIME_MIN = 15;
 /** Minutes it usually takes to fall asleep, added before lights-out. */
 export const FALL_ASLEEP_MIN = 15;

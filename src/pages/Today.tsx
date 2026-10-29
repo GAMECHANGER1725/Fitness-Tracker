@@ -3,7 +3,7 @@ import { useStore } from '../lib/store';
 import { EX, targetText } from '../lib/exercises';
 import { WEEKDAYS, inDeload, minutes, plannedDay, slotsFor } from '../lib/program';
 import { addDays, dateOf, fmtDate, weekStart } from '../lib/dates';
-import { clock12, clockOf, durationMin, hm, nightKey, onTime, toBedtime, wakeOffset } from '../lib/sleep';
+import { QUALITY, clock12, clockOf, durationMin, hm, nightKey, onTime, toBedtime, wakeOffset } from '../lib/sleep';
 import { BAND_LABEL } from '../lib/readiness';
 import { currentAi, morningBriefing, useCoach } from '../lib/coach';
 import { friendlyError, hasAi } from '../lib/ai';
@@ -101,6 +101,7 @@ function WakeCard() {
   const night = useStore((s) => s.nights[today]);
   const wakeTarget = useStore((s) => s.settings.wakeTarget);
   const wokeUp = useStore((s) => s.wokeUp);
+  const setNight = useStore((s) => s.setNight);
   const g = useGame();
   const hour = new Date().getHours();
   if (night?.wake == null) {
@@ -128,21 +129,36 @@ function WakeCard() {
   }
   const off = wakeOffset(night, wakeTarget) ?? 0;
   const dur = durationMin(night);
+  const rate = night.quality == null && hour < 12;
   return (
-    <a href="#/sleep" className="card tight" style={{ display: 'flex', alignItems: 'center', gap: 14, color: 'var(--ink)', textDecoration: 'none' }}>
-      <span style={{ width: 46, height: 46, borderRadius: 16, background: 'var(--sleep-soft)', color: 'var(--sleep)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
-        <Icon name="sun" />
-      </span>
-      <span className="grow">
-        <span className="bold" style={{ display: 'block' }}>
-          Up at {clockOf(night.wake)}, {off <= 15 ? (off < -5 ? 'early' : 'on time') : `${off} min late`}
+    <div className="card tight stack" style={{ gap: 10 }}>
+      <a href="#/sleep" style={{ display: 'flex', alignItems: 'center', gap: 14, color: 'var(--ink)', textDecoration: 'none' }}>
+        <span style={{ width: 46, height: 46, borderRadius: 16, background: 'var(--sleep-soft)', color: 'var(--sleep)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
+          <Icon name="sun" />
         </span>
-        <span className="small mut">
-          {dur != null ? `${hm(dur)} sleep` : 'No bedtime logged'}
-          {g.wake ? ` · ${g.wake}-day wake streak` : ''}
+        <span className="grow">
+          <span className="bold" style={{ display: 'block' }}>
+            Up at {clockOf(night.wake)}, {off <= 15 ? (off < -5 ? 'early' : 'on time') : `${off} min late`}
+          </span>
+          <span className="small mut">
+            {dur != null ? `${hm(dur)} sleep` : 'No bedtime logged'}
+            {g.wake ? ` · ${g.wake}-day wake streak` : ''}
+          </span>
         </span>
-      </span>
-    </a>
+      </a>
+      {rate && (
+        <div className="stack" style={{ gap: 6 }}>
+          <span className="small mut">How did you sleep?</span>
+          <div className="grid4" style={{ gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 6 }} role="group" aria-label="Sleep quality">
+            {QUALITY.map((q, i) => (
+              <button key={q} className="chip" style={{ padding: 0, fontSize: 13 }} onClick={() => (setNight(today, { quality: i + 1 }), toast(`Saved: ${q.toLowerCase()}`))}>
+                {q}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 

@@ -1,14 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useStore } from '../lib/store';
 import { addDays, atOn, fmtDate, hhmmOf } from '../lib/dates';
-import { clock12, clockOf, durationMin, hm, idealBedtime, minsOf, nightKey, onTime, samsungNights, sleepStats, wakeOffset } from '../lib/sleep';
+import { QUALITY, clock12, clockOf, durationMin, hm, idealBedtime, minsOf, nightKey, onTime, samsungNights, sleepStats, wakeOffset } from '../lib/sleep';
 import { currentAi, tonightPlan, useCoach } from '../lib/coach';
 import { friendlyError, hasAi } from '../lib/ai';
 import { Head, Icon, ProfileLink, Sheet, toast, useGame, useToday } from '../components/ui';
 import { useFuelData } from '../components/data';
 import type { Night } from '../lib/types';
 
-const QUALITY = ['Awful', 'Poor', 'OK', 'Good', 'Great'];
 
 export default function Sleep() {
   const today = useToday();
