@@ -13,6 +13,8 @@ import { Head, Icon, ProfileLink, go, toast, useGame, useNow, useToday } from '.
 import { useFuelData, useReadiness } from '../components/data';
 import type { PlanDay } from '../lib/types';
 
+const REST_DAY = ['An easy 10 to 15 min walk outside', '30 s each: hip flexor stretch, hamstring stretch, chest stretch on a doorway', '10 slow cat-cows and 10 deep breaths lying down'];
+
 export default function Today() {
   const today = useToday();
   const program = useStore((s) => s.program);
@@ -93,6 +95,16 @@ export default function Today() {
             </div>
           )}
         </section>
+
+        {!day && !doneToday.length && !active && !hidden.includes('exercises') && (
+          <section className="card soft stack" style={{ gap: 8 }} aria-label="Rest day">
+            <span className="label">Rest day, about 15 min if you feel like it</span>
+            <ul className="small" style={{ margin: 0, paddingLeft: 18 }}>
+              {REST_DAY.map((x) => <li key={x}>{x}</li>)}
+            </ul>
+            <p className="small mut">Muscles grow on rest days. Eat to your target and get to bed on time.</p>
+          </section>
+        )}
 
         {day && !doneToday.length && !hidden.includes('exercises') && (
           <section className="card" style={{ padding: '6px 18px' }} aria-label="Today's exercises">

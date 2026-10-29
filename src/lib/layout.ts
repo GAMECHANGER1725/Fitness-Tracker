@@ -4,7 +4,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 export const TODAY_CARDS = [
-  ['exercises', 'Today’s exercises'],
+  ['exercises', 'Today’s exercises (or rest-day ideas)'],
   ['fuel', 'Food from Fuel Log'],
   ['week', 'This week'],
 ] as const;
