@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useStore } from '../lib/store';
 import { EX, EXERCISES, PATTERN_LABEL, easier, harder, targetText, usable } from '../lib/exercises';
-import { WEEKDAYS, minutes, moveSlot } from '../lib/program';
+import { WEEKDAYS, copyDay, deleteDay, minutes, moveSlot } from '../lib/program';
 import { records, sessionText, trendOf, weeklySets } from '../lib/progress';
 import { addDays, daysBetween, fmtDate } from '../lib/dates';
 import { Bar, Head, Icon, ProfileLink, Sheet, Stepper, go, shareText, toast, useGame, useRoute, useToday } from '../components/ui';
@@ -148,11 +148,27 @@ function Plan() {
                   <Icon name="plus" size={18} /> Add exercise
                 </button>
               )}
-              {d.slots.length > 1 && (
-                <button className="btn sm" style={{ background: 'transparent', color: 'var(--acc)', padding: 0 }} onClick={() => setOrder(order === d.id ? null : d.id)}>
-                  {order === d.id ? 'Done' : 'Reorder'}
-                </button>
-              )}
+              <span className="row" style={{ gap: 14 }}>
+                {order !== d.id && program.days.length < 7 && (
+                  <button className="btn sm" style={{ background: 'transparent', color: 'var(--acc)', padding: 0 }} onClick={() => (save(copyDay(program, d.id, `day-${Date.now().toString(36)}`), `Copied ${d.name}`), toast(`Copied. Rename it and pick its days above.`))}>
+                    Copy
+                  </button>
+                )}
+                {order !== d.id && program.days.length > 1 && (
+                  <button
+                    className="btn sm"
+                    style={{ background: 'transparent', color: 'var(--danger)', padding: 0 }}
+                    onClick={() => (save(deleteDay(program, d.id), `Deleted ${d.name}`), toast(`${d.name} deleted`, { label: 'Undo', run: () => useStore.getState().undoProgram() }))}
+                  >
+                    Delete
+                  </button>
+                )}
+                {d.slots.length > 1 && (
+                  <button className="btn sm" style={{ background: 'transparent', color: 'var(--acc)', padding: 0 }} onClick={() => setOrder(order === d.id ? null : d.id)}>
+                    {order === d.id ? 'Done' : 'Reorder'}
+                  </button>
+                )}
+              </span>
             </div>
           </div>
         </section>

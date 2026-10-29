@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_DATA, exportCsv, exportJson, importJson, normalize } from '../src/lib/backup';
-import { DEFAULT_PROGRAM, minutes, moveSlot, plannedDay, slotsFor, warmupFor, weekdayOf } from '../src/lib/program';
+import { DEFAULT_PROGRAM, copyDay, deleteDay, minutes, moveSlot, plannedDay, slotsFor, warmupFor, weekdayOf } from '../src/lib/program';
 import { EX, EXERCISES, easier, harder } from '../src/lib/exercises';
 import { applySession, deloadDue, diffPrograms, guardProgram, newRecords, progressSlot, records, trendOf, moveSession, sessionText, weeklySets } from '../src/lib/progress';
 import { readiness } from '../src/lib/readiness';
@@ -150,6 +150,26 @@ describe('moveSlot and diffPrograms', () => {
     expect(diffPrograms(DEFAULT_PROGRAM, rest)[0]).toMatch(/rest \d+ → \d+ s/);
     const named = { ...DEFAULT_PROGRAM, days: DEFAULT_PROGRAM.days.map((x, i) => (i ? x : { ...x, name: 'Push and pull' })) };
     expect(diffPrograms(DEFAULT_PROGRAM, named)).toEqual([`${DEFAULT_PROGRAM.days[0].name} renamed to Push and pull`]);
+  });
+});
+
+describe('copyDay and deleteDay', () => {
+  it('copies a day after itself with a fresh name, deletes one and frees its weekdays, and reports both', () => {
+    const d0 = DEFAULT_PROGRAM.days[0];
+    const c = copyDay(DEFAULT_PROGRAM, d0.id, 'copy1');
+    expect(c.days[1]).toMatchObject({ id: 'copy1', name: `${d0.name} 2` });
+    expect(c.days[1].slots).toEqual(d0.slots);
+    expect(c.week).toEqual(DEFAULT_PROGRAM.week);
+    expect(copyDay(c, d0.id, 'copy2').days[1].name).toBe(`${d0.name} 3`);
+    expect(diffPrograms(DEFAULT_PROGRAM, c)).toEqual([`New workout: ${d0.name} 2`]);
+    const del = deleteDay(DEFAULT_PROGRAM, d0.id);
+    expect(del.days.some((d) => d.id === d0.id)).toBe(false);
+    expect(del.week.includes(d0.id)).toBe(false);
+    expect(diffPrograms(DEFAULT_PROGRAM, del)).toEqual([`Deleted workout: ${d0.name}`]);
+    expect(deleteDay({ ...DEFAULT_PROGRAM, days: [d0] }, d0.id).days).toHaveLength(1);
+    // A weekday moved on its own used to count as no change, so setProgram dropped it.
+    const week = { ...DEFAULT_PROGRAM, week: [...DEFAULT_PROGRAM.week].reverse() };
+    expect(diffPrograms(DEFAULT_PROGRAM, week)).toEqual(['Weekly schedule changed']);
   });
 });
 

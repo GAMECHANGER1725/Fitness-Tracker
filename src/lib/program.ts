@@ -96,3 +96,21 @@ export function warmupFor(slots: Slot[]): string[] {
   }
   return [WARMUP.any, ...[...seen].map((p) => WARMUP[p]).filter(Boolean)].slice(0, 4);
 }
+
+/** A copy of a plan day, named "<name> 2" (or 3, …), added after it; not scheduled on any weekday yet. At most 7 days. */
+export function copyDay(p: Program, dayId: string, id: string): Program {
+  const i = p.days.findIndex((d) => d.id === dayId);
+  if (i < 0 || p.days.length >= 7) return p;
+  const src = p.days[i];
+  let n = 2;
+  while (p.days.some((d) => d.name === `${src.name} ${n}`)) n++;
+  const days = [...p.days];
+  days.splice(i + 1, 0, { ...src, id, name: `${src.name} ${n}`.slice(0, 30), slots: src.slots.map((s) => ({ ...s })) });
+  return { ...p, days };
+}
+
+/** Removes a plan day and turns its weekdays into rest days. Keeps at least one day. */
+export function deleteDay(p: Program, dayId: string): Program {
+  if (p.days.length <= 1 || !p.days.some((d) => d.id === dayId)) return p;
+  return { ...p, days: p.days.filter((d) => d.id !== dayId), week: p.week.map((x) => (x === dayId ? null : x)) };
+}

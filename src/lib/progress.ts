@@ -255,7 +255,10 @@ export function diffPrograms(a: Program, b: Program): string[] {
   const name = (id: string) => EX[id]?.name ?? id;
   for (const db of b.days) {
     const da = a.days.find((d) => d.id === db.id);
-    if (!da) continue;
+    if (!da) {
+      lines.push(`New workout: ${db.name}`);
+      continue;
+    }
     if (da.name !== db.name) lines.push(`${da.name} renamed to ${db.name}`);
     const aIds = da.slots.map((s) => s.exerciseId);
     const bIds = db.slots.map((s) => s.exerciseId);
@@ -275,6 +278,8 @@ export function diffPrograms(a: Program, b: Program): string[] {
       if (bits.length) lines.push(`${name(sb.exerciseId)}: ${bits.join(', ')}`);
     }
   }
+  for (const da of a.days) if (!b.days.some((d) => d.id === da.id)) lines.push(`Deleted workout: ${da.name}`);
+  if (a.week.join() !== b.week.join() && !lines.length) lines.push('Weekly schedule changed');
   if (a.deloadUntil !== b.deloadUntil && b.deloadUntil) lines.push(`Lighter week until ${b.deloadUntil}`);
   return lines;
 }
