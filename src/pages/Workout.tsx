@@ -143,6 +143,7 @@ function Player({ onDone }: { onDone: (r: { session: Session; lines: string[]; r
 
       {!allDone ? (
         <section className="card stack" style={{ gap: 12 }}>
+          {ex?.unit === 'secs' && <HoldTimer low={slot.low} high={slot.high} onStop={setReps} />}
           <div className={ex?.loadable ? 'grid2' : 'stack'}>
             <label className="field">
               <span>{ex?.unit === 'secs' ? 'Seconds' : 'Reps'}{ex?.perSide ? ' (each side)' : ''}</span>
@@ -211,6 +212,48 @@ function Player({ onDone }: { onDone: (r: { session: Session; lines: string[]; r
         />
       )}
     </main>
+  );
+}
+
+const COUNT_IN_MS = 3000;
+
+/** Times a hold: a 3 s count-in to get into position, buzzes at the bottom and top of the range, Stop fills in the seconds.
+ * ponytail: lives in component state, so leaving the page mid-hold loses it; holds are under two minutes. */
+function HoldTimer({ low, high, onStop }: { low: number; high: number; onStop: (secs: number) => void }) {
+  const [start, setStart] = useState<number | null>(null);
+  const now = useNow(200);
+  const buzzed = useRef(0);
+  const secs = start == null ? 0 : Math.floor((now - start) / 1000);
+  const ready = start != null && now < start;
+  useEffect(() => {
+    if (start == null || ready) return;
+    for (const [mark, n] of [[0, 1], [low, 2], [high, 3]] as const) {
+      if (secs >= mark && buzzed.current < n) {
+        buzzed.current = n;
+        navigator.vibrate?.(n === 3 ? [200, 100, 200] : 150);
+      }
+    }
+  }, [secs, ready, start]);
+  if (start == null) {
+    return (
+      <button className="btn block" onClick={() => ((buzzed.current = 0), setStart(Date.now() + COUNT_IN_MS))}>
+        <Icon name="clock" size={18} /> Time this hold
+      </button>
+    );
+  }
+  return (
+    <div className="stack" style={{ alignItems: 'center', gap: 10 }} aria-live="polite">
+      <Ring size={150} width={10} frac={ready ? 0 : Math.min(1, secs / high)} color={secs >= low ? 'var(--acc)' : 'var(--line2)'}>
+        <span className="timer">{ready ? Math.ceil((start - now) / 1000) : secs}</span>
+        <span className="small mut">{ready ? 'get in position' : secs >= high ? 'top of the range' : secs >= low ? `in range, ${high - secs} s to the top` : `${low - secs} s to go`}</span>
+      </Ring>
+      <div className="row">
+        <button className="btn sm" onClick={() => setStart(null)}>Cancel</button>
+        <button className="btn sm primary" disabled={ready} onClick={() => (onStop(secs), setStart(null))}>
+          Stop at {secs} s
+        </button>
+      </div>
+    </div>
   );
 }
 
