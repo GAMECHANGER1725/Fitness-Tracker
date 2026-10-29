@@ -4,6 +4,7 @@ import { DEFAULT_PROGRAM, copyDay, deleteDay, minutes, moveSlot, plannedDay, slo
 import { EX, EXERCISES, easier, harder } from '../src/lib/exercises';
 import { applySession, deloadDue, diffPrograms, guardProgram, newRecords, progressSlot, records, trendOf, moveSession, sessionText, weeklySets } from '../src/lib/progress';
 import { readiness } from '../src/lib/readiness';
+import { weekNotes } from '../src/lib/notes';
 import { computeGame, weekSummary, workoutWeeks } from '../src/lib/game';
 import { addDays, atOn, weekStart } from '../src/lib/dates';
 import type { Night, Session, SetLog, Slot } from '../src/lib/types';
@@ -328,5 +329,24 @@ describe('backup', () => {
     expect(d.program).toEqual(DEFAULT_PROGRAM);
     expect(Object.keys(d.nights)).toEqual(['2026-10-26']);
     expect(d.nights['2026-10-26'].quality).toBe(5);
+  });
+});
+
+describe('weekNotes', () => {
+  it('counts the week, spots moves going up or stuck, and talks about sleep', () => {
+    const a = sess('2026-10-20', 'upper-a', [['pushup', 10], ['pack-row', 10, 6]]);
+    const b = sess('2026-10-23', 'upper-a', [['pushup', 11], ['pack-row', 10, 6]]);
+    const c = sess('2026-10-26', 'upper-a', [['pushup', 12], ['pack-row', 10, 6]]);
+    const nights: Record<string, Night> = {};
+    for (let i = 0; i < 5; i++) {
+      const k = addDays('2026-10-26', -i);
+      nights[k] = { date: k, bed: atOn(addDays(k, -1), '22:30'), wake: atOn(k, '06:00'), source: 'tap', m: 1 };
+    }
+    const notes = weekNotes({ sessions: { [a.id]: a, [b.id]: b, [c.id]: c }, nights, program: DEFAULT_PROGRAM, settings: DEFAULT_DATA.settings }, '2026-10-26');
+    expect(notes[0]).toMatch(/^3 workouts in the last 7 days/);
+    expect(notes.join(' ')).toMatch(/Going up .*Push-up/);
+    expect(notes.join(' ')).toMatch(/Same best set 3 times in a row: Backpack row/);
+    expect(notes.join(' ')).toMatch(/Sleep averaged 7 h 30 m, about 1 h 00 m under your goal/);
+    expect(weekNotes({ sessions: {}, nights: {}, program: DEFAULT_PROGRAM, settings: DEFAULT_DATA.settings }, '2026-10-26')[0]).toMatch(/No workouts logged yet/);
   });
 });

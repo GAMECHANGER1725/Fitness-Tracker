@@ -178,6 +178,8 @@ select.input { appearance: none; background-image: linear-gradient(45deg, transp
 @keyframes pop { from { transform: scale(0.9); opacity: 0; } }
 
 /* ----- Fitness only ----- */
+/* Centred with left: 50%, the toast would shrink to half the screen and wrap; let it size to its text. */
+.toast { width: max-content; }
 /* Accent choice (Profile > Look, per device): training colour only; sleep stays indigo and Fuel Log ember. */
 :root[data-accent='sky'] { --acc: #5cc8ff; --on-acc: #04121a; --acc-soft: #0f2230; }
 :root[data-accent='rose'] { --acc: #ff7aa8; --on-acc: #1a0710; --acc-soft: #2a1220; }

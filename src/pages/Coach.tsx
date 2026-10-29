@@ -1,12 +1,47 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useStore } from '../lib/store';
 import { SLEEP_STATUS_LABEL, applyCheckIn, ask, checkIn, currentAi, morningBriefing, reviewDue, undoCheckIn, useCoach } from '../lib/coach';
 import { friendlyError, hasAi, PROVIDER_NAME } from '../lib/ai';
-import { daysBetween, fmtDate } from '../lib/dates';
+import { addDays, daysBetween, fmtDate, weekStart } from '../lib/dates';
+import { deloadDue } from '../lib/progress';
 import { clock12 } from '../lib/sleep';
+import { weekNotes } from '../lib/notes';
 import { Head, Icon, ProfileLink, Switch, toast, useToday } from '../components/ui';
 
 const QUICK = ['Why am I tired at 6 am?', 'Make today harder', 'What should I eat after training?', 'Am I growing fast enough?'];
+
+/** Plain notes from the last week (no AI), from weekNotes. */
+function FromLog() {
+  const today = useToday();
+  const sessions = useStore((s) => s.sessions);
+  const nights = useStore((s) => s.nights);
+  const program = useStore((s) => s.program);
+  const settings = useStore((s) => s.settings);
+  const notes = useMemo(() => weekNotes({ sessions, nights, program, settings }, today), [sessions, nights, program, settings, today]);
+  return (
+    <section className="card stack" style={{ gap: 8 }} aria-label="From your log">
+      <h2 className="h2">From your log</h2>
+      {notes.map((n) => (
+        <p key={n} className="row small" style={{ alignItems: 'flex-start', gap: 10 }}>
+          <span style={{ width: 6, height: 6, borderRadius: 999, background: 'var(--acc)', marginTop: 7, flex: 'none' }} />
+          {n}
+        </p>
+      ))}
+      {deloadDue(sessions, program, today, weekStart, addDays) && (
+        <button
+          className="btn sm"
+          style={{ alignSelf: 'flex-start' }}
+          onClick={() => {
+            useStore.getState().setProgram({ ...program, deloadUntil: addDays(today, 6) }, 'me', 'Lighter week');
+            toast(`Lighter week until ${fmtDate(addDays(today, 6), { weekday: 'long', day: 'numeric', month: 'short' })}`, { label: 'Undo', run: () => useStore.getState().undoProgram() });
+          }}
+        >
+          Start a lighter week
+        </button>
+      )}
+    </section>
+  );
+}
 
 export default function Coach() {
   const ai = hasAi(currentAi());
@@ -15,6 +50,7 @@ export default function Coach() {
       <main>
         <Head over="Training, sleep and food" title="Coach" right={<ProfileLink />} />
         <div className="page">
+          <FromLog />
           <section className="card stack" style={{ gap: 10 }}>
             <h2 className="h2">Add your AI key</h2>
             <p className="small">The coach uses the same key as Fuel Log. Add a TokenHarbor (DeepSeek) or Gemini key in Fuel Log on this phone and it’s picked up here by itself, or paste one in Profile → AI.</p>
@@ -31,6 +67,7 @@ export default function Coach() {
     <main>
       <Head over="Training, sleep and food" title="Coach" right={<ProfileLink />} />
       <div className="page">
+        <FromLog />
         <CheckIn />
         <Morning />
         <Chat />
