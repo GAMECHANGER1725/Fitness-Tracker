@@ -5,7 +5,7 @@ import { friendlyError, hasAi, PROVIDER_NAME } from '../lib/ai';
 import { addDays, daysBetween, fmtDate, weekStart } from '../lib/dates';
 import { deloadDue } from '../lib/progress';
 import { clock12 } from '../lib/sleep';
-import { weekNotes } from '../lib/notes';
+import { movesTrend, weekNotes } from '../lib/notes';
 import { Head, Icon, ProfileLink, Switch, toast, useToday } from '../components/ui';
 
 const QUICK = ['Why am I tired at 6 am?', 'Make today harder', 'What should I eat after training?', 'Am I growing fast enough?'];
@@ -233,6 +233,10 @@ function Morning() {
 
 function Chat() {
   const chat = useCoach((c) => c.chat);
+  const today = useToday();
+  const sessions = useStore((s) => s.sessions);
+  // A stuck move gets its own ready-made question.
+  const stuckAsk = useMemo(() => movesTrend(sessions, today).stuck.slice(0, 1).map((m) => `How do I get past my ${m} plateau?`), [sessions, today]);
   const [q, setQ] = useState('');
   const [busy, setBusy] = useState(false);
   const send = (text: string) => {
@@ -265,7 +269,7 @@ function Chat() {
         </div>
       )}
       <div className="scroller">
-        {QUICK.map((x) => (
+        {[...stuckAsk, ...QUICK].map((x) => (
           <button key={x} className="chip" onClick={() => send(x)} disabled={busy}>
             {x}
           </button>

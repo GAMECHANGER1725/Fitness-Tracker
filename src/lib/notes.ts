@@ -8,6 +8,22 @@ import { deloadDue, trendOf } from './progress';
 import { hm, sleepStats } from './sleep';
 import { weekSummary } from './game';
 
+/** Moves done in the last 7 days whose best set went up over their last 3 sessions, and ones stuck on the same best set. */
+export function movesTrend(sessions: AppData['sessions'], today: string): { up: string[]; stuck: string[] } {
+  const last7 = Object.values(sessions).filter((s) => s.date > addDays(today, -7) && s.date <= today);
+  const ids = [...new Set(last7.flatMap((s) => s.sets.map((x) => x.exerciseId)))];
+  const up: string[] = [];
+  const stuck: string[] = [];
+  for (const id of ids) {
+    const t = trendOf(sessions, id, 3);
+    if (t.length < 3) continue;
+    const score = (p: (typeof t)[number]) => p.top.loadKg * 100 + p.top.reps;
+    if (score(t[2]) > score(t[0])) up.push(EX[id]?.name ?? id);
+    else if (score(t[2]) === score(t[1]) && score(t[1]) === score(t[0])) stuck.push(EX[id]?.name ?? id);
+  }
+  return { up, stuck };
+}
+
 export function weekNotes(d: Pick<AppData, 'sessions' | 'nights' | 'program' | 'settings'>, today: string): string[] {
   const out: string[] = [];
   const last7 = Object.values(d.sessions).filter((s) => s.date > addDays(today, -7) && s.date <= today);
@@ -16,17 +32,7 @@ export function weekNotes(d: Pick<AppData, 'sessions' | 'nights' | 'program' | '
   if (!Object.keys(d.sessions).length) out.push('No workouts logged yet. Start one from Today and notes will show up here.');
   else out.push(`${last7.length} workout${last7.length === 1 ? '' : 's'} in the last 7 days (your plan has ${planned} a week). This week so far: ${w.done}.`);
 
-  // Moves whose best set hasn't moved in 3 sessions, and ones that went up.
-  const ids = [...new Set(last7.flatMap((s) => s.sets.map((x) => x.exerciseId)))];
-  const stuck: string[] = [];
-  const up: string[] = [];
-  for (const id of ids) {
-    const t = trendOf(d.sessions, id, 3);
-    if (t.length < 3) continue;
-    const score = (p: (typeof t)[number]) => p.top.loadKg * 100 + p.top.reps;
-    if (score(t[2]) > score(t[0])) up.push(EX[id]?.name ?? id);
-    else if (score(t[2]) === score(t[1]) && score(t[1]) === score(t[0])) stuck.push(EX[id]?.name ?? id);
-  }
+  const { up, stuck } = movesTrend(d.sessions, today);
   if (up.length) out.push(`Going up over your last 3 sessions: ${up.slice(0, 3).join(', ')}.`);
   if (stuck.length) out.push(`Same best set 3 times in a row: ${stuck.slice(0, 3).join(', ')}. Try a slower lowering or one more rep on the first set; the plan steps you up when you hit the top of the range.`);
 
