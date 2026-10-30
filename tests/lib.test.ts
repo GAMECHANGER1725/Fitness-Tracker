@@ -351,6 +351,7 @@ describe('badges', () => {
     expect(g.badges.find((b) => b.id === 'wake30')).toMatchObject({ have: 7, need: 30 });
     expect(g.badges.find((b) => b.id === 'bests10')).toMatchObject({ need: 10, earned: false });
     expect(g.badges.find((b) => b.id === 'diary30')).toMatchObject({ have: 7, need: 30, earned: false });
+    expect(g.badges.find((b) => b.id === 'tape5')).toMatchObject({ have: 0, need: 5 });
     const ticked = { ...nights, '2026-10-26': { ...nights['2026-10-26'], done: [...DEFAULT_DATA.profile.windDown] } };
     expect(computeGame({ ...DEFAULT_DATA, sessions: { [s.id]: s }, nights: ticked }, '2026-10-26').badges.find((b) => b.id === 'wind7')).toMatchObject({ have: 1, need: 7 });
   });

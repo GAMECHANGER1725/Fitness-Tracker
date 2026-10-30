@@ -93,6 +93,7 @@ export function computeGame(d: AppData, today: string) {
     b('wake30', 'Like clockwork', 'Up on time 30 days in a row', wake, 30),
     b('sleep7', 'Well rested', 'Sleep your goal 7 nights in a row', sleepRun, 7),
     b('diary30', 'Sleep diary', 'Log 30 nights', logged, 30),
+    b('tape5', 'Tape measure', 'Measure on 5 days', d.profile.measures?.length ?? 0, 5),
     b('watch', 'Synced up', 'Import sleep from Samsung Health', imported ? 1 : 0, 1),
     b('bests10', 'Record breaker', 'Set 10 personal bests', bestCount, 10),
     b('wind7', 'Wound down', 'Finish your wind-down on 7 nights', windNights, 7),
