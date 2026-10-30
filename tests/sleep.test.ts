@@ -199,17 +199,18 @@ describe('bedtimeEffect', () => {
 describe('shortestEvening', () => {
   const four = (shortBed: string) => {
     const all: Record<string, Night> = {};
-    for (let i = 0; i < 28; i++) {
-      const d = addDays('2026-10-05', i); // Mondays: 5, 12, 19, 26 Oct (Sunday evenings)
+    // 5–29 Oct, clear of DST changes in Sydney and New York. Mondays: 5, 12, 19, 26 Oct (Sunday evenings).
+    for (let i = 0; i < 25; i++) {
+      const d = addDays('2026-10-05', i);
       all[d] = N(d, (i % 7 === 0 ? shortBed : '21:30'), '06:00');
     }
     return all;
   };
   it('names the evening with the least sleep, by the day you went to bed', () => {
-    expect(shortestEvening(four('23:00'), '2026-11-01')).toEqual({ name: 'Sunday', avg: 420, under: 77 });
+    expect(shortestEvening(four('23:00'), '2026-10-29')).toEqual({ name: 'Sunday', avg: 420, under: 76 });
   });
   it('stays quiet under a 30 min gap or with too few nights', () => {
-    expect(shortestEvening(four('22:00'), '2026-11-01')).toBeNull();
+    expect(shortestEvening(four('22:00'), '2026-10-29')).toBeNull();
     expect(shortestEvening({ '2026-10-26': N('2026-10-26', '23:00', '06:00') }, '2026-11-01')).toBeNull();
   });
 });
