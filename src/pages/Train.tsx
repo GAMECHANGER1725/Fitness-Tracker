@@ -47,6 +47,7 @@ function Plan() {
   const [rename, setRename] = useState<string | null>(null);
   const wk = weeklySets(program);
   const last = log.at(-1);
+  const [allLog, setAllLog] = useState(false);
   const save = (p: Program, why: string) => setProgram(p, 'me', why);
 
   return (
@@ -118,6 +119,24 @@ function Plan() {
           {last.lines.slice(0, 5).map((l) => (
             <p key={l} className="small bold">{l}</p>
           ))}
+          {log.length > 1 && (
+            <button className="small acc bold" onClick={() => setAllLog(!allLog)} aria-expanded={allLog} style={{ background: 'none', border: 0, padding: 0, textAlign: 'left' }}>
+              {allLog ? 'Hide earlier changes' : `Show earlier changes (${log.length - 1})`}
+            </button>
+          )}
+          {allLog &&
+            log
+              .slice(0, -1)
+              .reverse()
+              .map((c) => (
+                <div key={c.at} className="stack" style={{ gap: 2, borderTop: '1px solid var(--line2)', paddingTop: 6 }}>
+                  <span className="small mut">
+                    {new Date(c.at).toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' })} · {c.by === 'coach' ? 'coach' : c.by === 'auto' ? 'progression' : 'you'}
+                  </span>
+                  {c.lines.slice(0, 5).map((l) => <span key={l} className="small">{l}</span>)}
+                  {c.lines.length > 5 && <span className="small mut">and {c.lines.length - 5} more</span>}
+                </div>
+              ))}
         </section>
       )}
 
