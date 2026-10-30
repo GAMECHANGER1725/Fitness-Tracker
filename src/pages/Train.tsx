@@ -833,8 +833,10 @@ function BadgeGrid() {
         </div>
       </div>
       <Bests />
+      <p className="small mut" style={{ textAlign: 'center' }}>{g.badges.filter((b) => b.earned).length} of {g.badges.length} badges</p>
       <section className="card grid3" style={{ rowGap: 18 }}>
-        {g.badges.map((b) => (
+        {/* Earned first, then the locked ones closest to done. */}
+        {[...g.badges].sort((a, b) => Number(b.earned) - Number(a.earned) || (a.earned ? 0 : b.have / b.need - a.have / a.need)).map((b) => (
           <div key={b.id} className={`badge ${b.earned ? '' : 'locked'}`}>
             <span className="medal">
               <Icon name="medal" size={26} />
