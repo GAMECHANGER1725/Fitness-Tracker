@@ -15,6 +15,7 @@ import { persist } from 'zustand/middleware';
 import type { AppData, Night, Pattern, Session, Slot } from './types';
 import type { FuelData, Macros } from './fuel';
 import { aiConfig, fuelAi, FUEL_STORE, weightOf } from './fuel';
+import { MEASURES, measureChange } from './body';
 import { AiError, complete, jsonRule, parseJson, type AiConfig, type Body, type Msg } from './ai';
 import { EX, EXERCISES, PATTERN_LABEL, usable } from './exercises';
 import { WEEKDAYS, inDeload, plannedDay } from './program';
@@ -64,7 +65,7 @@ export interface Snapshot {
   today: string;
   now: string;
   weekday: string;
-  profile: { age: number; sex: string; heightCm: number; weightKg: number; goal: string; equipment: string };
+  profile: { age: number; sex: string; heightCm: number; weightKg: number; goal: string; equipment: string; measurementsCm?: string[] };
   schedule: { wakeTarget: string; bedtime: string; sleepGoalHours: number; workoutTime: string; weekendWorkoutTime?: string };
   program: { week: string[]; days: { id: string; name: string; slots: (Slot & { name: string; unit: string })[] }[]; deloadUntil: string | null; weeklySetsByPattern: Record<Pattern, number> };
   todayPlan: string;
@@ -136,6 +137,10 @@ export function snapshot(d: AppData, fuel: FuelData | null, now = new Date()): S
       weightKg,
       goal: 'Build muscle on a vegetarian bulk (eggs and dairy OK), gaining 0.25–0.5 kg a week',
       equipment: `Bodyweight, a backpack loaded up to ${d.profile.packMaxKg} kg${d.profile.hasGrip ? ', a forearm trainer' : ''}. No bar, bench or dumbbells.`,
+      // Tape measurements: latest and the change since the first ("arm 28.5 (+1.3 in 28 days)").
+      ...(d.profile.measures.length
+        ? { measurementsCm: MEASURES.flatMap(([k, name]) => { const c = measureChange(d.profile.measures, k); return c ? [`${name.toLowerCase()} ${c.now}${c.days ? ` (${c.diff >= 0 ? '+' : ''}${c.diff} in ${c.days} days)` : ''}`] : []; }) }
+        : {}),
     },
     schedule: { wakeTarget: s.wakeTarget, bedtime: s.bedtime, sleepGoalHours: s.sleepGoalH, workoutTime: s.workoutTime, weekendWorkoutTime: s.weekendWorkoutTime || undefined },
     program: {
