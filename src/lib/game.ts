@@ -3,7 +3,7 @@
 import type { AppData } from './types';
 import { addDays, weekStart } from './dates';
 import { durationMin, wakeStreak } from './sleep';
-import { records } from './progress';
+import { newRecords, records } from './progress';
 
 export interface Badge {
   id: string;
@@ -71,6 +71,9 @@ export function computeGame(d: AppData, today: string) {
   const heaviest = Math.max(0, ...Object.values(recs).map((r) => r.loadKg));
   const sleepRun = bestSleepRun(d);
   const imported = Object.values(d.nights).some((n) => n.source === 'samsung');
+  const bestCount = sessions.reduce((t, s) => t + new Set(newRecords(s, d.sessions).map((r) => r.exerciseId)).size, 0);
+  const steps = d.profile.windDown;
+  const windNights = steps.length ? Object.values(d.nights).filter((n) => steps.every((x) => n.done?.includes(x))).length : 0;
   const b = (id: string, name: string, how: string, have: number, need: number): Badge => ({ id, name, how, earned: have >= need, have: Math.min(have, need), need });
   const badges = [
     b('first', 'First rep', 'Finish your first workout', sessions.length, 1),
@@ -82,6 +85,8 @@ export function computeGame(d: AppData, today: string) {
     b('wake30', 'Like clockwork', 'Up on time 30 days in a row', wake, 30),
     b('sleep7', 'Well rested', 'Sleep your goal 7 nights in a row', sleepRun, 7),
     b('watch', 'Synced up', 'Import sleep from Samsung Health', imported ? 1 : 0, 1),
+    b('bests10', 'Record breaker', 'Set 10 personal bests', bestCount, 10),
+    b('wind7', 'Wound down', 'Finish your wind-down on 7 nights', windNights, 7),
   ];
   return { wake, weeks, sessions: sessions.length, badges };
 }

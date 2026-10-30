@@ -207,7 +207,8 @@ export function useGame() {
   const sessions = useStore((s) => s.sessions);
   const nights = useStore((s) => s.nights);
   const settings = useStore((s) => s.settings);
-  return useMemo(() => computeGame(dataOf({ ...useStore.getState(), sessions, nights, settings }), today), [sessions, nights, settings, today]);
+  const profile = useStore((s) => s.profile);
+  return useMemo(() => computeGame(dataOf({ ...useStore.getState(), sessions, nights, settings, profile }), today), [sessions, nights, settings, profile, today]);
 }
 
 /** Minimal hash router: #/today, #/train?tab=plan, ... */
