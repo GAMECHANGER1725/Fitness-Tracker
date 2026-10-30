@@ -812,7 +812,7 @@ function Bests() {
         const e = EX[id];
         const fresh = daysBetween(b.date, today) < 7;
         return (
-          <div key={id} className="item">
+          <a key={id} className="item" href={`#/train?tab=moves&open=${id}`} style={{ color: 'var(--ink)', textDecoration: 'none' }}>
             <span className="grow">
               <span className="bold" style={{ display: 'block' }}>{e?.name ?? id}</span>
               <span className="small mut">{fmtDate(b.date, { weekday: 'short', day: 'numeric', month: 'short' })}{fresh ? ' · this week' : ''}</span>
@@ -820,7 +820,7 @@ function Bests() {
             <span className={fresh ? 'pill' : 'bold'}>
               {b.reps}{e?.unit === 'secs' ? ' s' : ''}{b.loadKg ? ` @ ${b.loadKg} kg` : ''}
             </span>
-          </div>
+          </a>
         );
       })}
       {list.length > 5 && (
