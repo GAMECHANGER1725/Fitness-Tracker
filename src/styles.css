@@ -178,6 +178,10 @@ select.input { appearance: none; background-image: linear-gradient(45deg, transp
 @keyframes pop { from { transform: scale(0.9); opacity: 0; } }
 
 /* ----- Fitness only ----- */
+/* Phone set to Reduce motion: no slide-ins, pops or animated bars. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+}
 /* Centred with left: 50%, the toast would shrink to half the screen and wrap; let it size to its text. */
 .toast { width: max-content; }
 /* Accent choice (Profile > Look, per device): training colour only; sleep stays indigo and Fuel Log ember. */

@@ -263,3 +263,6 @@ export async function shareText(text: string) {
     toast('Couldn’t share from here');
   }
 }
+
+/** Smooth scrolling unless the phone asks for reduced motion. */
+export const scrollMotion = (): ScrollBehavior => (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth');

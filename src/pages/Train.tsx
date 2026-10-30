@@ -4,7 +4,7 @@ import { EX, EXERCISES, PATTERN_LABEL, easier, harder, targetText, usable } from
 import { WEEKDAYS, copyDay, deleteDay, inDeload, minutes, moveSlot } from '../lib/program';
 import { PATTERN_CAP, records, sessionText, trendOf, weeklySets } from '../lib/progress';
 import { addDays, addMonths, daysBetween, fmtDate, monthGrid } from '../lib/dates';
-import { Bar, Head, Icon, ProfileLink, Sheet, Stepper, go, shareText, toast, useGame, useRoute, useToday } from '../components/ui';
+import { Bar, Head, Icon, ProfileLink, Sheet, Stepper, go, scrollMotion, shareText, toast, useGame, useRoute, useToday } from '../components/ui';
 import { useReadiness } from '../components/data';
 import type { Exercise, Pattern, PlanDay, Program, Session, Slot } from '../lib/types';
 
@@ -355,7 +355,7 @@ function History() {
         onPick={(id) => {
           setOnly(null);
           setOpen(id);
-          setTimeout(() => document.getElementById(`ses-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
+          setTimeout(() => document.getElementById(`ses-${id}`)?.scrollIntoView({ behavior: scrollMotion(), block: 'center' }), 50);
         }}
       />
       {names.length > 1 && (
@@ -551,7 +551,7 @@ function Moves() {
   useEffect(() => {
     // After App's scroll-to-top on a page change, which runs after this effect.
     if (!open) return;
-    const t = setTimeout(() => document.getElementById(`move-${open}`)?.scrollIntoView({ block: 'start', behavior: 'smooth' }), 80);
+    const t = setTimeout(() => document.getElementById(`move-${open}`)?.scrollIntoView({ block: 'start', behavior: scrollMotion() }), 80);
     return () => clearTimeout(t);
   }, [open]);
   return (

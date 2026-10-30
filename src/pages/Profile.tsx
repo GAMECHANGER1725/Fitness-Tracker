@@ -11,7 +11,7 @@ import { ACCENTS, TODAY_CARDS, useLayout } from '../lib/layout';
 import { TOKEN_URL, connect, disconnect, fuelLogToken, syncNow, useSync } from '../lib/sync';
 import { clock12, idealBedtime } from '../lib/sleep';
 import { todayKey } from '../lib/dates';
-import { Head, Icon, Stepper, Switch, go, toast } from '../components/ui';
+import { Head, Icon, Stepper, Switch, go, scrollMotion, toast } from '../components/ui';
 import { useWeight } from '../components/data';
 
 // Profile's cards in order, with the short names used by the jump chips at the top.
@@ -42,7 +42,7 @@ export default function ProfilePage() {
       <div className="page">
         <nav className="row" style={{ flexWrap: 'wrap', gap: 6 }} aria-label="Settings sections">
           {SECTIONS.map(([id, label]) => (
-            <button key={id} className="chip" style={{ fontSize: 13, minHeight: 34 }} onClick={() => document.getElementById(`set-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>
+            <button key={id} className="chip" style={{ fontSize: 13, minHeight: 34 }} onClick={() => document.getElementById(`set-${id}`)?.scrollIntoView({ behavior: scrollMotion(), block: 'start' })}>
               {label}
             </button>
           ))}
