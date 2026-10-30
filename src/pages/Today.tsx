@@ -179,7 +179,7 @@ export default function Today() {
         )}
 
         <BackupNudge />
-        <LastWeek />
+        {!hidden.includes('recap') && <LastWeek />}
         {!hidden.includes('fuel') && <FuelStrip />}
         {!hidden.includes('week') && <WeekStrip />}
         {hidden.length > 0 && (

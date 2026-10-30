@@ -7,6 +7,7 @@ export const TODAY_CARDS = [
   ['exercises', 'Today’s exercises (or rest-day ideas)'],
   ['fuel', 'Food from Fuel Log'],
   ['week', 'This week'],
+  ['recap', 'Last week’s recap (Monday to Wednesday)'],
 ] as const;
 export type TodayCard = (typeof TODAY_CARDS)[number][0];
 
