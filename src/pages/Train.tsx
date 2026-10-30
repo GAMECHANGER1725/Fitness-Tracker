@@ -745,6 +745,7 @@ function Ladder({ id, onPick }: { id: string; onPick: (id: string) => void }) {
 function Trend({ ex, sessions }: { ex: Exercise; sessions: Record<string, Session> }) {
   const today = useToday();
   const [span, setSpan] = useState(8);
+  const [sel, setSel] = useState<string | null>(null);
   const all = trendOf(sessions, ex.id, 30);
   const pts = all.slice(-span);
   if (!pts.length) return <p className="small mut">Not done yet.</p>;
@@ -762,18 +763,30 @@ function Trend({ ex, sessions }: { ex: Exercise; sessions: Record<string, Sessio
           ))}
         </div>
       )}
-      <div className="trend" style={loaded ? { height: 126 } : undefined} role="img" aria-label={`Last ${pts.length} sessions, total ${ex.unit === 'secs' ? 'seconds' : 'reps'}: ${pts.map((p) => p.total).join(', ')}`}>
+      <div className="trend" style={loaded ? { height: 126 } : undefined} role="group" aria-label={`Last ${pts.length} sessions, total ${ex.unit === 'secs' ? 'seconds' : 'reps'}: ${pts.map((p) => p.total).join(', ')}. Tap a bar for its sets.`}>
         {pts.map((p, i) => (
-          <div key={p.date + i} className="trend-col">
+          <button key={p.date + i} className="trend-col" aria-pressed={sel === p.date} aria-label={fmtDate(p.date)} onClick={() => setSel(sel === p.date ? null : p.date)} style={{ background: 'none', border: 0, padding: 0, color: 'inherit', font: 'inherit', opacity: sel && sel !== p.date ? 0.5 : 1 }}>
             {pts.length <= 16 && <span className="small mut" style={{ fontSize: 11 }}>{p.total}</span>}
             <span className="trend-bar">
               <i style={{ height: `${Math.max(8, (p.total / max) * 100)}%` }} className={i === pts.length - 1 ? 'now' : ''} />
             </span>
             {pts.length <= 8 && <span className="small" style={{ fontSize: 11 }}>{fmtDate(p.date, { day: 'numeric', month: 'numeric' })}</span>}
             {loaded && pts.length <= 8 && <span className="small acc bold" style={{ fontSize: 11 }}>{p.top.loadKg ? `${p.top.loadKg} kg` : '–'}</span>}
-          </div>
+          </button>
         ))}
       </div>
+      {sel && (
+        <p className="small bold">
+          {fmtDate(sel, { weekday: 'short', day: 'numeric', month: 'short' })}:{' '}
+          {(() => {
+            const xs = Object.values(sessions).filter((x) => x.date === sel).flatMap((x) => x.sets.filter((y) => y.exerciseId === ex.id));
+            const same = xs.every((y) => y.loadKg === xs[0]?.loadKg);
+            return same
+              ? `${xs.map((y) => y.reps).join(', ')}${u}${xs[0]?.loadKg ? ` @ ${xs[0].loadKg} kg` : ''}`
+              : xs.map((y) => `${y.reps}${u}${y.loadKg ? ` @ ${y.loadKg} kg` : ''}`).join(', ');
+          })()}
+        </p>
+      )}
       <p className="small mut">
         Total {ex.unit === 'secs' ? 'seconds' : 'reps'} per session{loaded && pts.length <= 8 ? ', backpack load below' : ''}{range} · last best set {pts.at(-1)!.top.reps}{u}{pts.at(-1)!.top.loadKg ? ` @ ${pts.at(-1)!.top.loadKg} kg` : ''} · {ago === 0 ? 'done today' : ago === 1 ? 'yesterday' : `${ago} days ago`}
       </p>
