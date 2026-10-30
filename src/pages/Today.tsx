@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useStore } from '../lib/store';
 import { EX, targetText } from '../lib/exercises';
 import { WEEKDAYS, inDeload, minutes, nextPlanned, plannedDay, slotsFor, workoutTimeOn } from '../lib/program';
-import { addDays, dateOf, fmtDate, keyOf, weekStart } from '../lib/dates';
+import { addDays, dateOf, daysBetween, fmtDate, keyOf, weekStart } from '../lib/dates';
 import { QUALITY, clock12, clockOf, durationMin, hm, minsOf, nightKey, onTime, pastAt, sleepIfNow, toBedtime, wakeOffset } from '../lib/sleep';
 import { BAND_LABEL, readiness } from '../lib/readiness';
 import { nextBadge, weekSummary } from '../lib/game';
@@ -37,6 +37,8 @@ export default function Today() {
   const hidden = useLayout((l) => l.hidden);
   const exNotes = useStore((s) => s.profile.exNotes);
   const lastNight = useStore((s) => s.nights[today]);
+  const lastMeasure = useStore((s) => s.profile.measures.at(-1)?.date);
+  const measureAgo = lastMeasure ? daysBetween(lastMeasure, today) : null;
   const fuelData = useFuelData();
   const yLine = yesterdayLine(sessions, fuelData?.days[addDays(today, -1)], addDays(today, -1));
 
@@ -271,6 +273,9 @@ export default function Today() {
           </a>
           <a className="chip" href="#/train?tab=history&past=1" style={{ textDecoration: 'none', color: 'var(--ink)' }}>
             <Icon name="plus" size={14} /> A workout I already did
+          </a>
+          <a className="chip" href="#/train?tab=badges" style={{ textDecoration: 'none', color: 'var(--ink)' }}>
+            <Icon name="plus" size={14} /> {measureAgo != null && measureAgo >= 28 ? `Measure (${measureAgo} days)` : 'Measurements'}
           </a>
         </div>
         {hidden.length > 0 && (
