@@ -78,7 +78,7 @@ export default function App() {
   return (
     <div className="app">
       {sync.status === 'error' && sync.kind !== 'offline' && sync.kind !== 'rate' && path !== 'profile' && (
-        <a href="#/profile" className="card tight" style={{ display: 'block', margin: '12px 16px 0', color: 'var(--ink)', textDecoration: 'none', boxShadow: 'inset 0 0 0 1.5px var(--danger)' }}>
+        <a href="#/profile?open=sync" className="card tight" style={{ display: 'block', margin: '12px 16px 0', color: 'var(--ink)', textDecoration: 'none', boxShadow: 'inset 0 0 0 1.5px var(--danger)' }}>
           <span className="bold" style={{ color: 'var(--danger)' }}>Sync problem</span>
           <span className="small" style={{ display: 'block' }}>{sync.error} Tap to fix.</span>
         </a>

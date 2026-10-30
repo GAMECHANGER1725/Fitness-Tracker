@@ -135,7 +135,7 @@ export default function Today() {
         {!hidden.includes('fuel') && <FuelStrip />}
         {!hidden.includes('week') && <WeekStrip />}
         {hidden.length > 0 && (
-          <a href="#/profile" className="small mut" style={{ textAlign: 'center' }}>
+          <a href="#/profile?open=look" className="small mut" style={{ textAlign: 'center' }}>
             {hidden.length} card{hidden.length === 1 ? '' : 's'} hidden · change in Profile
           </a>
         )}
@@ -294,7 +294,7 @@ function WindDown({ nightDone }: { nightDone: string[] }) {
     <div className="stack" style={{ gap: 6 }}>
       <div className="between small">
         <span className="bold">Wind down · {n} of {list.length}</span>
-        <a href="#/profile" className="mut" style={{ fontSize: 12 }}>Edit</a>
+        <a href="#/profile?open=wind" className="mut" style={{ fontSize: 12 }}>Edit</a>
       </div>
       <div className="row" style={{ flexWrap: 'wrap', gap: 6 }} role="group" aria-label="Wind-down steps">
         {list.map((l) => (
