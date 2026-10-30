@@ -121,6 +121,28 @@ export default function Fuel() {
           </section>
         </div>
 
+        {w.length >= 3 && (() => {
+          const pts = w.slice(-12);
+          const lo = Math.min(...pts.map((x) => x.kg)) - 0.3;
+          const hi = Math.max(...pts.map((x) => x.kg)) + 0.3;
+          const xy = pts.map((x, i) => [4 + (i / (pts.length - 1)) * 292, 70 - ((x.kg - lo) / (hi - lo)) * 60] as const);
+          return (
+            <section className="card stack" style={{ gap: 8 }} aria-label="Weight trend">
+              <div className="between">
+                <h2 className="h2">Weight</h2>
+                <span className="small mut">last {pts.length} weigh-ins</span>
+              </div>
+              <svg viewBox="0 0 300 80" width="100%" height="80" preserveAspectRatio="none" role="img" aria-label={`Weight from ${pts[0].kg} to ${pts.at(-1)!.kg} kg`}>
+                <polyline points={xy.map(([x, y]) => `${x},${y}`).join(' ')} fill="none" stroke="var(--fuel)" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+              </svg>
+              <div className="between small mut">
+                <span>{fmtDate(pts[0].date, { day: 'numeric', month: 'short' })} · {pts[0].kg.toFixed(1)} kg</span>
+                <span>{fmtDate(pts.at(-1)!.date, { day: 'numeric', month: 'short' })} · <span className="bold" style={{ color: 'var(--ink)' }}>{pts.at(-1)!.kg.toFixed(1)} kg</span></span>
+              </div>
+            </section>
+          );
+        })()}
+
         {tk != null && rk != null && (
           <section className="card stack" style={{ gap: 12 }} aria-label="Training days vs rest days">
             <h2 className="h2">Training days vs rest days</h2>
