@@ -13,7 +13,7 @@ const NEWS: [title: string, body: string, href?: string][] = [
   ['See your progress', 'Month calendars for workouts and sleep, a chart per exercise, personal bests, badge progress, and week totals on Today.', '#/train?tab=history'],
   ['Coach without AI', 'Coach now opens with plain notes from your last week: what’s going up, what’s stuck, sleep and whether a lighter week is due.', '#/coach'],
   ['Undo instead of “Are you sure?”', 'Deleting a workout or night, removing a set or stopping a workout can all be undone for a few seconds.'],
-  ['Make it yours', 'In Profile: a training colour (mint, sky, rose or lime), larger text, which cards Today shows, your wind-down steps, and CSV downloads. The app also follows your phone’s Reduce motion setting.', '#/profile?open=look'],
+  ['Make it yours', 'In Profile: a training colour (mint, sky, rose or lime), larger text, which cards Today shows and which reminders you get, your wind-down steps, and CSV downloads. The app also follows your phone’s Reduce motion setting.', '#/profile?open=look'],
 ];
 
 const seen = () => {
