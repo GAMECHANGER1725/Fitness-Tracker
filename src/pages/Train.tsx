@@ -846,6 +846,16 @@ function Bests() {
 
 function BadgeGrid() {
   const g = useGame();
+  const sessions = useStore((s) => s.sessions);
+  const nights = useStore((s) => s.nights);
+  const totals = useMemo(() => {
+    const xs = Object.values(sessions);
+    return {
+      mins: Math.round(xs.reduce((t, x) => t + Math.max(0, x.end - x.start), 0) / 60_000),
+      sets: xs.reduce((t, x) => t + x.sets.length, 0),
+      nights: Object.values(nights).filter((n) => n.wake != null).length,
+    };
+  }, [sessions, nights]);
   return (
     <>
       <div className="grid3">
@@ -860,6 +870,20 @@ function BadgeGrid() {
         <div className="tile">
           <p className="num" style={{ fontSize: 28 }}>{g.wake}</p>
           <span className="small mut">on-time wakes</span>
+        </div>
+      </div>
+      <div className="grid3">
+        <div className="tile">
+          <p className="num" style={{ fontSize: 22, whiteSpace: 'nowrap' }}>{totals.mins >= 60 ? `${Math.round(totals.mins / 60)} h` : `${totals.mins} min`}</p>
+          <span className="small mut">trained, all time</span>
+        </div>
+        <div className="tile">
+          <p className="num" style={{ fontSize: 22 }}>{totals.sets.toLocaleString('en-AU')}</p>
+          <span className="small mut">sets</span>
+        </div>
+        <div className="tile">
+          <p className="num" style={{ fontSize: 22 }}>{totals.nights}</p>
+          <span className="small mut">nights logged</span>
         </div>
       </div>
       <Bests />
