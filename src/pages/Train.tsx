@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useStore } from '../lib/store';
 import { EX, EXERCISES, PATTERN_LABEL, bestText, easier, harder, targetText, usable } from '../lib/exercises';
-import { WEEKDAYS, copyDay, deleteDay, inDeload, minutes, moveSlot } from '../lib/program';
+import { WEEKDAYS, addSlot, copyDay, deleteDay, inDeload, minutes, moveSlot } from '../lib/program';
 import { PATTERN_CAP, matchSession, newRecords, records, sessionText, trendOf, weeklySets } from '../lib/progress';
 import { addDays, addMonths, daysBetween, fmtDate, monthGrid } from '../lib/dates';
 import { hm } from '../lib/sleep';
@@ -666,6 +666,7 @@ function Ladder({ id, onPick }: { id: string; onPick: (id: string) => void }) {
   const down = easier(id);
   const up = harder(id);
   const inPlan = days.filter((d) => d.slots.some((x) => x.exerciseId === id)).map((d) => d.name);
+  const open = days.filter((d) => d.slots.length < 12 && !d.slots.some((x) => x.exerciseId === id));
   const step = (e: Exercise | null, label: string) =>
     e && usable(e, hasGrip) ? (
       <button className="chip" style={{ fontSize: 13, minHeight: 36 }} onClick={() => onPick(e.id)}>
@@ -680,7 +681,25 @@ function Ladder({ id, onPick }: { id: string; onPick: (id: string) => void }) {
           {step(up, 'Harder')}
         </div>
       )}
-      <p className="small mut">{inPlan.length ? `In your plan: ${inPlan.join(', ')}` : 'Not in your plan. Add it from Plan, or swap it in during a workout.'}</p>
+      <p className="small mut">{inPlan.length ? `In your plan: ${inPlan.join(', ')}` : 'Not in your plan yet.'}</p>
+      {!inPlan.length && open.length > 0 && (
+        <div className="row" style={{ flexWrap: 'wrap', gap: 6 }}>
+          {open.map((d) => (
+            <button
+              key={d.id}
+              className="chip"
+              style={{ fontSize: 13, minHeight: 36 }}
+              onClick={() => {
+                const { program, setProgram } = useStore.getState();
+                setProgram(addSlot(program, d.id, id), 'me', `Added ${EX[id]?.name} to ${d.name}`);
+                toast(`Added to ${d.name}: 3 sets`, { label: 'Undo', run: () => useStore.getState().undoProgram() });
+              }}
+            >
+              <Icon name="plus" size={14} /> Add to {d.name}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

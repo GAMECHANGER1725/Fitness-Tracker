@@ -107,6 +107,20 @@ export function warmupFor(slots: Slot[]): string[] {
   return [WARMUP.any, ...[...seen].map((p) => WARMUP[p]).filter(Boolean)].slice(0, 4);
 }
 
+/** A plan day with one more exercise at the end, at 3 sets of a starting range (8–12 reps or 20–40 s), 60 s rest, no load.
+ * Unchanged if the day already has it or is full (12). */
+export function addSlot(p: Program, dayId: string, exerciseId: string): Program {
+  const e = EX[exerciseId];
+  return {
+    ...p,
+    days: p.days.map((d) =>
+      d.id !== dayId || !e || d.slots.length >= 12 || d.slots.some((x) => x.exerciseId === exerciseId)
+        ? d
+        : { ...d, slots: [...d.slots, { exerciseId, sets: 3, low: e.unit === 'secs' ? 20 : 8, high: e.unit === 'secs' ? 40 : 12, restS: 60, loadKg: 0 }] },
+    ),
+  };
+}
+
 /** A copy of a plan day, named "<name> 2" (or 3, …), added after it; not scheduled on any weekday yet. At most 7 days. */
 export function copyDay(p: Program, dayId: string, id: string): Program {
   const i = p.days.findIndex((d) => d.id === dayId);

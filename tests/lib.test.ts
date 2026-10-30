@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_DATA, exportCsv, exportJson, importJson, normalize } from '../src/lib/backup';
-import { DEFAULT_PROGRAM, copyDay, deleteDay, nextPlanned, minutes, minutesLeft, workoutTimeOn, moveSlot, plannedDay, slotsFor, warmupFor, weekdayOf } from '../src/lib/program';
+import { DEFAULT_PROGRAM, addSlot, copyDay, deleteDay, nextPlanned, minutes, minutesLeft, workoutTimeOn, moveSlot, plannedDay, slotsFor, warmupFor, weekdayOf } from '../src/lib/program';
 import { EX, EXERCISES, bestText, easier, harder } from '../src/lib/exercises';
 import { applySession, deloadDue, diffPrograms, guardProgram, matchSession, newRecords, progressSlot, records, trendOf, moveSession, sessionText, vsLast, weeklySets } from '../src/lib/progress';
 import { readiness } from '../src/lib/readiness';
@@ -118,6 +118,17 @@ describe('exportCsv', () => {
     expect(rows[2]).toBe('2026-10-26,upper-a,Push-up,2,9,0,,4,"Wrist, a bit sore"');
     expect(rows[3]).toMatch(/^2026-10-26,upper-a,Backpack row,1,12,6,/);
     expect(sleep.trim().split('\n')[1]).toBe('2026-10-26,21:30,06:00,510,4,tap,Screens off; Teeth,"Late, study"');
+  });
+});
+
+describe('addSlot', () => {
+  it('adds a move at the end with a starting range, once, and not past 12', () => {
+    const d = DEFAULT_PROGRAM.days[0];
+    const p = addSlot(DEFAULT_PROGRAM, d.id, 'wall-sit');
+    expect(p.days[0].slots.at(-1)).toEqual({ exerciseId: 'wall-sit', sets: 3, low: 20, high: 40, restS: 60, loadKg: 0 });
+    expect(addSlot(p, d.id, 'wall-sit')).toEqual(p);
+    expect(addSlot(DEFAULT_PROGRAM, d.id, 'nope')).toEqual(DEFAULT_PROGRAM);
+    expect(p.days[1]).toBe(DEFAULT_PROGRAM.days[1]);
   });
 });
 
