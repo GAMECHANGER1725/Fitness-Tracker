@@ -130,6 +130,11 @@ export default function Today() {
               <button className="small bold" onClick={() => setChoice(!easy)} style={{ background: 'none', border: 0, padding: 0, color: 'inherit', opacity: 0.85, textDecoration: 'underline', alignSelf: 'center' }}>
                 {easy ? 'Do the full workout instead' : 'Do a lighter version (about a quarter fewer sets)'}
               </button>
+              {program.days.length > 1 && (
+                <button className="small bold" onClick={() => setPick(!pick)} aria-expanded={pick} style={{ background: 'none', border: 0, padding: 0, color: 'inherit', opacity: 0.85, textDecoration: 'underline', alignSelf: 'center' }}>
+                  {pick ? 'Keep today’s workout' : 'Do a different workout today'}
+                </button>
+              )}
             </>
           ) : (
             <button className="btn block" onClick={() => setPick(!pick)}>
@@ -141,10 +146,10 @@ export default function Today() {
               Next: {next.day.name}, {next.date === addDays(today, 1) ? 'tomorrow' : fmtDate(next.date, { weekday: 'long' })}
             </p>
           )}
-          {pick && !day && (
-            <div className="row" style={{ flexWrap: 'wrap' }}>
-              {program.days.map((d) => (
-                <button key={d.id} className="chip" onClick={() => start(d)}>{d.name}</button>
+          {pick && !active && !doneToday.length && (
+            <div className="row" style={{ flexWrap: 'wrap' }} role="group" aria-label="Pick a workout">
+              {program.days.filter((d) => d.id !== day?.id).map((d) => (
+                <button key={d.id} className="chip" onClick={() => start(d)}>{d.name} · {minutes(slotsFor(program, d, today, easy))} min</button>
               ))}
             </div>
           )}
