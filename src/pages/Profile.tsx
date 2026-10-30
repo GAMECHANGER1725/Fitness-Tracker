@@ -22,7 +22,7 @@ const SECTIONS: [id: string, label: string, card: ReactNode][] = [
   ['times', 'Times', <SleepGoals />],
   ['coach', 'AI coach', <AiCard />],
   ['sync', 'Sync', <SyncCard />],
-  ['wind', 'Wind-down', <WindDownEdit />],
+  ['wind', 'Wind-down & notes', <WindDownEdit />],
   ['workout', 'Workout', <PlayerPrefs />],
   ['reminders', 'Reminders', <Reminders />],
   ['look', 'Look', <Look />],

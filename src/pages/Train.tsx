@@ -733,28 +733,38 @@ function Ladder({ id, onPick }: { id: string; onPick: (id: string) => void }) {
 /** Last few sessions of one move: bars for total reps, the best set under each. */
 function Trend({ ex, sessions }: { ex: Exercise; sessions: Record<string, Session> }) {
   const today = useToday();
-  const pts = trendOf(sessions, ex.id);
+  const [span, setSpan] = useState(8);
+  const all = trendOf(sessions, ex.id, 30);
+  const pts = all.slice(-span);
   if (!pts.length) return <p className="small mut">Not done yet.</p>;
   const max = Math.max(...pts.map((p) => p.total));
   const ago = daysBetween(pts.at(-1)!.date, today);
+  const range = pts.length > 8 ? ` · ${fmtDate(pts[0].date, { day: 'numeric', month: 'short' })} to ${fmtDate(pts.at(-1)!.date, { day: 'numeric', month: 'short' })}` : '';
   const u = ex.unit === 'secs' ? ' s' : '';
   const loaded = pts.some((p) => p.top.loadKg);
   return (
     <div className="stack" style={{ gap: 6 }}>
+      {all.length > 8 && (
+        <div className="seg" role="group" aria-label="Sessions to show">
+          {[8, 16, 30].filter((_, i, xs) => i === 0 || all.length > xs[i - 1]).map((n) => (
+            <button key={n} aria-pressed={span === n} onClick={() => setSpan(n)}>Last {n}</button>
+          ))}
+        </div>
+      )}
       <div className="trend" style={loaded ? { height: 126 } : undefined} role="img" aria-label={`Last ${pts.length} sessions, total ${ex.unit === 'secs' ? 'seconds' : 'reps'}: ${pts.map((p) => p.total).join(', ')}`}>
         {pts.map((p, i) => (
           <div key={p.date + i} className="trend-col">
-            <span className="small mut" style={{ fontSize: 11 }}>{p.total}</span>
+            {pts.length <= 16 && <span className="small mut" style={{ fontSize: 11 }}>{p.total}</span>}
             <span className="trend-bar">
               <i style={{ height: `${Math.max(8, (p.total / max) * 100)}%` }} className={i === pts.length - 1 ? 'now' : ''} />
             </span>
-            <span className="small" style={{ fontSize: 11 }}>{fmtDate(p.date, { day: 'numeric', month: 'numeric' })}</span>
-            {loaded && <span className="small acc bold" style={{ fontSize: 11 }}>{p.top.loadKg ? `${p.top.loadKg} kg` : '–'}</span>}
+            {pts.length <= 8 && <span className="small" style={{ fontSize: 11 }}>{fmtDate(p.date, { day: 'numeric', month: 'numeric' })}</span>}
+            {loaded && pts.length <= 8 && <span className="small acc bold" style={{ fontSize: 11 }}>{p.top.loadKg ? `${p.top.loadKg} kg` : '–'}</span>}
           </div>
         ))}
       </div>
       <p className="small mut">
-        Total {ex.unit === 'secs' ? 'seconds' : 'reps'} per session{loaded ? ', backpack load below' : ''} · last best set {pts.at(-1)!.top.reps}{u}{pts.at(-1)!.top.loadKg ? ` @ ${pts.at(-1)!.top.loadKg} kg` : ''} · {ago === 0 ? 'done today' : ago === 1 ? 'yesterday' : `${ago} days ago`}
+        Total {ex.unit === 'secs' ? 'seconds' : 'reps'} per session{loaded && pts.length <= 8 ? ', backpack load below' : ''}{range} · last best set {pts.at(-1)!.top.reps}{u}{pts.at(-1)!.top.loadKg ? ` @ ${pts.at(-1)!.top.loadKg} kg` : ''} · {ago === 0 ? 'done today' : ago === 1 ? 'yesterday' : `${ago} days ago`}
       </p>
     </div>
   );
