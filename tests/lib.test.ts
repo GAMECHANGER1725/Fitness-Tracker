@@ -6,6 +6,7 @@ import { applySession, deloadDue, diffPrograms, guardProgram, matchSession, newR
 import { readiness } from '../src/lib/readiness';
 import { lastWeekReport, weekNotes, weekReportText, yesterdayLine } from '../src/lib/notes';
 import { backupDue, lookDefaults, startHash } from '../src/lib/layout';
+import { addMeasure, measureChange } from '../src/lib/body';
 import { computeGame, nextBadge, weekSummary, workoutWeeks } from '../src/lib/game';
 import { addDays, addMonths, atOn, monthGrid, weekStart } from '../src/lib/dates';
 import type { Night, Session, SetLog, Slot } from '../src/lib/types';
@@ -395,6 +396,23 @@ describe('lookDefaults', () => {
     a.hidden.push('fuel');
     expect(lookDefaults()).toMatchObject({ hidden: [], accent: 'mint', large: false, start: 'today' });
     expect(lookDefaults().noteTags).not.toContain('x');
+  });
+});
+
+describe('body measurements', () => {
+  it('keeps one entry a day, oldest first, and reports the change since the first', () => {
+    let l = addMeasure([], { date: '2026-10-20', arm: 28, waist: 70 });
+    l = addMeasure(l, { date: '2026-10-01', arm: 27.2 });
+    l = addMeasure(l, { date: '2026-10-20', arm: 28.5, waist: 70 });
+    expect(l.map((x) => x.date)).toEqual(['2026-10-01', '2026-10-20']);
+    expect(measureChange(l, 'arm')).toEqual({ now: 28.5, diff: 1.3, days: 19 });
+    expect(measureChange(l, 'waist')).toEqual({ now: 70, diff: 0, days: 0 });
+    expect(measureChange(l, 'chest')).toBeNull();
+  });
+  it('normalize cleans the log', () => {
+    const d = normalize({ profile: { measures: [{ date: '2026-10-02', arm: '27.04', chest: 'x' }, { date: 'bad', arm: 30 }, { date: '2026-10-01' }, { date: '2026-10-02', arm: 27.5 }] } });
+    expect(d.profile.measures).toEqual([{ date: '2026-10-02', arm: 27.5 }]);
+    expect(normalize({}).profile.measures).toEqual([]);
   });
 });
 

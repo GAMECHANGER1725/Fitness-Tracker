@@ -5,10 +5,11 @@ import { WEEKDAYS, addSlot, copyDay, deleteDay, inDeload, minutes, moveSlot } fr
 import { PATTERN_CAP, matchSession, newRecords, records, sessionText, trendOf, weeklySets } from '../lib/progress';
 import { addDays, addMonths, daysBetween, fmtDate, monthGrid } from '../lib/dates';
 import { hm } from '../lib/sleep';
+import { MEASURES, addMeasure, measureChange, type MeasureKey } from '../lib/body';
 import { Bar, Head, Icon, ProfileLink, Sheet, Stepper, go, scrollMotion, shareText, toast, useGame, useRoute, useToday } from '../components/ui';
 import { useReadiness } from '../components/data';
 import { NoteSheet } from './Workout';
-import type { Exercise, Pattern, PlanDay, Program, Session, Slot } from '../lib/types';
+import type { Exercise, Measure, Pattern, PlanDay, Program, Session, Slot } from '../lib/types';
 
 const TABS = [
   ['plan', 'Plan'],
@@ -807,6 +808,77 @@ function Trend({ ex, sessions }: { ex: Exercise; sessions: Record<string, Sessio
 }
 
 /** Best set per move, newest first, with the ones set this week marked. */
+function Body() {
+  const list = useStore((s) => s.profile.measures);
+  const setProfile = useStore((s) => s.setProfile);
+  const [open, setOpen] = useState(false);
+  const today = useToday();
+  const last = list.at(-1);
+  return (
+    <section className="card stack" style={{ gap: 8 }} aria-label="Body measurements">
+      <div className="between">
+        <h2 className="h2">Measurements</h2>
+        <button className="btn sm" onClick={() => setOpen(true)}>
+          <Icon name="plus" size={16} /> {last?.date === today ? 'Edit today' : 'Add'}
+        </button>
+      </div>
+      {!list.length ? (
+        <p className="small mut">Arm, chest, waist and thigh in cm, every few weeks. Muscle shows here before it shows on the scale.</p>
+      ) : (
+        <>
+          <div className="grid2" style={{ gap: 8 }}>
+            {MEASURES.map(([k, name]) => {
+              const c = measureChange(list, k);
+              return c ? (
+                <div key={k} className="tile">
+                  <span className="small mut">{name}</span>
+                  <p className="num" style={{ fontSize: 22 }}>{c.now} cm</p>
+                  {c.days > 0 && <span className="small" style={{ color: c.diff > 0 ? 'var(--acc)' : 'var(--mut)' }}>{c.diff ? `${c.diff > 0 ? '+' : ''}${c.diff} cm in ${c.days} days` : `Same as ${c.days} days ago`}</span>}
+                </div>
+              ) : null;
+            })}
+          </div>
+          <p className="small mut">{list.length} entr{list.length === 1 ? 'y' : 'ies'}, last on {fmtDate(last!.date, { weekday: 'short', day: 'numeric', month: 'short' })}. Measure at the same time of day, relaxed.</p>
+        </>
+      )}
+      {open && <MeasureSheet onClose={() => setOpen(false)} onSave={(m) => setProfile({ measures: addMeasure(list, m) })} />}
+    </section>
+  );
+}
+
+function MeasureSheet({ onClose, onSave }: { onClose: () => void; onSave: (m: Measure) => void }) {
+  const today = useToday();
+  const list = useStore((s) => s.profile.measures);
+  // Starts from today's entry, or the last one, so only what changed needs typing.
+  const base = list.find((x) => x.date === today) ?? list.at(-1);
+  const [vals, setVals] = useState<Record<string, string>>(() => Object.fromEntries(MEASURES.map(([k]) => [k, base?.[k] != null ? String(base[k]) : ''])));
+  const parsed = Object.fromEntries(MEASURES.map(([k]) => [k, parseFloat(vals[k].replace(',', '.'))]).filter(([, v]) => Number.isFinite(v) && (v as number) >= 10 && (v as number) <= 250)) as Partial<Record<MeasureKey, number>>;
+  return (
+    <Sheet onClose={onClose} label="Measurements">
+      <h2 className="h2">Measurements today</h2>
+      <div className="grid2">
+        {MEASURES.map(([k, name]) => (
+          <label key={k} className="field">
+            <span>{name} (cm)</span>
+            <input className="input" inputMode="decimal" value={vals[k]} placeholder="–" onChange={(e) => setVals({ ...vals, [k]: e.target.value })} />
+          </label>
+        ))}
+      </div>
+      <button
+        className="btn primary block"
+        disabled={!Object.keys(parsed).length}
+        onClick={() => {
+          onSave({ date: today, ...parsed });
+          toast('Measurements saved');
+          onClose();
+        }}
+      >
+        Save
+      </button>
+    </Sheet>
+  );
+}
+
 function Bests() {
   const today = useToday();
   const sessions = useStore((s) => s.sessions);
@@ -886,6 +958,7 @@ function BadgeGrid() {
           <span className="small mut">nights logged</span>
         </div>
       </div>
+      <Body />
       <Bests />
       <p className="small mut" style={{ textAlign: 'center' }}>{g.badges.filter((b) => b.earned).length} of {g.badges.length} badges</p>
       <section className="card grid3" style={{ rowGap: 18 }}>

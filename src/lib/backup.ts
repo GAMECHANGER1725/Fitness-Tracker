@@ -1,7 +1,7 @@
 // Defaults, backup export and import. Anything loaded from storage, a backup or the gist goes through
 // normalize(), which re-validates every field and fills gaps from DEFAULT_DATA.
 
-import type { ActiveWorkout, AppData, Night, PlanDay, Program, ProgramChange, Session, SetLog, Slot } from './types';
+import type { ActiveWorkout, AppData, Measure, Night, PlanDay, Program, ProgramChange, Session, SetLog, Slot } from './types';
 import { DEFAULT_GEMINI_MODEL, DEFAULT_MODEL } from './ai';
 import { DEFAULT_PROGRAM } from './program';
 import { EX } from './exercises';
@@ -11,7 +11,7 @@ import { durationMin } from './sleep';
 // Personal app: starts set up for its one user (same stats as Fuel Log).
 export const DEFAULT_DATA: AppData = {
   v: 1,
-  profile: { name: 'Vaidik', age: 15, sex: 'male', heightCm: 182, weightKg: 58.3, packMaxKg: 15, hasGrip: true, exNotes: {}, windDown: ['Screens off', 'Bag packed for tomorrow', 'Teeth brushed'] },
+  profile: { name: 'Vaidik', age: 15, sex: 'male', heightCm: 182, weightKg: 58.3, packMaxKg: 15, hasGrip: true, exNotes: {}, windDown: ['Screens off', 'Bag packed for tomorrow', 'Teeth brushed'], measures: [] },
   settings: {
     wakeTarget: '06:00',
     sleepGoalH: 8.5,
@@ -115,6 +115,21 @@ function night(k: string, v: unknown): Night | null {
   return out;
 }
 
+function measures(v: unknown): Measure[] {
+  const byDay = new Map<string, Measure>();
+  for (const x of arr(v)) {
+    const o = obj(x);
+    if (!isKey(o.date)) continue;
+    const m: Measure = { date: o.date };
+    for (const k of ['arm', 'chest', 'waist', 'thigh'] as const) {
+      const val = opt(o[k], 10, 250);
+      if (val != null) m[k] = Math.round(val * 10) / 10;
+    }
+    if (Object.keys(m).length > 1) byDay.set(m.date, m);
+  }
+  return [...byDay.values()].sort((a, b) => (a.date < b.date ? -1 : 1)).slice(-100);
+}
+
 function active(v: unknown): ActiveWorkout | null {
   const a = obj(v);
   if (!isKey(a.date)) return null;
@@ -167,6 +182,7 @@ export function normalize(v: unknown): AppData {
       packMaxKg: num(p.packMaxKg, D.profile.packMaxKg, 0, 40),
       hasGrip: typeof p.hasGrip === 'boolean' ? p.hasGrip : D.profile.hasGrip,
       windDown: Array.isArray(p.windDown) ? [...new Set(arr(p.windDown).map((x) => str(x, 40).trim()).filter(Boolean))].slice(0, 6) : D.profile.windDown,
+      measures: measures(p.measures),
       exNotes: Object.fromEntries(Object.entries(obj(p.exNotes)).filter(([id]) => EX[id]).map(([id, t]) => [id, str(t, 200).trim()]).filter(([, t]) => t)),
     },
     settings: {

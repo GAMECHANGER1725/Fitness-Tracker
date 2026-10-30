@@ -133,6 +133,17 @@ export interface Profile {
   exNotes: Record<string, string>;
   /** Your evening wind-down steps, ticked on Today before Going to sleep. */
   windDown: string[];
+  /** Tape-measure log, oldest first, one per day (`body.ts`). */
+  measures: Measure[];
+}
+
+/** Circumferences in cm on one day; any can be missing. */
+export interface Measure {
+  date: string;
+  arm?: number;
+  chest?: number;
+  waist?: number;
+  thigh?: number;
 }
 
 export interface Settings {
