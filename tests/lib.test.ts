@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_DATA, exportCsv, exportJson, importJson, normalize } from '../src/lib/backup';
-import { DEFAULT_PROGRAM, copyDay, deleteDay, nextPlanned, minutes, minutesLeft, moveSlot, plannedDay, slotsFor, warmupFor, weekdayOf } from '../src/lib/program';
+import { DEFAULT_PROGRAM, copyDay, deleteDay, nextPlanned, minutes, minutesLeft, workoutTimeOn, moveSlot, plannedDay, slotsFor, warmupFor, weekdayOf } from '../src/lib/program';
 import { EX, EXERCISES, bestText, easier, harder } from '../src/lib/exercises';
 import { applySession, deloadDue, diffPrograms, guardProgram, matchSession, newRecords, progressSlot, records, trendOf, moveSession, sessionText, vsLast, weeklySets } from '../src/lib/progress';
 import { readiness } from '../src/lib/readiness';
@@ -118,6 +118,19 @@ describe('exportCsv', () => {
     expect(rows[2]).toBe('2026-10-26,upper-a,Push-up,2,9,0,,4,"Wrist, a bit sore"');
     expect(rows[3]).toMatch(/^2026-10-26,upper-a,Backpack row,1,12,6,/);
     expect(sleep.trim().split('\n')[1]).toBe('2026-10-26,21:30,06:00,510,4,tap,Screens off; Teeth,"Late, study"');
+  });
+});
+
+describe('workoutTimeOn', () => {
+  it('uses the weekend time on Saturday and Sunday when set, and normalize keeps only a valid one', () => {
+    const s = { workoutTime: '16:30', weekendWorkoutTime: '10:00' };
+    expect(workoutTimeOn(s, '2026-10-30')).toBe('16:30');
+    expect(workoutTimeOn(s, '2026-10-31')).toBe('10:00');
+    expect(workoutTimeOn(s, '2026-11-01')).toBe('10:00');
+    expect(workoutTimeOn({ ...s, weekendWorkoutTime: '' }, '2026-10-31')).toBe('16:30');
+    expect(normalize({ settings: { weekendWorkoutTime: '9:05' } }).settings.weekendWorkoutTime).toBe('09:05');
+    expect(normalize({ settings: { weekendWorkoutTime: 'soon' } }).settings.weekendWorkoutTime).toBe('');
+    expect(normalize({}).settings.weekendWorkoutTime).toBe('');
   });
 });
 

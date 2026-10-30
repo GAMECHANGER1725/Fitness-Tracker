@@ -142,6 +142,8 @@ export interface Settings {
   /** Lights-out target, "HH:mm". The sleep coach can move it a little each week. */
   bedtime: string;
   workoutTime: string;
+  /** Saturday and Sunday workout reminder, "HH:mm"; empty = same as `workoutTime`. */
+  weekendWorkoutTime: string;
   theme: 'auto' | 'dark' | 'light';
   /** Own AI keys; empty = use Fuel Log's. */
   aiKey: string;

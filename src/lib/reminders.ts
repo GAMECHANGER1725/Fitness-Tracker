@@ -8,7 +8,7 @@
 
 import { useStore } from './store';
 import { keyOf, todayKey } from './dates';
-import { minutes, plannedDay, slotsFor } from './program';
+import { minutes, plannedDay, slotsFor, workoutTimeOn } from './program';
 import { clock12, minsOf } from './sleep';
 import { useCoach } from './coach';
 
@@ -96,7 +96,7 @@ function tick() {
   }
   const day = plannedDay(s.program, today);
   const trained = Object.values(s.sessions).some((x) => x.date === today);
-  if (want('workout') && day && !trained && !s.active && dueAt(now, minsOf(s.settings.workoutTime), r.workoutDate, 120)) {
+  if (want('workout') && day && !trained && !s.active && dueAt(now, minsOf(workoutTimeOn(s.settings, today)), r.workoutDate, 120)) {
     patch({ workoutDate: today });
     notify(`${day.name} today`, `${day.slots.length} exercises, about ${minutes(slotsFor(s.program, day, today))} minutes. Tap to start.`, 'workout', 'today');
   }

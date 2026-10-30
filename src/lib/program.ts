@@ -2,7 +2,7 @@
 // Built for a 15-year-old on a bulk: moderate volume, reps well short of failure, progress by adding
 // reps, then backpack weight, then a harder variation (progress.ts). The coach can change it within limits.
 
-import type { PlanDay, Program, Slot } from './types';
+import type { PlanDay, Program, Settings, Slot } from './types';
 import { addDays, dateOf } from './dates';
 import { EX } from './exercises';
 
@@ -133,4 +133,10 @@ export function nextPlanned(p: Program, date: string): { day: PlanDay; date: str
     if (day) return { day, date: k };
   }
   return null;
+}
+
+/** The workout reminder time on a day: the weekend one on Saturday and Sunday if set. */
+export function workoutTimeOn(s: Pick<Settings, 'workoutTime' | 'weekendWorkoutTime'>, date: string): string {
+  const wd = dateOf(date).getDay();
+  return (wd === 0 || wd === 6) && s.weekendWorkoutTime ? s.weekendWorkoutTime : s.workoutTime;
 }

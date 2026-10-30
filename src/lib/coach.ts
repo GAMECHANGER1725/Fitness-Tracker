@@ -65,7 +65,7 @@ export interface Snapshot {
   now: string;
   weekday: string;
   profile: { age: number; sex: string; heightCm: number; weightKg: number; goal: string; equipment: string };
-  schedule: { wakeTarget: string; bedtime: string; sleepGoalHours: number; workoutTime: string };
+  schedule: { wakeTarget: string; bedtime: string; sleepGoalHours: number; workoutTime: string; weekendWorkoutTime?: string };
   program: { week: string[]; days: { id: string; name: string; slots: (Slot & { name: string; unit: string })[] }[]; deloadUntil: string | null; weeklySetsByPattern: Record<Pattern, number> };
   todayPlan: string;
   sessions: ReturnType<typeof sessionLine>[];
@@ -137,7 +137,7 @@ export function snapshot(d: AppData, fuel: FuelData | null, now = new Date()): S
       goal: 'Build muscle on a vegetarian bulk (eggs and dairy OK), gaining 0.25–0.5 kg a week',
       equipment: `Bodyweight, a backpack loaded up to ${d.profile.packMaxKg} kg${d.profile.hasGrip ? ', a forearm trainer' : ''}. No bar, bench or dumbbells.`,
     },
-    schedule: { wakeTarget: s.wakeTarget, bedtime: s.bedtime, sleepGoalHours: s.sleepGoalH, workoutTime: s.workoutTime },
+    schedule: { wakeTarget: s.wakeTarget, bedtime: s.bedtime, sleepGoalHours: s.sleepGoalH, workoutTime: s.workoutTime, weekendWorkoutTime: s.weekendWorkoutTime || undefined },
     program: {
       week: d.program.week.map((id, i) => `${WEEKDAYS[i]}: ${d.program.days.find((x) => x.id === id)?.name ?? 'rest'}`),
       days: d.program.days.map((day) => ({ id: day.id, name: day.name, slots: day.slots.map((x) => ({ ...x, name: EX[x.exerciseId]?.name ?? x.exerciseId, unit: EX[x.exerciseId]?.unit ?? 'reps' })) })),

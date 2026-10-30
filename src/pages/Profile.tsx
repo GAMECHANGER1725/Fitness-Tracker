@@ -129,6 +129,17 @@ function SleepGoals() {
           <input className="input" type="time" value={s.workoutTime} onChange={(e) => e.target.value && set({ workoutTime: e.target.value })} />
         </label>
       </div>
+      <div className="field">
+        <span>Weekend workout reminder</span>
+        {s.weekendWorkoutTime ? (
+          <div className="row">
+            <input className="input" style={{ flex: 1 }} type="time" value={s.weekendWorkoutTime} aria-label="Weekend workout reminder" onChange={(e) => e.target.value && set({ weekendWorkoutTime: e.target.value })} />
+            <button className="btn sm" onClick={() => set({ weekendWorkoutTime: '' })}>Same as weekdays</button>
+          </div>
+        ) : (
+          <button className="btn sm" style={{ alignSelf: 'flex-start' }} onClick={() => set({ weekendWorkoutTime: '10:00' })}>Same as weekdays · set a different time</button>
+        )}
+      </div>
       <label className="field">
         <span>Sleep goal (8–10 h is right at your age)</span>
         <Stepper value={s.sleepGoalH} onChange={(v) => set({ sleepGoalH: v })} label="sleep goal hours" step={0.5} min={7} max={10.5} unit="h" />
