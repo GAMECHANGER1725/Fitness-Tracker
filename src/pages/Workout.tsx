@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../lib/store';
-import { warmupFor } from '../lib/program';
+import { minutesLeft, warmupFor } from '../lib/program';
 import { EX, EXERCISES, PATTERN_LABEL, bestText, targetText, usable } from '../lib/exercises';
 import { historyOf, newRecords, records, sessionText, vsLast } from '../lib/progress';
 import { currentAi, postWorkout, suggestSwap } from '../lib/coach';
@@ -116,6 +116,7 @@ function Player({ onDone }: { onDone: (r: { session: Session; lines: string[]; r
 
   const total = a.slots.reduce((t, s) => t + s.sets, 0);
   const elapsed = Math.floor((now - a.start) / 60_000);
+  const left = minutesLeft(a.slots, a.sets);
 
   return (
     <main style={{ padding: '18px 16px 32px' }} className="stack">
@@ -279,7 +280,10 @@ function Player({ onDone }: { onDone: (r: { session: Session; lines: string[]; r
         <button className="btn sm" disabled={a.idx === 0} onClick={() => goTo(a.idx - 1)}>
           <Icon name="left" size={18} /> Back
         </button>
-        <span className="small mut">{a.sets.length} of {total} sets</span>
+        <span className="small mut" style={{ textAlign: 'center' }}>
+          {a.sets.length} of {total} sets
+          {left > 0 && <><br />about {left} min left</>}
+        </span>
         <button className="btn sm" disabled={a.idx === a.slots.length - 1} onClick={() => goTo(a.idx + 1)}>
           Skip <Icon name="right" size={18} />
         </button>

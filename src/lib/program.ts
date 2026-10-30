@@ -63,6 +63,16 @@ export function minutes(slots: Slot[]): number {
   return Math.round(s / 60 / 5) * 5 || 5;
 }
 
+/** Rough minutes still to go: the sets not yet logged for each slot, at the same per-set cost as `minutes`. */
+export function minutesLeft(slots: Slot[], done: { exerciseId: string }[]): number {
+  const s = slots.reduce((t, x) => {
+    const e = EX[x.exerciseId];
+    const left = Math.max(0, x.sets - done.filter((d) => d.exerciseId === x.exerciseId).length);
+    return t + left * ((e?.unit === 'secs' ? x.high : 40) * (e?.perSide ? 2 : 1) + x.restS);
+  }, 0);
+  return Math.ceil(s / 60);
+}
+
 /** Swaps a slot with its neighbour (dir -1 = earlier, 1 = later); unchanged at either end. */
 export function moveSlot(p: Program, dayId: string, idx: number, dir: -1 | 1): Program {
   return {
