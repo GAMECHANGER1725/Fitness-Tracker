@@ -82,3 +82,12 @@ export function weekReportText(r: WeekReport): string {
   const sleep = r.avgMin != null ? `Sleep: ${hm(r.avgMin)} average${r.withWake ? `, up on time ${r.onTime} of ${r.withWake}` : ''}, ${r.nights} of 7 nights logged` : 'Sleep: not logged';
   return [`My week, ${d(r.ws)} – ${d(addDays(r.ws, 6))}`, train, sleep].join('\n');
 }
+
+/** "Yesterday: Lower B, 35 min · 2,950 kcal, 110 g protein", from what was logged; null when nothing was. */
+export function yesterdayLine(sessions: AppData['sessions'], food: { kcal: number; protein: number } | undefined, yd: string): string | null {
+  const xs = Object.values(sessions).filter((s) => s.date === yd);
+  const parts: string[] = [];
+  if (xs.length) parts.push(xs.map((s) => `${s.name}, ${hm(Math.max(1, Math.round((s.end - s.start) / 60_000)))}`).join(' and '));
+  if (food && food.kcal > 0) parts.push(`${Math.round(food.kcal).toLocaleString('en-AU')} kcal, ${Math.round(food.protein)} g protein`);
+  return parts.length ? `Yesterday: ${parts.join(' · ')}` : null;
+}

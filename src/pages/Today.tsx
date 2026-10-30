@@ -7,7 +7,7 @@ import { QUALITY, clock12, clockOf, durationMin, hm, minsOf, nightKey, onTime, p
 import { BAND_LABEL, readiness } from '../lib/readiness';
 import { nextBadge, weekSummary } from '../lib/game';
 import { historyOf, newRecords } from '../lib/progress';
-import { lastWeekReport, weekReportText } from '../lib/notes';
+import { lastWeekReport, weekReportText, yesterdayLine } from '../lib/notes';
 import { backupDue, useLayout } from '../lib/layout';
 import { useSync } from '../lib/sync';
 import { currentAi, morningBriefing, useCoach } from '../lib/coach';
@@ -37,6 +37,8 @@ export default function Today() {
   const hidden = useLayout((l) => l.hidden);
   const exNotes = useStore((s) => s.profile.exNotes);
   const lastNight = useStore((s) => s.nights[today]);
+  const fuelData = useFuelData();
+  const yLine = yesterdayLine(sessions, fuelData?.days[addDays(today, -1)], addDays(today, -1));
 
   const start = (day: PlanDay) => {
     startWorkout(day, easy);
@@ -97,6 +99,7 @@ export default function Today() {
             </div>
           )}
           <Briefing fallback={ready.notes.slice(0, 2).join('. ') + (ready.notes.length ? '.' : '')} />
+          {new Date().getHours() < 12 && yLine && <p className="small" style={{ opacity: 0.85 }}>{yLine}</p>}
           {!lastNight?.wake && new Date().getHours() >= 14 && (
             <a href={`#/sleep?night=${today}`} className="small bold" style={{ color: 'inherit', opacity: 0.9 }}>Log last night’s sleep</a>
           )}

@@ -4,7 +4,7 @@ import { DEFAULT_PROGRAM, addSlot, copyDay, deleteDay, nextPlanned, minutes, min
 import { EX, EXERCISES, bestText, easier, harder } from '../src/lib/exercises';
 import { applySession, deloadDue, diffPrograms, guardProgram, matchSession, newRecords, progressSlot, records, trendOf, moveSession, sessionText, vsLast, withLength, weeklySets } from '../src/lib/progress';
 import { readiness } from '../src/lib/readiness';
-import { lastWeekReport, weekNotes, weekReportText } from '../src/lib/notes';
+import { lastWeekReport, weekNotes, weekReportText, yesterdayLine } from '../src/lib/notes';
 import { backupDue, lookDefaults, startHash } from '../src/lib/layout';
 import { computeGame, nextBadge, weekSummary, workoutWeeks } from '../src/lib/game';
 import { addDays, addMonths, atOn, monthGrid, weekStart } from '../src/lib/dates';
@@ -444,6 +444,16 @@ describe('weekNotes and night notes', () => {
       nights[date] = { date, bed, wake: atOn(date, '06:00'), note: ph ? 'Phone in bed' : undefined, source: 'tap', m: 1 };
     }
     expect(weekNotes({ ...DEFAULT_DATA, nights }, '2026-10-29').some((l) => l.startsWith('Nights you note “phone in bed” average 1 h 00 m less'))).toBe(true);
+  });
+});
+
+describe('yesterdayLine', () => {
+  it('names yesterday’s workout and food, or nothing', () => {
+    const a = sess('2026-10-29', 'Lower B', [['pushup', 10]]);
+    const sessions = { [a.id]: a };
+    expect(yesterdayLine(sessions, { kcal: 2950.4, protein: 110.2 }, '2026-10-29')).toBe('Yesterday: Lower B, 40 min · 2,950 kcal, 110 g protein');
+    expect(yesterdayLine(sessions, undefined, '2026-10-29')).toBe('Yesterday: Lower B, 40 min');
+    expect(yesterdayLine({}, { kcal: 0, protein: 0 }, '2026-10-29')).toBeNull();
   });
 });
 
