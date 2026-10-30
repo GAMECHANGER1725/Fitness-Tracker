@@ -194,7 +194,7 @@ function Player({ onDone }: { onDone: (r: { session: Session; lines: string[]; r
               <span className={`dot ${x ? 'on' : ''}`}>{x && <Icon name="check" size={14} stroke={3} />}</span>
               <span className="grow bold">Set {i + 1}</span>
               <span className={x ? 'bold' : 'mut'}>
-                {x ? `${x.reps}${ex?.unit === 'secs' ? ' s' : ' reps'}${x.loadKg ? ` · ${x.loadKg} kg` : ''}` : targetText(ex, slot.low, slot.high)}
+                {x ? `${x.reps}${ex?.unit === 'secs' ? ' s' : ' reps'}${x.loadKg ? ` · ${x.loadKg} kg` : ''}` : `${last?.[i] ? `last ${last[i].reps}${last[i].loadKg ? ` @ ${last[i].loadKg} kg` : ''} · ` : ''}${targetText(ex, slot.low, slot.high)}`}
               </span>
               {x && <Icon name="pencil" size={16} />}
             </div>
