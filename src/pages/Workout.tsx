@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore } from '../lib/store';
 import { minutesLeft, warmupFor } from '../lib/program';
 import { EX, EXERCISES, PATTERN_LABEL, bestText, easier, harder, targetText, usable } from '../lib/exercises';
-import { historyOf, moveUpText, newRecords, records, sessionText, vsLast } from '../lib/progress';
+import { historyOf, moveUpText, nearMisses, newRecords, records, sessionText, vsLast } from '../lib/progress';
 import { currentAi, postWorkout, suggestSwap } from '../lib/coach';
 import { friendlyError, hasAi } from '../lib/ai';
 import { beep, buzz, holdWakeLock, primeAudio, usePlayer } from '../lib/player';
@@ -23,7 +23,7 @@ const EFFORT: [number, string][] = [
 
 export default function Workout() {
   const active = useStore((s) => s.active);
-  const [result, setResult] = useState<{ session: Session; lines: string[]; records: string[] } | null>(null);
+  const [result, setResult] = useState<{ session: Session; lines: string[]; records: string[]; slots: Slot[] } | null>(null);
   if (result) return <Summary {...result} />;
   if (!active) {
     return (
@@ -37,7 +37,7 @@ export default function Workout() {
   return <Player onDone={setResult} />;
 }
 
-function Player({ onDone }: { onDone: (r: { session: Session; lines: string[]; records: string[] }) => void }) {
+function Player({ onDone }: { onDone: (r: { session: Session; lines: string[]; records: string[]; slots: Slot[] }) => void }) {
   const a = useStore((s) => s.active)!;
   const sessions = useStore((s) => s.sessions);
   const { logSet, undoSet, goTo, setRest, cancelWorkout, finishWorkout } = useStore.getState();
@@ -47,6 +47,9 @@ function Player({ onDone }: { onDone: (r: { session: Session; lines: string[]; r
   const done = a.sets.filter((x) => x.exerciseId === slot.exerciseId);
   const last = historyOf(sessions, slot.exerciseId)[0];
   const pb = useMemo(() => records(sessions)[slot.exerciseId], [sessions, slot.exerciseId]);
+  // Progression judges the plan's slot (a lighter day has fewer sets than it needs).
+  const program = useStore((s) => s.program);
+  const planSlot = program.days.find((d) => d.id === a.dayId)?.slots.find((x) => x.exerciseId === slot.exerciseId) ?? slot;
   const suggest = last?.[done.length]?.reps ?? last?.at(-1)?.reps ?? slot.low;
   const [reps, setReps] = useState(suggest);
   const [load, setLoad] = useState(slot.loadKg);
@@ -180,8 +183,8 @@ function Player({ onDone }: { onDone: (r: { session: Session; lines: string[]; r
         </ul>
         {ex && !past && (
           <p className="small acc">
-            {moveUpText(slot, ex)}
-            {done.length > 0 && <span className="bold"> {Math.min(slot.sets, done.slice(0, slot.sets).filter((x) => x.reps >= slot.high).length)} of {slot.sets} there today.</span>}
+            {moveUpText(planSlot, ex)}
+            {done.length > 0 && <span className="bold"> {done.slice(0, planSlot.sets).filter((x) => x.reps >= planSlot.high).length} of {planSlot.sets} there today.</span>}
           </p>
         )}
         <button className="small" onClick={() => setNoteOpen(true)} style={{ background: 'none', border: 0, padding: '4px 0', textAlign: 'left', color: note ? 'var(--ink)' : 'var(--acc)', display: 'flex', gap: 6, alignItems: 'flex-start' }}>
@@ -329,12 +332,14 @@ function Player({ onDone }: { onDone: (r: { session: Session; lines: string[]; r
           onClose={() => setFinish(false)}
           onSave={(feel, note) => {
             const before = useStore.getState().sessions;
+            // The plan's targets before progression changes them: what "all sets at the top" is judged against.
+            const planSlots = useStore.getState().program.days.find((d) => d.id === a.dayId)?.slots ?? a.slots;
             // Left open long after the last set: end it there, not now.
             const r = finishWorkout(feel, note, idleMin > 30 ? lastAt + 60_000 : undefined);
             setFinish(false);
             if (!r) return go('today');
             const recs = newRecords(r.session, before).map((x) => `${EX[x.exerciseId]?.name}: ${x.reps}${EX[x.exerciseId]?.unit === 'secs' ? ' s' : ''}${x.loadKg ? ` @ ${x.loadKg} kg` : ''}`);
-            onDone({ ...r, records: recs });
+            onDone({ ...r, records: recs, slots: planSlots });
           }}
         />
       )}
@@ -573,7 +578,7 @@ function RefuelCard({ date }: { date: string }) {
   );
 }
 
-function Summary({ session, lines, records }: { session: Session; lines: string[]; records: string[] }) {
+function Summary({ session, lines, records, slots }: { session: Session; lines: string[]; records: string[]; slots: Slot[] }) {
   const [text, setText] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const ai = hasAi(currentAi());
@@ -636,6 +641,19 @@ function Summary({ session, lines, records }: { session: Session; lines: string[
           ))}
         </section>
       )}
+      {(() => {
+        const near = nearMisses(session, slots);
+        return near.length ? (
+          <section className="card stack" style={{ gap: 6 }}>
+            <h2 className="h2">Nearly there</h2>
+            {near.map((n) => (
+              <p key={n.exerciseId} className="small">
+                <span className="bold">{EX[n.exerciseId]?.name}</span>: {n.hit} of {n.sets} sets at {n.high}{EX[n.exerciseId]?.unit === 'secs' ? ' s' : ' reps'}. All {n.sets} next time steps it up.
+              </p>
+            ))}
+          </section>
+        ) : null;
+      })()}
       <RefuelCard date={session.date} />
       {ai && (
         <section className="card stack">

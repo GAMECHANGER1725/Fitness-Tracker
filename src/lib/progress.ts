@@ -303,6 +303,15 @@ export function matchSession(s: Session, query: string): boolean {
   return words.every((w) => text.includes(w));
 }
 
+/** Moves in a finished workout that got some planned sets to the top of the range, but not all: the near misses. */
+export function nearMisses(session: Session, slots: Slot[]): { exerciseId: string; hit: number; sets: number; high: number }[] {
+  return slots.flatMap((sl) => {
+    const work = session.sets.filter((x) => x.exerciseId === sl.exerciseId).slice(0, sl.sets);
+    const hit = work.filter((x) => x.reps >= sl.high).length;
+    return hit > 0 && hit < sl.sets ? [{ exerciseId: sl.exerciseId, hit, sets: sl.sets, high: sl.high }] : [];
+  });
+}
+
 /** What progressSlot needs to step this slot up: every planned set at the top of the range, not mostly all-out. */
 export function moveUpText(slot: Slot, ex: Pick<Exercise, 'unit'>): string {
   return `To move up: ${slot.high}${ex.unit === 'secs' ? ' s' : ' reps'} on all ${slot.sets} set${slot.sets === 1 ? '' : 's'}, effort mostly Solid or easier.`;

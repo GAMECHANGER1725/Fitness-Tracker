@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_DATA, exportCsv, exportJson, importJson, normalize } from '../src/lib/backup';
 import { DEFAULT_PROGRAM, addSlot, copyDay, deleteDay, nextPlanned, minutes, minutesLeft, workoutTimeOn, moveSlot, plannedDay, slotsFor, warmupFor, weekdayOf } from '../src/lib/program';
 import { EX, EXERCISES, bestText, easier, harder } from '../src/lib/exercises';
-import { applySession, deloadDue, diffPrograms, guardProgram, matchSession, newRecords, progressSlot, records, trendOf, moveSession, sessionText, vsLast, withLength, moveUpText, weeklySets } from '../src/lib/progress';
+import { applySession, deloadDue, diffPrograms, guardProgram, matchSession, newRecords, progressSlot, records, trendOf, moveSession, sessionText, vsLast, withLength, moveUpText, nearMisses, weeklySets } from '../src/lib/progress';
 import { readiness } from '../src/lib/readiness';
 import { lastWeekReport, weekNotes, weekReportText, yesterdayLine } from '../src/lib/notes';
 import { backupDue, lookDefaults, startHash } from '../src/lib/layout';
@@ -152,6 +152,13 @@ describe('minutesLeft', () => {
     expect(minutesLeft([s], [])).toBe(6);
     expect(minutesLeft([s], [{ exerciseId: 'pushup' }])).toBe(4);
     expect(minutesLeft([s], [1, 2, 3, 4].map(() => ({ exerciseId: 'pushup' })))).toBe(0);
+  });
+});
+
+describe('nearMisses', () => {
+  it('lists moves with some but not all planned sets at the top', () => {
+    const a = sess('2026-10-26', 'upper-a', [['pushup', 12], ['pushup', 10], ['pushup', 12], ['pack-row', 12], ['pack-row', 12], ['pack-row', 12], ['squat', 8]]);
+    expect(nearMisses(a, [slot('pushup'), slot('pack-row'), slot('squat')])).toEqual([{ exerciseId: 'pushup', hit: 2, sets: 3, high: 12 }]);
   });
 });
 
