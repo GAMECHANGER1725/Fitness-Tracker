@@ -450,7 +450,7 @@ function History() {
               <>
                 {[...by.entries()].map(([id, xs]) => (
                   <p key={id} className="small">
-                    <span className="bold">{EX[id]?.name ?? id}</span>{' '}
+                    <a className="bold" href={`#/train?tab=moves&open=${id}`} style={{ color: 'var(--ink)' }}>{EX[id]?.name ?? id}</a>{' '}
                     <span className="mut">
                       {xs.map((x) => x.reps).join(', ')}
                       {EX[id]?.unit === 'secs' ? ' s' : ''}
