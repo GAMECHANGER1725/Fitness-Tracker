@@ -141,6 +141,7 @@ function Tonight() {
   const today = useToday();
   const t = useCoach((c) => c.tonight);
   const bedtime = useStore((s) => s.settings.bedtime);
+  const wake = useStore((s) => s.settings.wakeTarget);
   const [busy, setBusy] = useState(false);
   const ai = hasAi(currentAi());
   const hour = new Date().getHours();
@@ -159,6 +160,9 @@ function Tonight() {
       <section className="card stack" style={{ gap: 6 }}>
         <span className="row label"><Icon name="spark" size={16} /> Tonight</span>
         <p>Screens off by {clock12(minsToHhmm(minsOf(bedtime) - reminderKinds().lead))}, lights out at {clock12(bedtime)}.</p>
+        <p className="small">
+          Last big meal by {clock12(minsToHhmm(minsOf(bedtime) - 150))}, so it doesn’t keep you up. In bed on time, you get {hm((minsOf(wake) - minsOf(bedtime) + 1440) % 1440)} before {clock12(wake)}.
+        </p>
         <p className="small mut">Add an AI key in Fuel Log for a plan that looks at your food and training.</p>
       </section>
     );
