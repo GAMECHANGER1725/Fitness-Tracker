@@ -7,12 +7,12 @@ import { QUALITY, clock12, clockOf, durationMin, hm, nightKey, onTime, pastAt, s
 import { BAND_LABEL, readiness } from '../lib/readiness';
 import { nextBadge, weekSummary } from '../lib/game';
 import { historyOf, newRecords } from '../lib/progress';
-import { lastWeekReport } from '../lib/notes';
+import { lastWeekReport, weekReportText } from '../lib/notes';
 import { backupDue, useLayout } from '../lib/layout';
 import { useSync } from '../lib/sync';
 import { currentAi, morningBriefing, useCoach } from '../lib/coach';
 import { friendlyError, hasAi } from '../lib/ai';
-import { Bar, Head, Icon, ProfileLink, go, toast, useGame, useNow, useToday } from '../components/ui';
+import { Bar, Head, Icon, ProfileLink, go, shareText, toast, useGame, useNow, useToday } from '../components/ui';
 import { useFuelData, useReadiness } from '../components/data';
 import type { PlanDay } from '../lib/types';
 
@@ -449,9 +449,14 @@ function LastWeek() {
           <h2 className="h2">Last week</h2>
           <span className="small mut">{fmtDate(r.ws, { day: 'numeric', month: 'short' })} – {fmtDate(addDays(r.ws, 6), { day: 'numeric', month: 'short' })}</span>
         </span>
-        <button className="btn sm icon" aria-label="Hide last week" onClick={close}>
-          <Icon name="close" size={16} />
-        </button>
+        <span className="row" style={{ gap: 6 }}>
+          <button className="btn sm icon" aria-label="Share last week" onClick={() => shareText(weekReportText(r))}>
+            <Icon name="out" size={16} />
+          </button>
+          <button className="btn sm icon" aria-label="Hide last week" onClick={close}>
+            <Icon name="close" size={16} />
+          </button>
+        </span>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
         {tiles.map(([label, v]) => (

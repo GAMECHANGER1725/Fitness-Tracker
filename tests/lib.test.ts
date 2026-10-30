@@ -4,7 +4,7 @@ import { DEFAULT_PROGRAM, copyDay, deleteDay, nextPlanned, minutes, minutesLeft,
 import { EX, EXERCISES, bestText, easier, harder } from '../src/lib/exercises';
 import { applySession, deloadDue, diffPrograms, guardProgram, matchSession, newRecords, progressSlot, records, trendOf, moveSession, sessionText, vsLast, weeklySets } from '../src/lib/progress';
 import { readiness } from '../src/lib/readiness';
-import { lastWeekReport, weekNotes } from '../src/lib/notes';
+import { lastWeekReport, weekNotes, weekReportText } from '../src/lib/notes';
 import { backupDue } from '../src/lib/layout';
 import { computeGame, nextBadge, weekSummary, workoutWeeks } from '../src/lib/game';
 import { addDays, addMonths, atOn, monthGrid, weekStart } from '../src/lib/dates';
@@ -381,6 +381,7 @@ describe('lastWeekReport', () => {
     expect(r).toMatchObject({ ws: '2026-10-19', workouts: 2, bests: 2, nights: 1, avgMin: 510, onTime: 1 });
     expect(r.minutes).toBe(80);
     expect(lastWeekReport({ ...DEFAULT_DATA }, '2026-10-28')).toBeNull();
+    expect(weekReportText(r).split('\n')).toEqual(['My week, 19 Oct – 25 Oct', 'Workouts: 2 of 4, 1 h 20 m, 2 new bests', 'Sleep: 8 h 30 m average, up on time 1 of 1, 1 of 7 nights logged']);
   });
 });
 

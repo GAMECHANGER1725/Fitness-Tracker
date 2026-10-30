@@ -2,7 +2,7 @@
 // Rule-based and conservative: each note says what happened and one small thing to try.
 
 import type { AppData } from './types';
-import { addDays, weekStart } from './dates';
+import { addDays, fmtDate, weekStart } from './dates';
 import { EX } from './exercises';
 import { deloadDue, newRecords, trendOf } from './progress';
 import { hm, sleepStats } from './sleep';
@@ -69,4 +69,14 @@ export function lastWeekReport(d: Pick<AppData, 'sessions' | 'program' | 'nights
   const xs = Object.values(d.sessions).filter((s) => s.date >= ws && s.date <= end);
   const bests = xs.reduce((t, s) => t + new Set(newRecords(s, d.sessions).map((r) => r.exerciseId)).size, 0);
   return { ws, workouts: w.done, planned: w.planned, minutes: w.minutes, bests, nights: st.nights, avgMin: st.avgMin, onTime: st.onTime, withWake: st.withWake };
+}
+
+/** The recap as plain text for sharing. */
+export function weekReportText(r: WeekReport): string {
+  const d = (k: string) => fmtDate(k, { day: 'numeric', month: 'short' });
+  const train = r.workouts
+    ? `Workouts: ${r.planned ? `${r.workouts} of ${r.planned}` : r.workouts}, ${hm(r.minutes)}${r.bests ? `, ${r.bests} new best${r.bests === 1 ? '' : 's'}` : ''}`
+    : 'Workouts: none';
+  const sleep = r.avgMin != null ? `Sleep: ${hm(r.avgMin)} average${r.withWake ? `, up on time ${r.onTime} of ${r.withWake}` : ''}, ${r.nights} of 7 nights logged` : 'Sleep: not logged';
+  return [`My week, ${d(r.ws)} – ${d(addDays(r.ws, 6))}`, train, sleep].join('\n');
 }
