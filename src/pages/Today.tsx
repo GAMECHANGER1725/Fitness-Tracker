@@ -6,7 +6,7 @@ import { addDays, dateOf, fmtDate, keyOf, weekStart } from '../lib/dates';
 import { QUALITY, clock12, clockOf, durationMin, hm, nightKey, onTime, pastAt, sleepIfNow, toBedtime, wakeOffset } from '../lib/sleep';
 import { BAND_LABEL, readiness } from '../lib/readiness';
 import { weekSummary } from '../lib/game';
-import { newRecords } from '../lib/progress';
+import { historyOf, newRecords } from '../lib/progress';
 import { lastWeekReport } from '../lib/notes';
 import { backupDue, useLayout } from '../lib/layout';
 import { useSync } from '../lib/sync';
@@ -172,7 +172,13 @@ export default function Today() {
               const e = EX[s.exerciseId];
               return (
                 <a className="item" key={s.exerciseId} href={`#/train?tab=moves&open=${s.exerciseId}`} style={{ color: 'var(--ink)', textDecoration: 'none' }}>
-                  <span className="grow bold">{e?.name ?? s.exerciseId}</span>
+                  <span className="grow" style={{ minWidth: 0 }}>
+                    <span className="bold" style={{ display: 'block' }}>{e?.name ?? s.exerciseId}</span>
+                    {(() => {
+                      const last = historyOf(sessions, s.exerciseId)[0];
+                      return last ? <span className="small mut">Last time {last.map((x) => x.reps).join(', ')}{e?.unit === 'secs' ? ' s' : ''}{last[0].loadKg ? ` @ ${last[0].loadKg} kg` : ''}</span> : null;
+                    })()}
+                  </span>
                   <span className="small mut" style={{ textAlign: 'right' }}>
                     {s.sets} × {targetText(e, s.low, s.high)}
                     {s.loadKg ? ` · ${s.loadKg} kg` : ''}
