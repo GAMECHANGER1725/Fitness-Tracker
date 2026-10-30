@@ -5,7 +5,7 @@ import { EX, EXERCISES, bestText, easier, harder } from '../src/lib/exercises';
 import { applySession, deloadDue, diffPrograms, guardProgram, matchSession, newRecords, progressSlot, records, trendOf, moveSession, sessionText, vsLast, withLength, weeklySets } from '../src/lib/progress';
 import { readiness } from '../src/lib/readiness';
 import { lastWeekReport, weekNotes, weekReportText } from '../src/lib/notes';
-import { backupDue } from '../src/lib/layout';
+import { backupDue, startHash } from '../src/lib/layout';
 import { computeGame, nextBadge, weekSummary, workoutWeeks } from '../src/lib/game';
 import { addDays, addMonths, atOn, monthGrid, weekStart } from '../src/lib/dates';
 import type { Night, Session, SetLog, Slot } from '../src/lib/types';
@@ -375,6 +375,16 @@ describe('wind-down', () => {
     const d = normalize({ nights: { a: 1, '2026-10-29': { bed: null, wake: null, note: '  Woke at 2 am ', m: 1 }, '2026-10-28': { bed: null, wake: null, note: '  ', m: 1 } } });
     expect(d.nights['2026-10-29'].note).toBe('Woke at 2 am');
     expect('note' in d.nights['2026-10-28']).toBe(false);
+  });
+});
+
+describe('startHash', () => {
+  it('goes to the start page only when the URL names no page', () => {
+    expect(startHash('', 'sleep')).toBe('#/sleep');
+    expect(startHash('#/', 'train')).toBe('#/train');
+    expect(startHash('#/profile', 'sleep')).toBeNull();
+    expect(startHash('', 'today')).toBeNull();
+    expect(startHash('', 'nope')).toBeNull();
   });
 });
 

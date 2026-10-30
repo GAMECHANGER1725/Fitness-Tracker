@@ -7,7 +7,7 @@ import { currentAi } from '../lib/coach';
 import { exportCsv, exportJson, importJson } from '../lib/backup';
 import { isPaused, reminderKinds, remindersOn, remindersSupported, setKind, setLead, setPaused, setReminders } from '../lib/reminders';
 import { usePlayer } from '../lib/player';
-import { ACCENTS, TODAY_CARDS, useLayout } from '../lib/layout';
+import { ACCENTS, START_PAGES, TODAY_CARDS, useLayout } from '../lib/layout';
 import { showWhatsNew } from '../components/WhatsNew';
 import { install, useInstall } from '../lib/install';
 import { TOKEN_URL, connect, disconnect, fuelLogToken, syncNow, useSync } from '../lib/sync';
@@ -444,7 +444,7 @@ function Reminders() {
 function Look() {
   const theme = useStore((s) => s.settings.theme);
   const set = useStore((s) => s.setSettings);
-  const { hidden, toggle, accent, setAccent, large, setLarge } = useLayout();
+  const { hidden, toggle, accent, setAccent, large, setLarge, start, setStart } = useLayout();
   return (
     <section className="card stack" style={{ gap: 10 }}>
       <h2 className="h2">Look</h2>
@@ -453,6 +453,12 @@ function Look() {
           <button key={t} aria-pressed={theme === t} onClick={() => set({ theme: t })}>
             {t === 'auto' ? 'Auto' : t === 'dark' ? 'Dark' : t === 'black' ? 'Black' : 'Light'}
           </button>
+        ))}
+      </div>
+      <span className="label" style={{ marginTop: 6 }}>Open on</span>
+      <div className="seg" role="group" aria-label="Open the app on">
+        {START_PAGES.map(([id, name]) => (
+          <button key={id} aria-pressed={start === id} onClick={() => setStart(id)}>{name}</button>
         ))}
       </div>
       <span className="label" style={{ marginTop: 6 }}>Text size</span>

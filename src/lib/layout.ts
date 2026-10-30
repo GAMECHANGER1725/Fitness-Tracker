@@ -20,6 +20,19 @@ export const ACCENTS = [
 ] as const;
 export type Accent = (typeof ACCENTS)[number][0];
 
+export const START_PAGES = [
+  ['today', 'Today'],
+  ['train', 'Train'],
+  ['sleep', 'Sleep'],
+] as const;
+export type StartPage = (typeof START_PAGES)[number][0];
+
+/** The hash to open on: the chosen start page when the app opens with no page in the URL (as from the home-screen icon). */
+export function startHash(hash: string, start: string): string | null {
+  if (hash && hash !== '#' && hash !== '#/') return null;
+  return START_PAGES.some(([id]) => id === start) && start !== 'today' ? `#/${start}` : null;
+}
+
 interface Layout {
   hidden: TodayCard[];
   accent: Accent;
@@ -35,6 +48,8 @@ interface Layout {
   /** Chips in the night sheet's note (and what the sleep insight looks for). */
   noteTags: string[];
   setNoteTags: (t: string[]) => void;
+  start: StartPage;
+  setStart: (s: StartPage) => void;
 }
 
 export const useLayout = create<Layout>()(
@@ -50,9 +65,11 @@ export const useLayout = create<Layout>()(
       setAccent: (accent) => set({ accent }),
       noteTags: NOTE_TAGS,
       setNoteTags: (noteTags) => set({ noteTags }),
+      start: 'today',
+      setStart: (start) => set({ start }),
       toggle: (c) => set((s) => ({ hidden: s.hidden.includes(c) ? s.hidden.filter((x) => x !== c) : [...s.hidden, c] })),
     }),
-    { name: 'fitness-layout', partialize: ({ hidden, accent, large, backupAt, backupSnooze, noteTags }) => ({ hidden, accent, large, backupAt, backupSnooze, noteTags }) },
+    { name: 'fitness-layout', partialize: ({ hidden, accent, large, backupAt, backupSnooze, noteTags, start }) => ({ hidden, accent, large, backupAt, backupSnooze, noteTags, start }) },
   ),
 );
 
