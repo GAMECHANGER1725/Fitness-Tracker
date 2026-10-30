@@ -578,6 +578,9 @@ function Moves() {
   const { params } = useRoute();
   const [open, setOpen] = useState<string | null>(params.get('open'));
   const [query, setQuery] = useState('');
+  const [only, setOnly] = useState<'all' | 'plan' | 'done'>('all');
+  const program = useStore((s) => s.program);
+  const inPlan = new Set(program.days.flatMap((d) => d.slots.map((x) => x.exerciseId)));
   // Opened from a link (Today's list or a ladder chip): bring it into view.
   useEffect(() => {
     // After App's scroll-to-top on a page change, which runs after this effect.
@@ -586,7 +589,10 @@ function Moves() {
     return () => clearTimeout(t);
   }, [open]);
   const q = query.trim().toLowerCase();
-  const match = (e: Exercise) => !q || `${e.name} ${e.muscles} ${PATTERN_LABEL[e.pattern]}`.toLowerCase().includes(q);
+  // The open move always shows, so a ladder chip never opens something filtered out.
+  const match = (e: Exercise) =>
+    e.id === open ||
+    ((!q || `${e.name} ${e.muscles} ${PATTERN_LABEL[e.pattern]}`.toLowerCase().includes(q)) && (only === 'all' || (only === 'plan' ? inPlan.has(e.id) : !!best[e.id])));
   const shown = (Object.keys(PATTERN_LABEL) as Pattern[]).filter((p) => EXERCISES.some((e) => e.pattern === p && usable(e, hasGrip) && match(e)));
   return (
     <>
@@ -599,7 +605,12 @@ function Moves() {
           </button>
         )}
       </label>
-      {!shown.length && <p className="empty">Nothing matches “{query}”.</p>}
+      <div className="row" style={{ gap: 6 }} role="group" aria-label="Show moves">
+        {([['all', 'All'], ['plan', 'In my plan'], ['done', 'Done before']] as const).map(([k, l]) => (
+          <button key={k} className="chip" aria-pressed={only === k} onClick={() => setOnly(k)}>{l}</button>
+        ))}
+      </div>
+      {!shown.length && <p className="empty">{query ? `Nothing matches “${query}”.` : only === 'done' ? 'No moves logged yet.' : 'Nothing to show.'}</p>}
       {shown.map((p) => (
         <section key={p} className="card" style={{ padding: '14px 18px 6px' }}>
           <h2 className="h2" style={{ marginBottom: 4 }}>{PATTERN_LABEL[p]}</h2>
