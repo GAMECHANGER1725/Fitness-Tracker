@@ -479,6 +479,7 @@ function Recent({ onPick }: { onPick: (d: string) => void }) {
                 {n.bed ? clockOf(n.bed) : '?'} → {n.wake ? clockOf(n.wake) : '?'}
                 {n.quality ? ` · ${QUALITY[n.quality - 1]}` : ''}
                 {n.source === 'samsung' ? ' · watch' : ''}
+                {n.awake ? ` · ${hm(n.awake)} awake` : ''}
                 {n.done?.length && steps.length ? ` · wind-down ${steps.filter((x) => n.done!.includes(x)).length}/${steps.length}` : ''}
               </span>
               {n.note && <span className="small mut" style={{ display: 'block', fontStyle: 'italic' }}>“{n.note}”</span>}
