@@ -254,6 +254,21 @@ export function mergeImported(cur: Record<string, Night>, add: Night[]): { night
   return { nights: out, count };
 }
 
+/** Average quality rating (1–5) on nights with lights out within 15 min of the bedtime target vs later, over the last 28.
+ * Null until each side has 3 rated nights. */
+export function bedtimeEffect(nights: Record<string, Night>, bedtime: string, today: string): { onTime: number; late: number } | null {
+  const on: number[] = [];
+  const late: number[] = [];
+  for (const n of Object.values(nights)) {
+    if (n.date <= addDays(today, -28) || n.date > today || n.bed == null || n.quality == null) continue;
+    const target = atOn(bedtime >= '12:00' ? addDays(n.date, -1) : n.date, bedtime);
+    (n.bed <= target + 15 * MIN ? on : late).push(n.quality);
+  }
+  if (on.length < 3 || late.length < 3) return null;
+  const avg = (xs: number[]) => Math.round((xs.reduce((a, b) => a + b, 0) / xs.length) * 10) / 10;
+  return { onTime: avg(on), late: avg(late) };
+}
+
 /** Average minutes slept on nights with every wind-down step ticked vs nights with some missed, over the last 28.
  * Null until each side has 3 nights. Nights with no ticks at all count as missed only once you've ever ticked. */
 export function windDownEffect(nights: Record<string, Night>, steps: string[], today: string): { full: number; partial: number } | null {

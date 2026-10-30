@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clock12, durationMin, guardBedtime, idealBedtime, mergeImported, nightKey, onTime, readCsv, samsungNights, samsungTime, sleepStats, wakeStreak, nightPos, toBedtime, windDownEffect, pastAt } from '../src/lib/sleep';
+import { clock12, durationMin, guardBedtime, idealBedtime, mergeImported, nightKey, onTime, readCsv, samsungNights, samsungTime, sleepStats, wakeStreak, nightPos, toBedtime, windDownEffect, pastAt, bedtimeEffect } from '../src/lib/sleep';
 import { addDays, atOn } from '../src/lib/dates';
 import type { Night } from '../src/lib/types';
 
@@ -146,6 +146,18 @@ describe('windDownEffect', () => {
     all['2026-10-25'] = n('2026-10-25', 7.5);
     expect(windDownEffect(all, steps, '2026-10-29')).toEqual({ full: 540, partial: 450 });
     expect(windDownEffect({ a: n('2026-10-25', 8) }, steps, '2026-10-29')).toBeNull();
+  });
+});
+
+describe('bedtimeEffect', () => {
+  it('compares ratings on nights in bed on time against later ones, once each side has 3', () => {
+    const all: Record<string, Night> = {};
+    ['2026-10-20', '2026-10-21', '2026-10-22'].forEach((d) => (all[d] = N(d, '21:20', '06:00', { quality: 4 })));
+    ['2026-10-23', '2026-10-24'].forEach((d) => (all[d] = N(d, '22:30', '06:00', { quality: 2 })));
+    expect(bedtimeEffect(all, '21:15', '2026-10-29')).toBeNull();
+    all['2026-10-25'] = N('2026-10-25', '23:00', '06:00', { quality: 3 });
+    all['2026-10-26'] = N('2026-10-26', '23:00', '06:00');
+    expect(bedtimeEffect(all, '21:15', '2026-10-29')).toEqual({ onTime: 4, late: 2.3 });
   });
 });
 
