@@ -556,6 +556,7 @@ function Moves() {
   const best = records(sessions);
   const { params } = useRoute();
   const [open, setOpen] = useState<string | null>(params.get('open'));
+  const [query, setQuery] = useState('');
   // Opened from a link (Today's list or a ladder chip): bring it into view.
   useEffect(() => {
     // After App's scroll-to-top on a page change, which runs after this effect.
@@ -563,12 +564,25 @@ function Moves() {
     const t = setTimeout(() => document.getElementById(`move-${open}`)?.scrollIntoView({ block: 'start', behavior: scrollMotion() }), 80);
     return () => clearTimeout(t);
   }, [open]);
+  const q = query.trim().toLowerCase();
+  const match = (e: Exercise) => !q || `${e.name} ${e.muscles} ${PATTERN_LABEL[e.pattern]}`.toLowerCase().includes(q);
+  const shown = (Object.keys(PATTERN_LABEL) as Pattern[]).filter((p) => EXERCISES.some((e) => e.pattern === p && usable(e, hasGrip) && match(e)));
   return (
     <>
-      {(Object.keys(PATTERN_LABEL) as Pattern[]).map((p) => (
+      <label className="search">
+        <Icon name="search" size={18} />
+        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Find a move or muscle" aria-label="Find a move" />
+        {query && (
+          <button className="btn sm icon" aria-label="Clear" onClick={() => setQuery('')}>
+            <Icon name="close" size={16} />
+          </button>
+        )}
+      </label>
+      {!shown.length && <p className="empty">Nothing matches “{query}”.</p>}
+      {shown.map((p) => (
         <section key={p} className="card" style={{ padding: '14px 18px 6px' }}>
           <h2 className="h2" style={{ marginBottom: 4 }}>{PATTERN_LABEL[p]}</h2>
-          {EXERCISES.filter((e) => e.pattern === p && usable(e, hasGrip))
+          {EXERCISES.filter((e) => e.pattern === p && usable(e, hasGrip) && match(e))
             .sort((a, b) => (a.ladder === b.ladder ? a.step - b.step : a.ladder < b.ladder ? -1 : 1))
             .map((e) => {
               const b = best[e.id];

@@ -21,6 +21,7 @@ const paths: Record<string, ReactNode> = {
   left: <path d="M15 6l-6 6 6 6" />,
   right: <path d="M9 6l6 6-6 6" />,
   up: <path d="M6 15l6-6 6 6" />,
+  search: <><circle cx="11" cy="11" r="6" /><path d="M16 16l4 4" /></>,
   down: <path d="M6 9l6 6 6-6" />,
   close: <path d="M6 6l12 12M18 6L6 18" />,
   trash: <path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" />,
