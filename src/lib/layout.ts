@@ -7,6 +7,7 @@ import { NOTE_TAGS } from './sleep';
 export const TODAY_CARDS = [
   ['exercises', 'Today’s exercises (or rest-day ideas)'],
   ['fuel', 'Food from Fuel Log'],
+  ['focus', 'This week’s focus'],
   ['week', 'This week'],
   ['recap', 'Last week’s recap (Monday to Wednesday)'],
 ] as const;

@@ -9,6 +9,7 @@ import { nextBadge, weekSummary } from '../lib/game';
 import { COMEBACK_DAYS, daysOff, historyOf, newRecords } from '../lib/progress';
 import { lastWeekReport, weekReportText, yesterdayLine } from '../lib/notes';
 import { backupDue, useLayout } from '../lib/layout';
+import { FOCUSES, focusLabel, focusProgress, loadFocus, saveFocus, type Focus } from '../lib/focus';
 import { useSync } from '../lib/sync';
 import { currentAi, morningBriefing, useCoach } from '../lib/coach';
 import { friendlyError, hasAi } from '../lib/ai';
@@ -305,6 +306,7 @@ export default function Today() {
         <BackupNudge />
         {!hidden.includes('recap') && <LastWeek />}
         {!hidden.includes('fuel') && <FuelStrip />}
+        {!hidden.includes('focus') && <FocusCard />}
         {!hidden.includes('week') && <WeekStrip />}
         <div className="row" style={{ flexWrap: 'wrap', gap: 6, justifyContent: 'center' }} role="group" aria-label="Quick log">
           <span className="small mut" style={{ width: '100%', textAlign: 'center' }}>Quick log</span>
@@ -686,6 +688,53 @@ function FuelStrip() {
       </span>
       <Icon name="right" />
     </a>
+  );
+}
+
+/** One goal for the week: pick it here, see how it's going. */
+function FocusCard() {
+  const today = useToday();
+  const ws = weekStart(today);
+  const d = useStore();
+  const [pick, setPickState] = useState(() => loadFocus(ws));
+  const set = (f: Focus | '' | null) => (saveFocus(ws, f), setPickState(f));
+  useEffect(() => setPickState(loadFocus(ws)), [ws]);
+  if (pick === '') return null;
+  if (pick == null)
+    return (
+      <section className="card stack" style={{ gap: 10 }} aria-label="This week's focus">
+        <div className="between">
+          <h2 className="h2">Pick a focus for this week</h2>
+          <button className="btn sm icon" aria-label="Not this week" onClick={() => (set(''), toast('No focus this week', { label: 'Undo', run: () => set(null) }))}>
+            <Icon name="close" size={16} />
+          </button>
+        </div>
+        <p className="small mut">One thing to get right this week. Today shows how it’s going.</p>
+        <div className="row" style={{ flexWrap: 'wrap' }}>
+          {FOCUSES.map((f) => (
+            <button key={f} className="chip" onClick={() => set(f)}>{focusLabel(f, d.settings)}</button>
+          ))}
+        </div>
+      </section>
+    );
+  const { have, need } = focusProgress(pick, d, ws);
+  const done = have >= need;
+  const daysLeft = 6 - daysBetween(ws, today);
+  return (
+    <section className="card stack" style={{ gap: 8 }} aria-label="This week's focus">
+      <div className="between" style={{ alignItems: 'baseline' }}>
+        <span className="label">This week’s focus</span>
+        <button className="small" style={{ background: 'none', border: 0, padding: 0, color: 'var(--acc)' }} onClick={() => set(null)}>change</button>
+      </div>
+      <div className="between" style={{ alignItems: 'baseline', gap: 8 }}>
+        <span className="bold">{focusLabel(pick, d.settings)}</span>
+        <span className="num" style={{ fontSize: 20, whiteSpace: 'nowrap' }}>{Math.min(have, need)}/{need}</span>
+      </div>
+      <Bar value={have} max={need} label={focusLabel(pick, d.settings)} />
+      <p className="small mut">
+        {done ? 'Done for this week. Nice work.' : need - have > daysLeft + 1 ? 'Out of reach this week; every one still counts.' : `${need - have} to go, ${daysLeft === 0 ? 'last day' : `${daysLeft + 1} days left`}.`}
+      </p>
+    </section>
   );
 }
 
