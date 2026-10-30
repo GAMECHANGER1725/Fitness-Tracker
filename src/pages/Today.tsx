@@ -4,7 +4,7 @@ import { EX, targetText } from '../lib/exercises';
 import { WEEKDAYS, inDeload, minutes, nextPlanned, plannedDay, slotsFor } from '../lib/program';
 import { addDays, dateOf, fmtDate, weekStart } from '../lib/dates';
 import { QUALITY, clock12, clockOf, durationMin, hm, nightKey, onTime, pastAt, toBedtime, wakeOffset } from '../lib/sleep';
-import { BAND_LABEL } from '../lib/readiness';
+import { BAND_LABEL, readiness } from '../lib/readiness';
 import { weekSummary } from '../lib/game';
 import { newRecords } from '../lib/progress';
 import { backupDue, useLayout } from '../lib/layout';
@@ -66,6 +66,7 @@ export default function Today() {
                 </div>
               ))}
               {ready.notes.length > 0 && <p className="small" style={{ opacity: 0.9 }}>{ready.notes.join('. ')}.</p>}
+              <ReadinessWeek />
               <p className="small" style={{ opacity: 0.75 }}>Missing data counts as average. Under 55 plans about a quarter fewer sets.</p>
             </div>
           )}
@@ -153,6 +154,33 @@ export default function Today() {
         )}
       </div>
     </main>
+  );
+}
+
+/** Readiness for each of the last 7 days (today on the right), recomputed from what was logged then. */
+function ReadinessWeek() {
+  const today = useToday();
+  const nights = useStore((s) => s.nights);
+  const sessions = useStore((s) => s.sessions);
+  const goalH = useStore((s) => s.settings.sleepGoalH);
+  const fuel = useFuelData();
+  const days = Array.from({ length: 7 }, (_, i) => addDays(today, i - 6));
+  const scores = days.map((d) => readiness({ today: d, night: nights[d], goalH, fuel, targets: fuel?.targets ?? null, sessions }).score);
+  return (
+    <div className="stack" style={{ gap: 4 }}>
+      <span className="small">Last 7 days</span>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 6, alignItems: 'end', height: 56 }} role="img" aria-label={`Readiness, last 7 days: ${scores.join(', ')}`}>
+        {scores.map((v, i) => (
+          <div key={days[i]} className="stack" style={{ gap: 2, alignItems: 'center', height: '100%', justifyContent: 'flex-end' }}>
+            <span style={{ fontSize: 10, opacity: 0.85 }}>{v}</span>
+            <i style={{ display: 'block', width: '100%', height: `${6 + Math.max(0, v - 40) * 0.6}px`, borderRadius: 4, background: 'var(--on-acc)', opacity: i === 6 ? 1 : 0.45 }} />
+          </div>
+        ))}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 6, fontSize: 10, opacity: 0.8, textAlign: 'center' }}>
+        {days.map((d) => <span key={d}>{fmtDate(d, { weekday: 'narrow' })}</span>)}
+      </div>
+    </div>
   );
 }
 
