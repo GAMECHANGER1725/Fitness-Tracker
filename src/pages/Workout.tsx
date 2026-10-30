@@ -222,7 +222,7 @@ function Player({ onDone }: { onDone: (r: { session: Session; lines: string[]; r
       {!allDone ? (
         <section className="card stack" style={{ gap: 12 }}>
           {ex?.unit === 'secs' && <HoldTimer low={slot.low} high={slot.high} onStop={setReps} />}
-          <div className={ex?.loadable ? 'grid2' : 'stack'}>
+          <div className={ex?.loadable ? 'grid2 pair' : 'stack'}>
             <label className="field">
               <span>{ex?.unit === 'secs' ? 'Seconds' : 'Reps'}{ex?.perSide ? ' (each side)' : ''}</span>
               <Stepper value={reps} onChange={setReps} label={ex?.unit === 'secs' ? 'seconds' : 'reps'} step={ex?.unit === 'secs' ? 5 : 1} min={0} max={300} />
@@ -397,7 +397,7 @@ function FixSetSheet({ set, loadable, secs, onClose }: { set: SetLog; loadable: 
   return (
     <Sheet onClose={onClose} label="Edit set">
       <h2 className="h2">Fix this set</h2>
-      <div className={loadable ? 'grid2' : 'stack'}>
+      <div className={loadable ? 'grid2 pair' : 'stack'}>
         <label className="field">
           <span>{secs ? 'Seconds' : 'Reps'}</span>
           <Stepper value={reps} onChange={setReps} label={secs ? 'seconds' : 'reps'} step={secs ? 5 : 1} min={0} max={300} />

@@ -314,7 +314,7 @@ function SlotSheet({ program, dayId, idx, onClose, onSave }: { program: Program;
         <span>Sets</span>
         <Stepper value={s.sets} onChange={(v) => setS({ ...s, sets: v })} label="sets" min={1} max={6} />
       </label>
-      <div className="grid2">
+      <div className="grid2 pair">
         <label className="field">
           <span>From ({secs ? 's' : 'reps'})</span>
           <Stepper value={s.low} onChange={(v) => setS({ ...s, low: v, high: Math.max(v, s.high) })} label="lowest" step={secs ? 5 : 1} min={1} max={secs ? 180 : 50} />
