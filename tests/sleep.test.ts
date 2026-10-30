@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clock12, hm, durationMin, guardBedtime, idealBedtime, mergeImported, nightKey, onTime, readCsv, samsungNights, samsungTime, sleepStats, wakeStreak, nightPos, toBedtime, windDownEffect, pastAt, bedtimeEffect, sleepIfNow } from '../src/lib/sleep';
+import { clock12, hm, durationMin, guardBedtime, idealBedtime, mergeImported, nightKey, onTime, readCsv, samsungNights, samsungTime, sleepStats, wakeStreak, nightPos, toBedtime, windDownEffect, pastAt, bedtimeEffect, sleepIfNow, lateMeal } from '../src/lib/sleep';
 import { addDays, atOn } from '../src/lib/dates';
 import type { Night } from '../src/lib/types';
 
@@ -126,6 +126,16 @@ describe('toBedtime', () => {
     expect(toBedtime(at(22, 20), '22:00')).toBe(-20);
     expect(toBedtime(at(0, 30), '22:00')).toBe(-150);
     expect(toBedtime(at(23, 0), '00:30')).toBe(90);
+  });
+});
+
+describe('lateMeal', () => {
+  it('flags food within 2.5 h of that night’s lights out', () => {
+    const nights = { '2026-10-30': N('2026-10-30', '21:30', '06:00') };
+    expect(lateMeal(atOn('2026-10-29', '19:30'), nights, '2026-10-29')).toBe(true);
+    expect(lateMeal(atOn('2026-10-29', '18:30'), nights, '2026-10-29')).toBe(false);
+    expect(lateMeal(atOn('2026-10-28', '21:00'), nights, '2026-10-28')).toBe(false);
+    expect(lateMeal(null, nights, '2026-10-29')).toBe(false);
   });
 });
 

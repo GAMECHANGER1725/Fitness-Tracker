@@ -24,6 +24,12 @@ export function durationMin(n: Pick<Night, 'bed' | 'wake' | 'awake'>): number | 
   return m > 0 && m < 20 * 60 ? m : null;
 }
 
+/** True when the last food on `day` came within 2.5 h of lights out that night (the night keyed the next morning). */
+export const lateMeal = (last: number | null | undefined, nights: Record<string, Night>, day: string) => {
+  const bed = nights[addDays(day, 1)]?.bed;
+  return last != null && bed != null && bed > last && bed - last < 2.5 * 3_600_000;
+};
+
 /** Minutes of sleep you'd get going to sleep at `now`, up to the wake target the next morning (or this morning, after midnight). */
 export const sleepIfNow = (now: number, wakeTarget: string) => Math.max(0, Math.round((atOn(nightKey(now), wakeTarget) - now) / MIN));
 

@@ -2,7 +2,7 @@ import { useStore } from '../lib/store';
 import { refreshFuel, useFuel, useSync } from '../lib/sync';
 import { FUEL_URL } from '../lib/fuel';
 import { addDays, daysBetween, fmtDate } from '../lib/dates';
-import { clockOf } from '../lib/sleep';
+import { clockOf, lateMeal } from '../lib/sleep';
 import { Bar, Head, Icon, toast, useToday } from '../components/ui';
 import { useWeight } from '../components/data';
 
@@ -11,6 +11,7 @@ export default function Fuel() {
   const { data, local, gist, at, error } = useFuel();
   const conn = useSync((s) => s.conn);
   const sessions = useStore((s) => s.sessions);
+  const nights = useStore((s) => s.nights);
   const weight = useWeight();
   const t = data?.targets;
   const f = data?.days[today];
@@ -140,7 +141,10 @@ export default function Fuel() {
               <div className="item" key={k}>
                 <span className="grow">
                   <span className="bold" style={{ display: 'block' }}>{fmtDate(k, { weekday: 'short', day: 'numeric', month: 'short' })}{trained.has(k) ? ' · trained' : ''}</span>
-                  <span className="small mut">last food {d!.last ? clockOf(d!.last) : '–'}</span>
+                  <span className="small mut">
+                    last food {d!.last ? clockOf(d!.last) : '–'}
+                    {lateMeal(d!.last, nights, k) && <span style={{ color: 'var(--warn)' }}> · late, close to bed</span>}
+                  </span>
                 </span>
                 <span className="stack" style={{ gap: 2, alignItems: 'flex-end' }}>
                   <span className="bold" style={{ color: t && d!.kcal >= t.kcal * 0.95 ? 'var(--acc)' : undefined }}>{d!.kcal.toLocaleString('en-AU')} kcal</span>
