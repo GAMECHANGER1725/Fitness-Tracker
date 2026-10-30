@@ -376,7 +376,7 @@ function History() {
         return (
           <section key={s.id} id={`ses-${s.id}`} className="card tight stack" style={{ gap: 8 }}>
             <button className="row" style={{ background: 'none', border: 0, padding: 0, color: 'var(--ink)', textAlign: 'left' }} onClick={() => setOpen(isOpen ? null : s.id)} aria-expanded={isOpen}>
-              <span className="grow">
+              <span className="grow" style={{ minWidth: 0 }}>
                 <span className="bold" style={{ display: 'block' }}>{s.name}</span>
                 <span className="small mut">
                   {fmtDate(s.date, { weekday: 'short', day: 'numeric', month: 'short' })} · {Math.max(1, Math.round((s.end - s.start) / 60_000))} min · {s.sets.length} set{s.sets.length === 1 ? '' : 's'}
@@ -387,6 +387,13 @@ function History() {
                     </span>
                   ) : null}
                 </span>
+                {!isOpen && (s.feel || s.note) && (
+                  <span className="small mut" style={{ display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {s.feel ? `Felt ${FEEL[s.feel - 1].toLowerCase()}` : ''}
+                    {s.feel && s.note ? ' · ' : ''}
+                    {s.note ? `“${s.note}”` : ''}
+                  </span>
+                )}
               </span>
               <Icon name={isOpen ? 'minus' : 'plus'} size={18} />
             </button>
