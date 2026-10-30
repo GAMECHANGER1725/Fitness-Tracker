@@ -5,6 +5,7 @@ import { EX, EXERCISES, easier, harder } from '../src/lib/exercises';
 import { applySession, deloadDue, diffPrograms, guardProgram, newRecords, progressSlot, records, trendOf, moveSession, sessionText, vsLast, weeklySets } from '../src/lib/progress';
 import { readiness } from '../src/lib/readiness';
 import { weekNotes } from '../src/lib/notes';
+import { backupDue } from '../src/lib/layout';
 import { computeGame, weekSummary, workoutWeeks } from '../src/lib/game';
 import { addDays, addMonths, atOn, monthGrid, weekStart } from '../src/lib/dates';
 import type { Night, Session, SetLog, Slot } from '../src/lib/types';
@@ -383,5 +384,18 @@ describe('vsLast', () => {
     const all = { [a.id]: a, [b.id]: b, [c.id]: c };
     expect(vsLast(c, all)).toEqual({ date: '2026-10-20', reps: 11, sets: 1 });
     expect(vsLast(a, all)).toBeNull();
+  });
+});
+
+describe('backupDue', () => {
+  const D = 86_400_000;
+  const base = { synced: false, sessions: 4, nights: 3, backupAt: null, snooze: null };
+  it('nudges only without sync, with data, after 30 days or never, and not while snoozed', () => {
+    expect(backupDue(100 * D, base)).toBe(true);
+    expect(backupDue(100 * D, { ...base, synced: true })).toBe(false);
+    expect(backupDue(100 * D, { ...base, sessions: 1, nights: 2 })).toBe(false);
+    expect(backupDue(100 * D, { ...base, backupAt: 80 * D })).toBe(false);
+    expect(backupDue(100 * D, { ...base, backupAt: 60 * D })).toBe(true);
+    expect(backupDue(100 * D, { ...base, snooze: 101 * D })).toBe(false);
   });
 });

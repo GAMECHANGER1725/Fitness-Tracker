@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useStore } from '../lib/store';
 import { useAuth } from '../lib/auth';
 import { AI_MODELS, GEMINI_MODELS, PROVIDER_NAME, friendlyError, hasAi, testKey, type Provider } from '../lib/ai';
@@ -11,7 +11,7 @@ import { ACCENTS, TODAY_CARDS, useLayout } from '../lib/layout';
 import { TOKEN_URL, connect, disconnect, fuelLogToken, syncNow, useSync } from '../lib/sync';
 import { clock12, idealBedtime } from '../lib/sleep';
 import { todayKey } from '../lib/dates';
-import { Head, Icon, Stepper, Switch, go, scrollMotion, toast } from '../components/ui';
+import { Head, Icon, Stepper, Switch, go, scrollMotion, toast, useRoute } from '../components/ui';
 import { useWeight } from '../components/data';
 
 // Profile's cards in order, with the short names used by the jump chips at the top.
@@ -28,6 +28,14 @@ const SECTIONS: [id: string, label: string, card: ReactNode][] = [
 ];
 
 export default function ProfilePage() {
+  // Links like #/profile?open=backup land on that card (after App's scroll-to-top on page change).
+  const { params } = useRoute();
+  const open = params.get('open');
+  useEffect(() => {
+    if (!open) return;
+    const t = setTimeout(() => document.getElementById(`set-${open}`)?.scrollIntoView({ behavior: scrollMotion(), block: 'start' }), 80);
+    return () => clearTimeout(t);
+  }, [open]);
   return (
     <main>
       <Head
@@ -390,12 +398,23 @@ function Look() {
   );
 }
 
+function BackupAge() {
+  const at = useLayout((l) => l.backupAt);
+  const days = at == null ? null : Math.floor((Date.now() - at) / 86_400_000);
+  return (
+    <p className="small mut">
+      Last backup file from this phone: {days == null ? 'never' : days === 0 ? 'today' : days === 1 ? 'yesterday' : `${days} days ago`}. With sync off, your data is only on this phone, so save one now and then.
+    </p>
+  );
+}
+
 function Backup() {
   const importData = useStore((s) => s.importData);
   const reset = useStore((s) => s.reset);
   return (
     <section className="card stack" style={{ gap: 10 }}>
       <h2 className="h2">Backup</h2>
+      <BackupAge />
       <div className="grid2">
         <button
           className="btn"
@@ -406,6 +425,7 @@ function Backup() {
             a.download = `fitness-tracker-${todayKey()}.json`;
             a.click();
             URL.revokeObjectURL(a.href);
+            useLayout.getState().set({ backupAt: Date.now(), backupSnooze: null });
           }}
         >
           Export

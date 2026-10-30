@@ -6,7 +6,8 @@ import { addDays, dateOf, fmtDate, weekStart } from '../lib/dates';
 import { QUALITY, clock12, clockOf, durationMin, hm, nightKey, onTime, pastAt, toBedtime, wakeOffset } from '../lib/sleep';
 import { BAND_LABEL } from '../lib/readiness';
 import { weekSummary } from '../lib/game';
-import { useLayout } from '../lib/layout';
+import { backupDue, useLayout } from '../lib/layout';
+import { useSync } from '../lib/sync';
 import { currentAi, morningBriefing, useCoach } from '../lib/coach';
 import { friendlyError, hasAi } from '../lib/ai';
 import { Bar, Head, Icon, ProfileLink, go, toast, useGame, useNow, useToday } from '../components/ui';
@@ -130,6 +131,7 @@ export default function Today() {
           </section>
         )}
 
+        <BackupNudge />
         {!hidden.includes('fuel') && <FuelStrip />}
         {!hidden.includes('week') && <WeekStrip />}
         {hidden.length > 0 && (
@@ -302,6 +304,25 @@ function WindDown({ nightDone }: { nightDone: string[] }) {
         ))}
       </div>
     </div>
+  );
+}
+
+/** Once a month, if sync is off: save a backup file, since the data only lives on this phone. */
+function BackupNudge() {
+  const synced = useSync((s) => !!s.conn);
+  const sessions = useStore((s) => Object.keys(s.sessions).length);
+  const nights = useStore((s) => Object.keys(s.nights).length);
+  const { backupAt, backupSnooze, set } = useLayout();
+  if (!backupDue(Date.now(), { synced, sessions, nights, backupAt, snooze: backupSnooze })) return null;
+  return (
+    <section className="card tight stack" style={{ gap: 8, boxShadow: 'inset 0 0 0 1.5px var(--line2)' }} aria-label="Backup reminder">
+      <span className="bold">Back up your workouts and sleep</span>
+      <span className="small mut">Sync is off, so everything lives only on this phone. Save a backup file, or turn on sync in Profile.</span>
+      <div className="row">
+        <a className="btn sm primary" href="#/profile?open=backup">Back up</a>
+        <button className="btn sm" onClick={() => set({ backupSnooze: Date.now() + 7 * 86_400_000 })}>Not now</button>
+      </div>
+    </section>
   );
 }
 
