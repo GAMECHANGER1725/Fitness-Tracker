@@ -112,12 +112,12 @@ describe('exportCsv', () => {
   it('writes one row per set and per night, numbering sets per exercise and quoting notes', () => {
     const a = sess('2026-10-26', 'upper-a', [['pushup', 10], ['pushup', 9], ['pack-row', 12, 6]], { note: 'Wrist, a bit sore', feel: 4 });
     const bed = atOn('2026-10-25', '21:30');
-    const { workouts, sleep } = exportCsv({ sessions: { [a.id]: a }, nights: { '2026-10-26': { date: '2026-10-26', bed, wake: bed + 510 * 60_000, quality: 4, source: 'tap', m: 1 } } });
+    const { workouts, sleep } = exportCsv({ sessions: { [a.id]: a }, nights: { '2026-10-26': { date: '2026-10-26', bed, wake: bed + 510 * 60_000, quality: 4, done: ['Screens off', 'Teeth'], source: 'tap', m: 1 } } });
     const rows = workouts.trim().split('\n');
     expect(rows).toHaveLength(4);
     expect(rows[2]).toBe('2026-10-26,upper-a,Push-up,2,9,0,,4,"Wrist, a bit sore"');
     expect(rows[3]).toMatch(/^2026-10-26,upper-a,Backpack row,1,12,6,/);
-    expect(sleep.trim().split('\n')[1]).toBe('2026-10-26,21:30,06:00,510,4,tap');
+    expect(sleep.trim().split('\n')[1]).toBe('2026-10-26,21:30,06:00,510,4,tap,Screens off; Teeth');
   });
 });
 

@@ -222,10 +222,10 @@ export function exportCsv(d: Pick<AppData, 'sessions' | 'nights'>): { workouts: 
       rows.push([s.date, s.name, EX[x.exerciseId]?.name ?? x.exerciseId, String(n.get(x.exerciseId)), String(x.reps), String(x.loadKg), x.rpe != null ? String(x.rpe) : '', s.feel != null ? String(s.feel) : '', s.note ?? '']);
     }
   }
-  const nights = [['date_woke', 'bed', 'wake', 'minutes', 'quality_1_5', 'source']];
+  const nights = [['date_woke', 'bed', 'wake', 'minutes', 'quality_1_5', 'source', 'wind_down']];
   for (const x of Object.values(d.nights).sort((a, b) => (a.date < b.date ? -1 : 1))) {
     const m = durationMin(x);
-    nights.push([x.date, hhmm(x.bed), hhmm(x.wake), m != null ? String(Math.round(m)) : '', x.quality != null ? String(x.quality) : '', x.source]);
+    nights.push([x.date, hhmm(x.bed), hhmm(x.wake), m != null ? String(Math.round(m)) : '', x.quality != null ? String(x.quality) : '', x.source, (x.done ?? []).join('; ')]);
   }
   const out = (t: string[][]) => t.map((r) => r.map(csvCell).join(',')).join('\n') + '\n';
   return { workouts: out(rows), sleep: out(nights) };
