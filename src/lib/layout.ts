@@ -1,7 +1,8 @@
-// Which optional cards Today shows, the accent colour and text size, per device (localStorage `fitness-layout`, not synced).
+// Which optional cards Today shows, the accent colour, text size and quick night notes, per device (localStorage `fitness-layout`, not synced).
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { NOTE_TAGS } from './sleep';
 
 export const TODAY_CARDS = [
   ['exercises', 'Today’s exercises (or rest-day ideas)'],
@@ -31,6 +32,9 @@ interface Layout {
   set: (p: Partial<Pick<Layout, 'backupAt' | 'backupSnooze'>>) => void;
   toggle: (c: TodayCard) => void;
   setAccent: (a: Accent) => void;
+  /** Chips in the night sheet's note (and what the sleep insight looks for). */
+  noteTags: string[];
+  setNoteTags: (t: string[]) => void;
 }
 
 export const useLayout = create<Layout>()(
@@ -44,9 +48,11 @@ export const useLayout = create<Layout>()(
       backupSnooze: null,
       set: (p) => set(p),
       setAccent: (accent) => set({ accent }),
+      noteTags: NOTE_TAGS,
+      setNoteTags: (noteTags) => set({ noteTags }),
       toggle: (c) => set((s) => ({ hidden: s.hidden.includes(c) ? s.hidden.filter((x) => x !== c) : [...s.hidden, c] })),
     }),
-    { name: 'fitness-layout', partialize: ({ hidden, accent, large, backupAt, backupSnooze }) => ({ hidden, accent, large, backupAt, backupSnooze }) },
+    { name: 'fitness-layout', partialize: ({ hidden, accent, large, backupAt, backupSnooze, noteTags }) => ({ hidden, accent, large, backupAt, backupSnooze, noteTags }) },
   ),
 );
 

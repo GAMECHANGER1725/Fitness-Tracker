@@ -29,11 +29,11 @@ export const NOTE_TAGS = ['Woke in the night', 'Late homework', 'Phone in bed', 
 
 /** The quick note that goes with the most lost sleep over the last 28 nights: average minutes with it vs without.
  * Needs 3 nights each side and at least 20 min less; null otherwise. */
-export function noteEffect(nights: Record<string, Night>, today: string): { tag: string; less: number } | null {
+export function noteEffect(nights: Record<string, Night>, today: string, tags = NOTE_TAGS): { tag: string; less: number } | null {
   const recent = Object.values(nights).filter((n) => n.date > addDays(today, -28) && n.date <= today && durationMin(n) != null);
   const avg = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
   let best: { tag: string; less: number } | null = null;
-  for (const tag of NOTE_TAGS) {
+  for (const tag of tags) {
     const has = (n: Night) => !!n.note?.split(', ').includes(tag);
     const w = recent.filter(has).map((n) => durationMin(n)!);
     const wo = recent.filter((n) => !has(n)).map((n) => durationMin(n)!);

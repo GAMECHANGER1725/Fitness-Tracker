@@ -10,7 +10,7 @@ import { usePlayer } from '../lib/player';
 import { ACCENTS, TODAY_CARDS, useLayout } from '../lib/layout';
 import { install, useInstall } from '../lib/install';
 import { TOKEN_URL, connect, disconnect, fuelLogToken, syncNow, useSync } from '../lib/sync';
-import { clock12, idealBedtime } from '../lib/sleep';
+import { NOTE_TAGS, clock12, idealBedtime } from '../lib/sleep';
 import { todayKey } from '../lib/dates';
 import { Head, Icon, Stepper, Switch, go, scrollMotion, toast, useRoute } from '../components/ui';
 import { useWeight } from '../components/data';
@@ -308,7 +308,7 @@ function WindDownEdit() {
   const changed = lines.join('\n') !== list.join('\n');
   return (
     <section className="card stack" style={{ gap: 10 }}>
-      <h2 className="h2">Wind-down checklist</h2>
+      <h2 className="h2">Wind-down and night notes</h2>
       <label className="field">
         <span>One step per line, up to 6. You tick them on Today in the evening.</span>
         <textarea className="input" rows={4} value={text} onChange={(e) => setText(e.target.value)} placeholder={'Screens off\nBag packed for tomorrow\nTeeth brushed'} />
@@ -316,7 +316,27 @@ function WindDownEdit() {
       <button className="btn sm primary" style={{ alignSelf: 'flex-start' }} disabled={!changed} onClick={() => (setProfile({ windDown: lines }), toast(lines.length ? 'Checklist saved' : 'Checklist turned off'))}>
         Save checklist
       </button>
+      <NoteTagsEdit />
     </section>
+  );
+}
+
+function NoteTagsEdit() {
+  const { noteTags, setNoteTags } = useLayout();
+  const [text, setText] = useState(noteTags.join('\n'));
+  const lines = [...new Set(text.split('\n').map((l) => l.trim().replace(/,/g, '').slice(0, 30)).filter(Boolean))].slice(0, 8);
+  const changed = lines.join('\n') !== noteTags.join('\n');
+  return (
+    <>
+      <label className="field" style={{ marginTop: 6 }}>
+        <span>Quick notes for a night, one per line, up to 8. Tap them when you log a night; Insights shows which ones cost you sleep. This device only.</span>
+        <textarea className="input" rows={4} value={text} onChange={(e) => setText(e.target.value)} />
+      </label>
+      <div className="row">
+        <button className="btn sm primary" disabled={!changed} onClick={() => (setNoteTags(lines), toast('Quick notes saved'))}>Save quick notes</button>
+        <button className="btn sm" onClick={() => (setNoteTags(NOTE_TAGS), setText(NOTE_TAGS.join('\n')), toast('Quick notes reset'))}>Reset</button>
+      </div>
+    </>
   );
 }
 

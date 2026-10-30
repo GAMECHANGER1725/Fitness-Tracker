@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useStore } from '../lib/store';
 import { addDays, addMonths, atOn, fmtDate, hhmmOf, isKey, monthGrid } from '../lib/dates';
-import { QUALITY, clock12, clockOf, nightPos, durationMin, hm, idealBedtime, minsOf, windDownEffect, bedtimeEffect, noteEffect, NOTE_TAGS, nightKey, onTime, samsungNights, sleepStats, wakeOffset } from '../lib/sleep';
+import { QUALITY, clock12, clockOf, nightPos, durationMin, hm, idealBedtime, minsOf, windDownEffect, bedtimeEffect, noteEffect, nightKey, onTime, samsungNights, sleepStats, wakeOffset } from '../lib/sleep';
 import { currentAi, tonightPlan, useCoach } from '../lib/coach';
 import { friendlyError, hasAi } from '../lib/ai';
 import { Head, Icon, ProfileLink, Sheet, Stepper, toast, useGame, useRoute, useToday } from '../components/ui';
 import { useFuelData } from '../components/data';
 import { reminderKinds } from '../lib/reminders';
+import { useLayout } from '../lib/layout';
 import type { Night } from '../lib/types';
 
 
@@ -359,6 +360,7 @@ function Insights() {
   const fuel = useFuelData();
   const g = useGame();
   const steps = useStore((s) => s.profile.windDown);
+  const noteTags = useLayout((l) => l.noteTags);
   const lines = useMemo(() => {
     const st = sleepStats(nights, today, 14, goal, wake);
     const out: string[] = [];
@@ -388,14 +390,14 @@ function Insights() {
     }
     const wd = windDownEffect(nights, steps, today);
     if (wd && Math.abs(wd.full - wd.partial) >= 15) out.push(wd.full > wd.partial ? `On nights you finish your wind-down you sleep ${wd.full - wd.partial} min longer. Worth keeping up.` : `Your wind-down doesn’t seem to add sleep yet (${hm(wd.full)} vs ${hm(wd.partial)}). Try swapping a step.`);
-    const ne = noteEffect(nights, today);
+    const ne = noteEffect(nights, today, noteTags);
     if (ne) out.push(`On nights you note “${ne.tag.toLowerCase()}”, you sleep ${hm(ne.less)} less.`);
     const be = bedtimeEffect(nights, bedtime, today);
     if (be && be.onTime - be.late >= 0.5) out.push(`You rate your sleep ${be.onTime} out of 5 when lights are out by ${clock12(bedtime)}, and ${be.late} when it’s later.`);
     const ideal = idealBedtime(wake, goal);
     if (ideal !== bedtime) out.push(`For ${goal} h before ${clock12(wake)}, lights out at ${clock12(ideal)}. Your coach set ${clock12(bedtime)}.`);
     return out;
-  }, [nights, sessions, fuel, today, goal, wake, bedtime, g.wake, steps]);
+  }, [nights, sessions, fuel, today, goal, wake, bedtime, g.wake, steps, noteTags]);
   return (
     <section className="card stack" style={{ gap: 10 }} aria-label="Insights">
       <h2 className="h2">Insights</h2>
@@ -508,6 +510,7 @@ function NightSheet({ date, onClose }: { date: string; onClose: () => void }) {
   const [wake, setWake] = useState(n?.wake ? hhmmOf(n.wake) : settings.wakeTarget);
   const [q, setQ] = useState<number | undefined>(n?.quality);
   const [awake, setAwake] = useState(n?.awake ?? 0);
+  const noteTags = useLayout((l) => l.noteTags);
   const [note, setNote] = useState(n?.note ?? '');
   // A bedtime after noon belongs to the evening before.
   const bedAt = atOn(bed >= '12:00' ? addDays(d, -1) : d, bed);
@@ -568,7 +571,7 @@ function NightSheet({ date, onClose }: { date: string; onClose: () => void }) {
         <input className="input" value={note} maxLength={200} placeholder="Woke at 2 am, late study…" onChange={(e) => setNote(e.target.value)} />
       </label>
       <div className="row" style={{ flexWrap: 'wrap', gap: 6 }} role="group" aria-label="Quick notes">
-        {NOTE_TAGS.map((t) => {
+        {noteTags.map((t) => {
           const on = note.split(', ').includes(t);
           return (
             <button key={t} className="chip" style={{ fontSize: 13, minHeight: 34 }} aria-pressed={on} onClick={() => setNote(on ? note.split(', ').filter((x) => x !== t).join(', ') : [note.trim(), t].filter(Boolean).join(', ').slice(0, 200))}>

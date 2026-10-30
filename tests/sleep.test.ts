@@ -137,6 +137,8 @@ describe('noteEffect', () => {
     expect(noteEffect(all, '2026-10-29')).toBeNull();
     all['2026-10-25'] = N('2026-10-25', '21:30', '06:00', { note: 'Noisy' });
     expect(noteEffect(all, '2026-10-29')).toEqual({ tag: 'Phone in bed', less: 60 });
+    expect(noteEffect(all, '2026-10-29', ['Storm'])).toEqual({ tag: 'Storm', less: 60 });
+    expect(noteEffect(all, '2026-10-29', ['Noisy'])).toBeNull();
   });
 });
 
