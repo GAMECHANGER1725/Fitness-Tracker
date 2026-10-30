@@ -232,7 +232,7 @@ const csvCell = (v: string | number | undefined) => {
 };
 
 /** Workouts and nights as two CSV tables (one row per set, one per night), for a spreadsheet. Times are local. */
-export function exportCsv(d: Pick<AppData, 'sessions' | 'nights'>): { workouts: string; sleep: string } {
+export function exportCsv(d: Pick<AppData, 'sessions' | 'nights'> & { profile?: Pick<AppData['profile'], 'measures'> }): { workouts: string; sleep: string; body: string } {
   const hhmm = (ms: number | null) => (ms == null ? '' : hhmmOf(ms));
   const rows = [['date', 'workout', 'exercise', 'set', 'reps_or_secs', 'backpack_kg', 'effort_rpe', 'feel_1_5', 'note']];
   for (const s of Object.values(d.sessions).sort((a, b) => a.start - b.start)) {
@@ -247,6 +247,8 @@ export function exportCsv(d: Pick<AppData, 'sessions' | 'nights'>): { workouts: 
     const m = durationMin(x);
     nights.push([x.date, hhmm(x.bed), hhmm(x.wake), m != null ? String(Math.round(m)) : '', x.quality != null ? String(x.quality) : '', x.source, (x.done ?? []).join('; '), x.note ?? '']);
   }
+  const body = [['date', 'arm_cm', 'chest_cm', 'waist_cm', 'thigh_cm']];
+  for (const m of d.profile?.measures ?? []) body.push([m.date, ...(['arm', 'chest', 'waist', 'thigh'] as const).map((k) => (m[k] != null ? String(m[k]) : ''))]);
   const out = (t: string[][]) => t.map((r) => r.map(csvCell).join(',')).join('\n') + '\n';
-  return { workouts: out(rows), sleep: out(nights) };
+  return { workouts: out(rows), sleep: out(nights), body: out(body) };
 }

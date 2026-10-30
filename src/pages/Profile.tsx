@@ -571,8 +571,8 @@ function Backup() {
         </label>
       </div>
       <span className="label">For a spreadsheet (CSV)</span>
-      <div className="grid2">
-        {(['workouts', 'sleep'] as const).map((name) => (
+      <div className="grid3">
+        {(['workouts', 'sleep', 'body'] as const).map((name) => (
           <button
             key={name}
             className="btn sm"
@@ -584,7 +584,7 @@ function Backup() {
               URL.revokeObjectURL(a.href);
             }}
           >
-            <Icon name="out" size={16} /> {name === 'workouts' ? 'Workouts' : 'Sleep'}
+            <Icon name="out" size={16} /> {name === 'workouts' ? 'Workouts' : name === 'sleep' ? 'Sleep' : 'Body'}
           </button>
         ))}
       </div>

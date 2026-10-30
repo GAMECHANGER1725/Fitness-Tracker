@@ -408,6 +408,7 @@ describe('body measurements', () => {
     expect(measureChange(l, 'arm')).toEqual({ now: 28.5, diff: 1.3, days: 19 });
     expect(measureChange(l, 'waist')).toEqual({ now: 70, diff: 0, days: 0 });
     expect(measureChange(l, 'chest')).toBeNull();
+    expect(exportCsv({ sessions: {}, nights: {}, profile: { measures: l } }).body.trim().split('\n')).toEqual(['date,arm_cm,chest_cm,waist_cm,thigh_cm', '2026-10-01,27.2,,,', '2026-10-20,28.5,,70,']);
   });
   it('normalize cleans the log', () => {
     const d = normalize({ profile: { measures: [{ date: '2026-10-02', arm: '27.04', chest: 'x' }, { date: 'bad', arm: 30 }, { date: '2026-10-01' }, { date: '2026-10-02', arm: 27.5 }] } });
