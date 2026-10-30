@@ -313,6 +313,7 @@ function Player({ onDone }: { onDone: (r: { session: Session; lines: string[]; r
       {swap && <SwapSheet slot={slot} onClose={() => setSwap(false)} />}
       {finish && (
         <FinishSheet
+          left={a.slots.map((x) => ({ name: EX[x.exerciseId]?.name ?? x.exerciseId, n: Math.max(0, x.sets - a.sets.filter((y) => y.exerciseId === x.exerciseId).length) })).filter((x) => x.n)}
           onClose={() => setFinish(false)}
           onSave={(feel, note) => {
             const before = useStore.getState().sessions;
@@ -504,11 +505,19 @@ function SwapSheet({ slot, onClose }: { slot: Slot; onClose: () => void }) {
   );
 }
 
-function FinishSheet({ onClose, onSave }: { onClose: () => void; onSave: (feel: number | undefined, note: string) => void }) {
+function FinishSheet({ left, onClose, onSave }: { left: { name: string; n: number }[]; onClose: () => void; onSave: (feel: number | undefined, note: string) => void }) {
   const [feel, setFeel] = useState<number | undefined>();
   const [note, setNote] = useState('');
+  const sets = left.reduce((t, x) => t + x.n, 0);
   return (
     <Sheet onClose={onClose} label="Finish workout">
+      {sets > 0 && (
+        <div className="card soft stack" style={{ gap: 6 }}>
+          <span className="bold">{sets} planned set{sets === 1 ? '' : 's'} not done yet</span>
+          <span className="small mut">{left.map((x) => `${x.name} (${x.n})`).join(', ')}. Finishing now saves what you did; progression only moves up on moves where you hit every set.</span>
+          <button className="btn sm" style={{ alignSelf: 'flex-start' }} onClick={onClose}>Keep going</button>
+        </div>
+      )}
       <h2 className="h2">How did it feel?</h2>
       <div className="row" style={{ flexWrap: 'wrap' }} role="group" aria-label="Feel">
         {FEEL.map((l, i) => (
