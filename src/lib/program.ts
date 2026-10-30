@@ -162,3 +162,11 @@ export function packChange(cur: Slot, next: Slot | undefined): string | null {
   const now = EX[cur.exerciseId]?.loadable ? cur.loadKg : 0;
   return now === next.loadKg ? null : `Pack ${next.loadKg} kg for ${n.name}`;
 }
+
+/** When a plan workout was last done and when it is next scheduled (from today, or tomorrow once done today). */
+export function dayWhen(p: Program, sessions: { date: string; dayId: string }[], dayId: string, today: string): { last: string | null; next: string | null } {
+  const last = sessions.reduce<string | null>((m, s) => (s.dayId === dayId && s.date <= today && (!m || s.date > m) ? s.date : m), null);
+  let next: string | null = null;
+  for (let i = last === today ? 1 : 0; i <= 7 && !next; i++) if (p.week[weekdayOf(addDays(today, i))] === dayId) next = addDays(today, i);
+  return { last, next };
+}

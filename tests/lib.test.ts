@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_DATA, exportCsv, exportJson, importJson, normalize } from '../src/lib/backup';
-import { DEFAULT_PROGRAM, addSlot, copyDay, deleteDay, nextPlanned, minutes, minutesLeft, packChange, workoutTimeOn, moveSlot, plannedDay, slotsFor, warmupFor, weekdayOf } from '../src/lib/program';
+import { DEFAULT_PROGRAM, addSlot, copyDay, deleteDay, nextPlanned, minutes, minutesLeft, packChange, dayWhen, workoutTimeOn, moveSlot, plannedDay, slotsFor, warmupFor, weekdayOf } from '../src/lib/program';
 import { EX, EXERCISES, bestText, easier, harder } from '../src/lib/exercises';
 import { applySession, deloadDue, diffPrograms, guardProgram, matchSession, newRecords, progressSlot, records, trendOf, moveSession, sessionText, vsLast, withLength, moveUpText, nearMisses, weeklySets } from '../src/lib/progress';
 import { readiness } from '../src/lib/readiness';
@@ -143,6 +143,21 @@ describe('workoutTimeOn', () => {
     expect(normalize({ settings: { weekendWorkoutTime: '9:05' } }).settings.weekendWorkoutTime).toBe('09:05');
     expect(normalize({ settings: { weekendWorkoutTime: 'soon' } }).settings.weekendWorkoutTime).toBe('');
     expect(normalize({}).settings.weekendWorkoutTime).toBe('');
+  });
+});
+
+describe('dayWhen', () => {
+  // 2026-10-26 is a Monday.
+  const p = { ...DEFAULT_PROGRAM, week: ['a', null, 'b', null, 'a', null, null] } as typeof DEFAULT_PROGRAM;
+  it('finds the last session and the next scheduled day', () => {
+    expect(dayWhen(p, [{ date: '2026-10-20', dayId: 'a' }, { date: '2026-10-23', dayId: 'a' }, { date: '2026-10-24', dayId: 'b' }], 'a', '2026-10-27')).toEqual({ last: '2026-10-23', next: '2026-10-30' });
+  });
+  it('counts today until it is done, then looks ahead', () => {
+    expect(dayWhen(p, [], 'a', '2026-10-26')).toEqual({ last: null, next: '2026-10-26' });
+    expect(dayWhen(p, [{ date: '2026-10-26', dayId: 'a' }], 'a', '2026-10-26').next).toBe('2026-10-30');
+  });
+  it('has no next day for an unscheduled workout', () => {
+    expect(dayWhen(p, [], 'c', '2026-10-26').next).toBeNull();
   });
 });
 

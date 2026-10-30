@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useStore } from '../lib/store';
 import { EX, EXERCISES, PATTERN_LABEL, bestText, easier, harder, targetText, usable } from '../lib/exercises';
-import { WEEKDAYS, addSlot, copyDay, deleteDay, inDeload, minutes, moveSlot } from '../lib/program';
+import { WEEKDAYS, addSlot, copyDay, dayWhen, deleteDay, inDeload, minutes, moveSlot } from '../lib/program';
 import { PATTERN_CAP, matchSession, moveUpText, newRecords, records, sessionText, trendOf, weeklySets } from '../lib/progress';
 import { addDays, addMonths, daysBetween, fmtDate, monthGrid } from '../lib/dates';
 import { hm } from '../lib/sleep';
@@ -42,6 +42,7 @@ function Plan() {
   const today = useToday();
   const program = useStore((s) => s.program);
   const log = useStore((s) => s.programLog);
+  const sessions = useStore((s) => s.sessions);
   const { setProgram, undoProgram, startWorkout } = useStore.getState();
   const ready = useReadiness();
   const [edit, setEdit] = useState<{ day: string; idx: number | null } | null>(null);
@@ -152,6 +153,13 @@ function Plan() {
               <span className="small mut">
                 {program.week.map((x, i) => (x === d.id ? WEEKDAYS[i] : null)).filter(Boolean).join(', ') || 'Not scheduled'} · {minutes(d.slots)} min
               </span>
+              {(() => {
+                const w = dayWhen(program, Object.values(sessions), d.id, today);
+                const rel = (k: string) => (k === addDays(today, 1) ? 'tomorrow' : fmtDate(k, { weekday: 'short', day: 'numeric', month: 'short' }));
+                const bits = [w.last && `Last done ${agoText(daysBetween(w.last, today))}`, w.next && (w.next === today ? 'planned for today' : `next ${rel(w.next)}`)].filter(Boolean) as string[];
+                const t = bits.join(' · ');
+                return t ? <span className="small mut" style={{ display: 'block' }}>{t[0].toUpperCase() + t.slice(1)}</span> : null;
+              })()}
             </div>
             <button
               className="btn sm primary"
