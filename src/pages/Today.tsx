@@ -228,6 +228,7 @@ function WakeCard() {
   const today = useToday();
   const night = useStore((s) => s.nights[today]);
   const wakeTarget = useStore((s) => s.settings.wakeTarget);
+  const goalH = useStore((s) => s.settings.sleepGoalH);
   const wokeUp = useStore((s) => s.wokeUp);
   const setNight = useStore((s) => s.setNight);
   const g = useGame();
@@ -274,7 +275,7 @@ function WakeCard() {
             Up at {clockOf(night.wake)}, {off <= 15 ? (off < -5 ? 'early' : 'on time') : `${off} min late`}
           </span>
           <span className="small mut">
-            {dur != null ? `${hm(dur)} sleep` : 'No bedtime logged'}
+            {dur != null ? `${hm(dur)} sleep, ${dur >= goalH * 60 - 10 ? 'goal met' : `${hm(goalH * 60 - dur)} short`}` : 'No bedtime logged'}
             {g.wake ? ` · ${g.wake}-day wake streak` : ''}
           </span>
         </span>

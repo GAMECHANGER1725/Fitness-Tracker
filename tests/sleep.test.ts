@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clock12, durationMin, guardBedtime, idealBedtime, mergeImported, nightKey, onTime, readCsv, samsungNights, samsungTime, sleepStats, wakeStreak, nightPos, toBedtime, windDownEffect, pastAt, bedtimeEffect } from '../src/lib/sleep';
+import { clock12, hm, durationMin, guardBedtime, idealBedtime, mergeImported, nightKey, onTime, readCsv, samsungNights, samsungTime, sleepStats, wakeStreak, nightPos, toBedtime, windDownEffect, pastAt, bedtimeEffect } from '../src/lib/sleep';
 import { addDays, atOn } from '../src/lib/dates';
 import type { Night } from '../src/lib/types';
 
@@ -12,6 +12,11 @@ describe('nights', () => {
   it('keys a night by the morning you woke up', () => {
     expect(nightKey(atOn('2026-10-26', '21:50'))).toBe('2026-10-27');
     expect(nightKey(atOn('2026-10-27', '00:30'))).toBe('2026-10-27');
+  });
+  it('formats durations, in minutes under an hour', () => {
+    expect(hm(492)).toBe('8 h 12 m');
+    expect(hm(40)).toBe('40 min');
+    expect(hm(59.6)).toBe('1 h 00 m');
   });
   it('works out hours across midnight and takes off time awake', () => {
     expect(durationMin(N('2026-10-27', '21:52', '06:04'))).toBe(8 * 60 + 12);

@@ -24,7 +24,11 @@ export function durationMin(n: Pick<Night, 'bed' | 'wake' | 'awake'>): number | 
   return m > 0 && m < 20 * 60 ? m : null;
 }
 
-export const hm = (min: number) => `${Math.floor(min / 60)} h ${String(Math.round(min % 60)).padStart(2, '0')} m`;
+/** "8 h 05 m", or "40 min" under an hour. */
+export const hm = (min: number) => {
+  const r = Math.round(min);
+  return r < 60 ? `${r} min` : `${Math.floor(r / 60)} h ${String(r % 60).padStart(2, '0')} m`;
+};
 
 /** Minutes after midnight of "HH:mm". */
 export const minsOf = (hhmm: string) => {
