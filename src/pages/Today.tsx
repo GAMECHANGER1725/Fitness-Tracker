@@ -9,7 +9,7 @@ import { weekSummary } from '../lib/game';
 import { useLayout } from '../lib/layout';
 import { currentAi, morningBriefing, useCoach } from '../lib/coach';
 import { friendlyError, hasAi } from '../lib/ai';
-import { Head, Icon, ProfileLink, go, toast, useGame, useNow, useToday } from '../components/ui';
+import { Bar, Head, Icon, ProfileLink, go, toast, useGame, useNow, useToday } from '../components/ui';
 import { useFuelData, useReadiness } from '../components/data';
 import type { PlanDay } from '../lib/types';
 
@@ -341,6 +341,12 @@ function FuelStrip() {
       <span className="grow">
         <span className="small mut" style={{ display: 'block' }}>From Fuel Log</span>
         <span className="bold">{text}</span>
+        {t && (
+          <span className="stack" style={{ gap: 4, marginTop: 6 }}>
+            <Bar value={f?.kcal ?? 0} max={t.kcal} color="var(--fuel)" height={6} label="Energy today" />
+            <Bar value={f?.protein ?? 0} max={t.protein} color="var(--pro)" height={6} label="Protein today" />
+          </span>
+        )}
       </span>
       <Icon name="right" />
     </a>
