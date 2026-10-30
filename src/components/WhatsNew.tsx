@@ -2,13 +2,13 @@ import { useState } from 'react';
 import { Sheet } from './ui';
 
 /** Bump when there is something new to show; the sheet opens once per device for each id. */
-export const NEWS_ID = '2026-10-30e';
+export const NEWS_ID = '2026-10-30f';
 const KEY = 'fitness-news';
 
 const NEWS: [title: string, body: string, href?: string][] = [
   ['Fixed: your plan saves', 'Changing which workout is on a weekday, or only an exercise’s rest time, now saves. Before, those changes were quietly lost. A workout left unfinished from an earlier day can now be saved or discarded instead of blocking today’s.', '#/train'],
   ['Evenings and mornings on Today', 'Tick your own wind-down checklist and tap Going to sleep; tap I’m up and rate the night in one tap. Forgot to tap? Pick an earlier time. See how much sleep you’d get if you went now, and add time awake and a one-tap note to any night (“phone in bed”, or your own list); Insights shows which ones cost you sleep.', '#/sleep'],
-  ['Better workouts', 'A warm-up first, last time’s reps on every set, a timer for holds, extra sets, fix or remove a logged set, notes per exercise, a beep when rest ends, and how many minutes are left. Today shows last time’s sets for each move, and you can swap in a different workout from your plan.'],
+  ['Better workouts', 'A warm-up first, last time’s reps on every set, a timer for holds, extra sets, fix or remove a logged set, notes per exercise, a beep when rest ends, and how many minutes are left. Today shows last time’s sets for each move, and you can swap in a different workout from your plan. Swap shows the easier and harder versions first, and a workout you forgot to finish no longer counts as hours long (you can fix its length in History too).'],
   ['Your plan, your way', 'Reorder, rename, copy or delete workouts, add a move straight from Exercises, change rest times as you go, see past plan changes, and start or end a lighter week.', '#/train'],
   ['See your progress', 'Month calendars for workouts and sleep, a chart per exercise, a search through your workouts and their notes, personal bests, your next badge (and a new Sleep diary badge), a weight chart on Fuel, and a recap of last week on Today each Monday.', '#/train?tab=history'],
   ['Coach without AI', 'Coach now opens with plain notes from your last week: what’s going up, what’s stuck, sleep and whether a lighter week is due.', '#/coach'],
