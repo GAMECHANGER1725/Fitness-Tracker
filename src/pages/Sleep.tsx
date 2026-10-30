@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useStore } from '../lib/store';
 import { addDays, addMonths, atOn, fmtDate, hhmmOf, isKey, monthGrid } from '../lib/dates';
-import { QUALITY, clock12, clockOf, nightPos, durationMin, hm, idealBedtime, minsOf, windDownEffect, bedtimeEffect, nightKey, onTime, samsungNights, sleepStats, wakeOffset } from '../lib/sleep';
+import { QUALITY, clock12, clockOf, nightPos, durationMin, hm, idealBedtime, minsOf, windDownEffect, bedtimeEffect, noteEffect, NOTE_TAGS, nightKey, onTime, samsungNights, sleepStats, wakeOffset } from '../lib/sleep';
 import { currentAi, tonightPlan, useCoach } from '../lib/coach';
 import { friendlyError, hasAi } from '../lib/ai';
 import { Head, Icon, ProfileLink, Sheet, toast, useGame, useRoute, useToday } from '../components/ui';
@@ -388,6 +388,8 @@ function Insights() {
     }
     const wd = windDownEffect(nights, steps, today);
     if (wd && Math.abs(wd.full - wd.partial) >= 15) out.push(wd.full > wd.partial ? `On nights you finish your wind-down you sleep ${wd.full - wd.partial} min longer. Worth keeping up.` : `Your wind-down doesn’t seem to add sleep yet (${hm(wd.full)} vs ${hm(wd.partial)}). Try swapping a step.`);
+    const ne = noteEffect(nights, today);
+    if (ne) out.push(`On nights you note “${ne.tag.toLowerCase()}”, you sleep ${hm(ne.less)} less.`);
     const be = bedtimeEffect(nights, bedtime, today);
     if (be && be.onTime - be.late >= 0.5) out.push(`You rate your sleep ${be.onTime} out of 5 when lights are out by ${clock12(bedtime)}, and ${be.late} when it’s later.`);
     const ideal = idealBedtime(wake, goal);
@@ -494,8 +496,6 @@ function Recent({ onPick }: { onPick: (d: string) => void }) {
     </section>
   );
 }
-
-const NOTE_TAGS = ['Woke in the night', 'Late homework', 'Phone in bed', 'Noisy', 'Sore', 'Sick'];
 
 function NightSheet({ date, onClose }: { date: string; onClose: () => void }) {
   const n = useStore((s) => s.nights[date]);

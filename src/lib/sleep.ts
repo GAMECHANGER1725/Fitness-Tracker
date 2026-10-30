@@ -24,6 +24,26 @@ export function durationMin(n: Pick<Night, 'bed' | 'wake' | 'awake'>): number | 
   return m > 0 && m < 20 * 60 ? m : null;
 }
 
+/** Quick notes offered in the night sheet. */
+export const NOTE_TAGS = ['Woke in the night', 'Late homework', 'Phone in bed', 'Noisy', 'Sore', 'Sick'];
+
+/** The quick note that goes with the most lost sleep over the last 28 nights: average minutes with it vs without.
+ * Needs 3 nights each side and at least 20 min less; null otherwise. */
+export function noteEffect(nights: Record<string, Night>, today: string): { tag: string; less: number } | null {
+  const recent = Object.values(nights).filter((n) => n.date > addDays(today, -28) && n.date <= today && durationMin(n) != null);
+  const avg = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
+  let best: { tag: string; less: number } | null = null;
+  for (const tag of NOTE_TAGS) {
+    const has = (n: Night) => !!n.note?.split(', ').includes(tag);
+    const w = recent.filter(has).map((n) => durationMin(n)!);
+    const wo = recent.filter((n) => !has(n)).map((n) => durationMin(n)!);
+    if (w.length < 3 || wo.length < 3) continue;
+    const less = Math.round(avg(wo) - avg(w));
+    if (less >= 20 && (!best || less > best.less)) best = { tag, less };
+  }
+  return best;
+}
+
 /** True when the last food on `day` came within 2.5 h of lights out that night (the night keyed the next morning). */
 export const lateMeal = (last: number | null | undefined, nights: Record<string, Night>, day: string) => {
   const bed = nights[addDays(day, 1)]?.bed;

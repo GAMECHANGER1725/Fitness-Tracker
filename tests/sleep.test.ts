@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clock12, hm, durationMin, guardBedtime, idealBedtime, mergeImported, nightKey, onTime, readCsv, samsungNights, samsungTime, sleepStats, wakeStreak, nightPos, toBedtime, windDownEffect, pastAt, bedtimeEffect, sleepIfNow, lateMeal } from '../src/lib/sleep';
+import { clock12, hm, durationMin, guardBedtime, idealBedtime, mergeImported, nightKey, onTime, readCsv, samsungNights, samsungTime, sleepStats, wakeStreak, nightPos, toBedtime, windDownEffect, pastAt, bedtimeEffect, sleepIfNow, lateMeal, noteEffect } from '../src/lib/sleep';
 import { addDays, atOn } from '../src/lib/dates';
 import type { Night } from '../src/lib/types';
 
@@ -126,6 +126,17 @@ describe('toBedtime', () => {
     expect(toBedtime(at(22, 20), '22:00')).toBe(-20);
     expect(toBedtime(at(0, 30), '22:00')).toBe(-150);
     expect(toBedtime(at(23, 0), '00:30')).toBe(90);
+  });
+});
+
+describe('noteEffect', () => {
+  it('finds the quick note with the most lost sleep, once each side has 3 nights', () => {
+    const all: Record<string, Night> = {};
+    ['2026-10-20', '2026-10-21', '2026-10-22'].forEach((d) => (all[d] = N(d, '22:30', '06:00', { note: 'Storm, Phone in bed' })));
+    ['2026-10-23', '2026-10-24'].forEach((d) => (all[d] = N(d, '21:30', '06:00')));
+    expect(noteEffect(all, '2026-10-29')).toBeNull();
+    all['2026-10-25'] = N('2026-10-25', '21:30', '06:00', { note: 'Noisy' });
+    expect(noteEffect(all, '2026-10-29')).toEqual({ tag: 'Phone in bed', less: 60 });
   });
 });
 
