@@ -56,7 +56,7 @@ Finishing a workout (`finishWorkout` in the store) runs progression and logs a `
 - the `useCoach` store (per device);
 - `currentAi()` uses this app's own keys if set, else Fuel Log's (`aiConfig`).
 
-`notes.ts` (`weekNotes`, `movesTrend`) gives Coach plain, rule-based notes that work without an AI key.
+`notes.ts` (`weekNotes`, `movesTrend`) gives Coach plain, rule-based notes that work without an AI key; `lastWeekReport` feeds the Monday-to-Wednesday recap card on Today.
 
 **Sync.** `sync.ts` is adapted from Fuel Log's: its own gist file `fitness-tracker-sync.json`, and it auto-connects once with Fuel Log's token if present. `syncdoc.ts` holds the merge rules:
 - sessions: union by id, newer `upd` wins;
@@ -64,7 +64,7 @@ Finishing a workout (`finishWorkout` in the store) runs progression and logs a `
 - deletions: in `tomb`, session ids and `night:<date>`;
 - profile, settings, program and log: newest `mod` wins.
 
-Per-device fields (AI keys and models, `aiFirst`, theme, `active` workout, `seen`) stay out of the gist: `LOCAL_ONLY` in `store.ts` and `toDoc`/`applyDoc` encode this. Exercise notes (`profile.exNotes`) and the wind-down steps (`profile.windDown`) ride with the profile block; the ticks are on each night (`Night.done`). Other per-device prefs live outside the store in their own localStorage keys (`fitness-player`, `fitness-layout`, `fitness-sleep-span`, `fitness-news`). Docs are key-sorted so equal docs compare equal.
+Per-device fields (AI keys and models, `aiFirst`, theme, `active` workout, `seen`) stay out of the gist: `LOCAL_ONLY` in `store.ts` and `toDoc`/`applyDoc` encode this. Exercise notes (`profile.exNotes`) and the wind-down steps (`profile.windDown`) ride with the profile block; the ticks are on each night (`Night.done`). Other per-device prefs live outside the store in their own localStorage keys (`fitness-player`, `fitness-layout`, `fitness-sleep-span`, `fitness-news`, `fitness-recap`). Docs are key-sorted so equal docs compare equal.
 
 **Reminders.** `reminders.ts` handles wind-down, workout and wake nudges via the service worker (`public/sw-extra.js` opens the tab named in `data.path`). They only fire while the app is alive. The master switch, each kind's switch and the wind-down lead (20/40/60 min) are per device in `fitness-reminders`.
 

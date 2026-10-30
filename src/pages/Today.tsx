@@ -7,6 +7,7 @@ import { QUALITY, clock12, clockOf, durationMin, hm, nightKey, onTime, pastAt, t
 import { BAND_LABEL, readiness } from '../lib/readiness';
 import { weekSummary } from '../lib/game';
 import { newRecords } from '../lib/progress';
+import { lastWeekReport } from '../lib/notes';
 import { backupDue, useLayout } from '../lib/layout';
 import { useSync } from '../lib/sync';
 import { currentAi, morningBriefing, useCoach } from '../lib/coach';
@@ -178,6 +179,7 @@ export default function Today() {
         )}
 
         <BackupNudge />
+        <LastWeek />
         {!hidden.includes('fuel') && <FuelStrip />}
         {!hidden.includes('week') && <WeekStrip />}
         {hidden.length > 0 && (
@@ -388,6 +390,64 @@ function WindDown({ nightDone }: { nightDone: string[] }) {
 }
 
 /** Once a month, if sync is off: save a backup file, since the data only lives on this phone. */
+const RECAP_KEY = 'fitness-recap';
+
+/** Monday to Wednesday: last week in a few numbers, until dismissed (per device). */
+function LastWeek() {
+  const today = useToday();
+  const sessions = useStore((s) => s.sessions);
+  const nights = useStore((s) => s.nights);
+  const program = useStore((s) => s.program);
+  const settings = useStore((s) => s.settings);
+  const [gone, setGone] = useState(() => {
+    try {
+      return localStorage.getItem(RECAP_KEY);
+    } catch {
+      return null;
+    }
+  });
+  if ((dateOf(today).getDay() + 6) % 7 > 2) return null;
+  const r = lastWeekReport({ sessions, nights, program, settings }, today);
+  if (!r || gone === r.ws) return null;
+  const close = () => {
+    try {
+      localStorage.setItem(RECAP_KEY, r.ws);
+    } catch {
+      /* shows again next time; harmless */
+    }
+    setGone(r.ws);
+  };
+  const tiles: [string, string][] = [
+    ['Workouts', r.planned ? `${r.workouts} of ${r.planned}` : String(r.workouts)],
+    ['Training time', r.minutes ? hm(r.minutes) : '–'],
+    ['New bests', String(r.bests)],
+    ['Average sleep', r.avgMin != null ? hm(r.avgMin) : '–'],
+    ['Up on time', r.withWake ? `${r.onTime} of ${r.withWake}` : '–'],
+    ['Nights', `${r.nights} of 7`],
+  ];
+  return (
+    <section className="card stack" style={{ gap: 10 }} aria-label="Last week">
+      <div className="between">
+        <span className="stack" style={{ gap: 0 }}>
+          <h2 className="h2">Last week</h2>
+          <span className="small mut">{fmtDate(r.ws, { day: 'numeric', month: 'short' })} – {fmtDate(addDays(r.ws, 6), { day: 'numeric', month: 'short' })}</span>
+        </span>
+        <button className="btn sm icon" aria-label="Hide last week" onClick={close}>
+          <Icon name="close" size={16} />
+        </button>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
+        {tiles.map(([label, v]) => (
+          <div key={label} className="stack" style={{ gap: 0, background: 'var(--s2)', borderRadius: 14, padding: '8px 10px' }}>
+            <span className="num bold" style={{ fontSize: 18 }}>{v}</span>
+            <span className="small mut">{label}</span>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function BackupNudge() {
   const synced = useSync((s) => !!s.conn);
   const sessions = useStore((s) => Object.keys(s.sessions).length);

@@ -4,7 +4,7 @@
 import type { AppData } from './types';
 import { addDays, weekStart } from './dates';
 import { EX } from './exercises';
-import { deloadDue, trendOf } from './progress';
+import { deloadDue, newRecords, trendOf } from './progress';
 import { hm, sleepStats } from './sleep';
 import { weekSummary } from './game';
 
@@ -44,4 +44,29 @@ export function weekNotes(d: Pick<AppData, 'sessions' | 'nights' | 'program' | '
   if (st.withWake) out.push(`Up on time ${st.onTime} of ${st.withWake} mornings.`);
   if (deloadDue(d.sessions, d.program, today, weekStart, addDays)) out.push('Five steady weeks in a row: a lighter week is due, with fewer sets so your body catches up.');
   return out;
+}
+
+export interface WeekReport {
+  /** Monday of the week reported on. */
+  ws: string;
+  workouts: number;
+  planned: number;
+  minutes: number;
+  bests: number;
+  nights: number;
+  avgMin: number | null;
+  onTime: number;
+  withWake: number;
+}
+
+/** Last Monday-to-Sunday in numbers, for the recap card on Today. Null when nothing was logged that week. */
+export function lastWeekReport(d: Pick<AppData, 'sessions' | 'program' | 'nights' | 'settings'>, today: string): WeekReport | null {
+  const ws = addDays(weekStart(today), -7);
+  const end = addDays(ws, 6);
+  const w = weekSummary(d, ws);
+  const st = sleepStats(d.nights, end, 7, d.settings.sleepGoalH, d.settings.wakeTarget);
+  if (!w.done && !st.nights) return null;
+  const xs = Object.values(d.sessions).filter((s) => s.date >= ws && s.date <= end);
+  const bests = xs.reduce((t, s) => t + new Set(newRecords(s, d.sessions).map((r) => r.exerciseId)).size, 0);
+  return { ws, workouts: w.done, planned: w.planned, minutes: w.minutes, bests, nights: st.nights, avgMin: st.avgMin, onTime: st.onTime, withWake: st.withWake };
 }

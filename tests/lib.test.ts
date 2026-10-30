@@ -4,7 +4,7 @@ import { DEFAULT_PROGRAM, copyDay, deleteDay, nextPlanned, minutes, minutesLeft,
 import { EX, EXERCISES, bestText, easier, harder } from '../src/lib/exercises';
 import { applySession, deloadDue, diffPrograms, guardProgram, matchSession, newRecords, progressSlot, records, trendOf, moveSession, sessionText, vsLast, weeklySets } from '../src/lib/progress';
 import { readiness } from '../src/lib/readiness';
-import { weekNotes } from '../src/lib/notes';
+import { lastWeekReport, weekNotes } from '../src/lib/notes';
 import { backupDue } from '../src/lib/layout';
 import { computeGame, weekSummary, workoutWeeks } from '../src/lib/game';
 import { addDays, addMonths, atOn, monthGrid, weekStart } from '../src/lib/dates';
@@ -360,6 +360,18 @@ describe('backup', () => {
     expect(d.program).toEqual(DEFAULT_PROGRAM);
     expect(Object.keys(d.nights)).toEqual(['2026-10-26']);
     expect(d.nights['2026-10-26'].quality).toBe(5);
+  });
+});
+
+describe('lastWeekReport', () => {
+  it('reports Monday to Sunday before this week, with new bests, or null when nothing was logged', () => {
+    const list = [sess('2026-10-13', 'upper-a', [['pushup', 8]]), sess('2026-10-20', 'upper-a', [['pushup', 10]]), sess('2026-10-22', 'upper-a', [['pushup', 12]]), sess('2026-10-27', 'upper-a', [['pushup', 15]])];
+    const bed = atOn('2026-10-20', '21:30');
+    const d = { ...DEFAULT_DATA, sessions: Object.fromEntries(list.map((x) => [x.id, x])), nights: { '2026-10-21': { date: '2026-10-21', bed, wake: bed + 510 * 60_000, source: 'tap' as const, m: 1 } } };
+    const r = lastWeekReport(d, '2026-10-28')!;
+    expect(r).toMatchObject({ ws: '2026-10-19', workouts: 2, bests: 2, nights: 1, avgMin: 510, onTime: 1 });
+    expect(r.minutes).toBe(80);
+    expect(lastWeekReport({ ...DEFAULT_DATA }, '2026-10-28')).toBeNull();
   });
 });
 
