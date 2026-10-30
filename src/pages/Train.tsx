@@ -575,12 +575,17 @@ function EditSessionSheet({ session, onClose }: { session: Session; onClose: () 
   const [date, setDate] = useState(session.date);
   const [feel, setFeel] = useState(session.feel);
   const [note, setNote] = useState(session.note ?? '');
+  const [mins, setMins] = useState(Math.max(1, Math.round((session.end - session.start) / 60_000)));
   return (
     <Sheet onClose={onClose} label="Edit workout">
       <h2 className="h2">Edit {session.name}</h2>
       <label className="field">
         <span>Day</span>
         <input className="input" type="date" value={date} max={today} onChange={(e) => e.target.value && setDate(e.target.value)} />
+      </label>
+      <label className="field">
+        <span>Length (forgot to tap Finish? fix it here)</span>
+        <Stepper value={mins} onChange={setMins} label="workout minutes" step={5} min={1} max={300} unit="min" />
       </label>
       <div className="stack" style={{ gap: 6 }}>
         <span className="label">How did it feel?</span>
@@ -599,7 +604,7 @@ function EditSessionSheet({ session, onClose }: { session: Session; onClose: () 
       <button
         className="btn primary block"
         onClick={() => {
-          editSession(session.id, { date, feel, note });
+          editSession(session.id, { date, feel, note, minutes: mins });
           toast('Saved');
           onClose();
         }}

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_DATA, exportCsv, exportJson, importJson, normalize } from '../src/lib/backup';
 import { DEFAULT_PROGRAM, addSlot, copyDay, deleteDay, nextPlanned, minutes, minutesLeft, workoutTimeOn, moveSlot, plannedDay, slotsFor, warmupFor, weekdayOf } from '../src/lib/program';
 import { EX, EXERCISES, bestText, easier, harder } from '../src/lib/exercises';
-import { applySession, deloadDue, diffPrograms, guardProgram, matchSession, newRecords, progressSlot, records, trendOf, moveSession, sessionText, vsLast, weeklySets } from '../src/lib/progress';
+import { applySession, deloadDue, diffPrograms, guardProgram, matchSession, newRecords, progressSlot, records, trendOf, moveSession, sessionText, vsLast, withLength, weeklySets } from '../src/lib/progress';
 import { readiness } from '../src/lib/readiness';
 import { lastWeekReport, weekNotes, weekReportText } from '../src/lib/notes';
 import { backupDue } from '../src/lib/layout';
@@ -151,6 +151,16 @@ describe('minutesLeft', () => {
     expect(minutesLeft([s], [])).toBe(6);
     expect(minutesLeft([s], [{ exerciseId: 'pushup' }])).toBe(4);
     expect(minutesLeft([s], [1, 2, 3, 4].map(() => ({ exerciseId: 'pushup' })))).toBe(0);
+  });
+});
+
+describe('withLength', () => {
+  it('keeps the start and sets the end, between 1 and 300 min', () => {
+    const s = sess('2026-10-26', 'upper-a', [['pushup', 10]]);
+    expect(withLength(s, 35).end - s.start).toBe(35 * 60_000);
+    expect(withLength(s, 900).end - s.start).toBe(300 * 60_000);
+    expect(withLength(s, 0).end - s.start).toBe(60_000);
+    expect(withLength(s, 35).start).toBe(s.start);
   });
 });
 

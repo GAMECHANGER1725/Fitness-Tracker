@@ -7,7 +7,7 @@ import { persist } from 'zustand/middleware';
 import type { ActiveWorkout, AppData, Night, PlanDay, Profile, Program, ProgramChange, Session, SetLog, Settings } from './types';
 import { DEFAULT_DATA, normalize } from './backup';
 import { applyDoc, nightTomb, type SyncDoc } from './syncdoc';
-import { applySession, diffPrograms, moveSession } from './progress';
+import { applySession, diffPrograms, moveSession, withLength } from './progress';
 import { dayById, slotsFor } from './program';
 import { mergeImported, nightKey } from './sleep';
 import { keyOf, todayKey } from './dates';
@@ -33,7 +33,7 @@ interface Actions {
   /** Bring back a deleted session (under a new id, since the old one is in `tomb` and may have synced). */
   restoreSession: (s: Session) => void;
   /** Change a saved session's day, feel or note. */
-  editSession: (id: string, patch: { date?: string; feel?: number; note?: string }) => void;
+  editSession: (id: string, patch: { date?: string; feel?: number; note?: string; minutes?: number }) => void;
   /** "Going to sleep" now (or at `at`). */
   goingToSleep: (at?: number) => void;
   /** "I'm up" now (or at `at`). */
@@ -103,11 +103,12 @@ export const useStore = create<Store>()(
             const now = Date.now();
             return { sessions: { ...s.sessions, [id]: { ...old, id, upd: now, sets: old.sets.map((x) => ({ ...x, id: uid() })) } } };
           }),
-        editSession: (id, { date, ...rest }) =>
+        editSession: (id, { date, minutes, ...rest }) =>
           set((s) => {
             const cur = s.sessions[id];
             if (!cur) return {};
-            const next = { ...(date ? moveSession(cur, date) : cur), ...rest, upd: Date.now() };
+            const moved = date ? moveSession(cur, date) : cur;
+            const next = { ...(minutes != null ? withLength(moved, minutes) : moved), ...rest, upd: Date.now() };
             if (next.note !== undefined) next.note = next.note.trim() || undefined;
             return { sessions: { ...s.sessions, [id]: next } };
           }),

@@ -303,6 +303,11 @@ export function matchSession(s: Session, query: string): boolean {
   return words.every((w) => text.includes(w));
 }
 
+/** A workout with its length set to `minutes` (1 to 300), keeping its start. */
+export function withLength(s: Session, minutes: number): Session {
+  return { ...s, end: s.start + Math.round(Math.min(300, Math.max(1, minutes))) * 60_000 };
+}
+
 /** A plain-text summary of a workout for sharing: one line per exercise with its sets. */
 export function sessionText(s: Session, when: string): string {
   const by = new Map<string, SetLog[]>();
