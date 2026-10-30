@@ -396,6 +396,19 @@ describe('nextBadge', () => {
   });
 });
 
+describe('weekNotes and night notes', () => {
+  it('mentions the note that goes with the least sleep', () => {
+    const nights: Record<string, Night> = {};
+    for (let i = 1; i <= 8; i++) {
+      const date = addDays('2026-10-29', -i);
+      const ph = i <= 3;
+      const bed = atOn(addDays(date, -1), ph ? '22:30' : '21:30');
+      nights[date] = { date, bed, wake: atOn(date, '06:00'), note: ph ? 'Phone in bed' : undefined, source: 'tap', m: 1 };
+    }
+    expect(weekNotes({ ...DEFAULT_DATA, nights }, '2026-10-29').some((l) => l.startsWith('Nights you note “phone in bed” average 1 h 00 m less'))).toBe(true);
+  });
+});
+
 describe('lastWeekReport', () => {
   it('reports Monday to Sunday before this week, with new bests, or null when nothing was logged', () => {
     const list = [sess('2026-10-13', 'upper-a', [['pushup', 8]]), sess('2026-10-20', 'upper-a', [['pushup', 10]]), sess('2026-10-22', 'upper-a', [['pushup', 12]]), sess('2026-10-27', 'upper-a', [['pushup', 15]])];

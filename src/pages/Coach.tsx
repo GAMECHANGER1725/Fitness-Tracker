@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useStore } from '../lib/store';
+import { useLayout } from '../lib/layout';
 import { SLEEP_STATUS_LABEL, applyCheckIn, ask, checkIn, currentAi, morningBriefing, reviewDue, undoCheckIn, useCoach } from '../lib/coach';
 import { friendlyError, hasAi, PROVIDER_NAME } from '../lib/ai';
 import { addDays, daysBetween, fmtDate, weekStart } from '../lib/dates';
@@ -17,7 +18,8 @@ function FromLog() {
   const nights = useStore((s) => s.nights);
   const program = useStore((s) => s.program);
   const settings = useStore((s) => s.settings);
-  const notes = useMemo(() => weekNotes({ sessions, nights, program, settings }, today), [sessions, nights, program, settings, today]);
+  const noteTags = useLayout((l) => l.noteTags);
+  const notes = useMemo(() => weekNotes({ sessions, nights, program, settings }, today, noteTags), [sessions, nights, program, settings, today, noteTags]);
   return (
     <section className="card stack" style={{ gap: 8 }} aria-label="From your log">
       <h2 className="h2">From your log</h2>

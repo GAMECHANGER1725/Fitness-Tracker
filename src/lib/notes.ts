@@ -5,7 +5,7 @@ import type { AppData } from './types';
 import { addDays, fmtDate, weekStart } from './dates';
 import { EX } from './exercises';
 import { deloadDue, newRecords, trendOf } from './progress';
-import { hm, sleepStats } from './sleep';
+import { hm, noteEffect, sleepStats } from './sleep';
 import { weekSummary } from './game';
 
 /** Moves done in the last 7 days whose best set went up over their last 3 sessions, and ones stuck on the same best set. */
@@ -24,7 +24,7 @@ export function movesTrend(sessions: AppData['sessions'], today: string): { up: 
   return { up, stuck };
 }
 
-export function weekNotes(d: Pick<AppData, 'sessions' | 'nights' | 'program' | 'settings'>, today: string): string[] {
+export function weekNotes(d: Pick<AppData, 'sessions' | 'nights' | 'program' | 'settings'>, today: string, noteTags?: string[]): string[] {
   const out: string[] = [];
   const last7 = Object.values(d.sessions).filter((s) => s.date > addDays(today, -7) && s.date <= today);
   const planned = d.program.week.filter(Boolean).length;
@@ -42,6 +42,8 @@ export function weekNotes(d: Pick<AppData, 'sessions' | 'nights' | 'program' | '
     out.push(short > 20 ? `Sleep averaged ${hm(st.avgMin)}, about ${hm(short)} under your goal. An earlier lights-out helps recovery more than an extra set.` : `Sleep averaged ${hm(st.avgMin)}, on your goal.`);
   }
   if (st.withWake) out.push(`Up on time ${st.onTime} of ${st.withWake} mornings.`);
+  const ne = noteEffect(d.nights, today, noteTags);
+  if (ne) out.push(`Nights you note “${ne.tag.toLowerCase()}” average ${hm(ne.less)} less sleep (last 4 weeks). Worth changing if you can.`);
   if (deloadDue(d.sessions, d.program, today, weekStart, addDays)) out.push('Five steady weeks in a row: a lighter week is due, with fewer sets so your body catches up.');
   return out;
 }
