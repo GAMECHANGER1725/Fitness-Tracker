@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../lib/store';
 import { warmupFor } from '../lib/program';
-import { EX, EXERCISES, PATTERN_LABEL, targetText, usable } from '../lib/exercises';
-import { historyOf, newRecords, sessionText, vsLast } from '../lib/progress';
+import { EX, EXERCISES, PATTERN_LABEL, bestText, targetText, usable } from '../lib/exercises';
+import { historyOf, newRecords, records, sessionText, vsLast } from '../lib/progress';
 import { currentAi, postWorkout, suggestSwap } from '../lib/coach';
 import { friendlyError, hasAi } from '../lib/ai';
 import { beep, holdWakeLock, primeAudio, usePlayer } from '../lib/player';
@@ -431,6 +431,7 @@ function SwapSheet({ slot, onClose }: { slot: Slot; onClose: () => void }) {
   const [pick, setPick] = useState<string | null>(null);
   // Not one already in this workout: sets are counted per exercise, so two slots of the same move would mix up.
   const inWorkout = new Set(useStore.getState().active?.slots.map((x) => x.exerciseId));
+  const best = records(useStore.getState().sessions);
   const options = EXERCISES.filter((e) => e.pattern === ex?.pattern && !inWorkout.has(e.id) && usable(e, hasGrip));
 
   const apply = (forPlan: boolean) => {
@@ -479,7 +480,7 @@ function SwapSheet({ slot, onClose }: { slot: Slot; onClose: () => void }) {
         {options.map((e) => (
           <button key={e.id} className="chip" aria-pressed={pick === e.id} onClick={() => setPick(e.id)} style={{ justifyContent: 'space-between', display: 'flex', alignItems: 'center', minHeight: 48, textAlign: 'left' }}>
             <span>{e.name}</span>
-            <span className="small" style={{ opacity: 0.7 }}>{e.muscles}</span>
+            <span className="small" style={{ opacity: 0.7, textAlign: 'right' }}>{bestText(best[e.id], e) ?? e.muscles}</span>
           </button>
         ))}
       </div>

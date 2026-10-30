@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useStore } from '../lib/store';
-import { EX, EXERCISES, PATTERN_LABEL, easier, harder, targetText, usable } from '../lib/exercises';
+import { EX, EXERCISES, PATTERN_LABEL, bestText, easier, harder, targetText, usable } from '../lib/exercises';
 import { WEEKDAYS, copyDay, deleteDay, inDeload, minutes, moveSlot } from '../lib/program';
 import { PATTERN_CAP, newRecords, records, sessionText, trendOf, weeklySets } from '../lib/progress';
 import { addDays, addMonths, daysBetween, fmtDate, monthGrid } from '../lib/dates';
@@ -244,6 +244,7 @@ function SlotSheet({ program, dayId, idx, onClose, onSave }: { program: Program;
   };
 
   if (picking) {
+    const best = records(useStore.getState().sessions);
     const taken = new Set(day.slots.map((x) => x.exerciseId));
     const groups = (Object.keys(PATTERN_LABEL) as Pattern[]).map((p) => [p, EXERCISES.filter((x) => x.pattern === p && usable(x, hasGrip) && (!taken.has(x.id) || x.id === s.exerciseId))] as const);
     return (
@@ -263,7 +264,7 @@ function SlotSheet({ program, dayId, idx, onClose, onSave }: { program: Program;
                 }}
               >
                 <span>{x.name}</span>
-                <span className="small" style={{ opacity: 0.7 }}>{x.muscles}</span>
+                <span className="small" style={{ opacity: 0.7, textAlign: 'right' }}>{bestText(best[x.id], x) ?? x.muscles}</span>
               </button>
             ))}
           </div>

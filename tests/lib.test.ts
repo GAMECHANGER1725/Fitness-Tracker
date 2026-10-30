@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_DATA, exportCsv, exportJson, importJson, normalize } from '../src/lib/backup';
 import { DEFAULT_PROGRAM, copyDay, deleteDay, nextPlanned, minutes, moveSlot, plannedDay, slotsFor, warmupFor, weekdayOf } from '../src/lib/program';
-import { EX, EXERCISES, easier, harder } from '../src/lib/exercises';
+import { EX, EXERCISES, bestText, easier, harder } from '../src/lib/exercises';
 import { applySession, deloadDue, diffPrograms, guardProgram, newRecords, progressSlot, records, trendOf, moveSession, sessionText, vsLast, weeklySets } from '../src/lib/progress';
 import { readiness } from '../src/lib/readiness';
 import { weekNotes } from '../src/lib/notes';
@@ -400,5 +400,14 @@ describe('backupDue', () => {
     expect(backupDue(100 * D, { ...base, backupAt: 80 * D })).toBe(false);
     expect(backupDue(100 * D, { ...base, backupAt: 60 * D })).toBe(true);
     expect(backupDue(100 * D, { ...base, snooze: 101 * D })).toBe(false);
+  });
+});
+
+describe('bestText', () => {
+  it('reads reps, seconds and backpack load', () => {
+    expect(bestText({ reps: 12, loadKg: 0 }, { unit: 'reps' })).toBe('best 12 reps');
+    expect(bestText({ reps: 40, loadKg: 0 }, { unit: 'secs' })).toBe('best 40 s');
+    expect(bestText({ reps: 10, loadKg: 8 }, { unit: 'reps' })).toBe('best 10 @ 8 kg');
+    expect(bestText(undefined, { unit: 'reps' })).toBeUndefined();
   });
 });

@@ -93,3 +93,9 @@ export function targetText(e: Exercise | undefined, low: number, high: number): 
   const unit = e?.unit === 'secs' ? 's' : 'reps';
   return `${low === high ? low : `${low}–${high}`} ${unit}${e?.perSide ? ' each side' : ''}`;
 }
+
+/** "best 12 reps", "best 40 s", "best 10 @ 8 kg"; undefined if never done. */
+export function bestText(b: { reps: number; loadKg: number } | undefined, e: { unit: 'reps' | 'secs' }): string | undefined {
+  if (!b) return undefined;
+  return `best ${b.reps}${e.unit === 'secs' ? ' s' : b.loadKg ? '' : ' reps'}${b.loadKg ? ` @ ${b.loadKg} kg` : ''}`;
+}
