@@ -833,6 +833,7 @@ function Body() {
                 <div key={k} className="tile">
                   <span className="small mut">{name}</span>
                   <p className="num" style={{ fontSize: 22 }}>{c.now} cm</p>
+                  <Spark values={list.map((x) => x[k]).filter((v): v is number => v != null)} />
                   {c.days > 0 && <span className="small" style={{ color: c.diff > 0 ? 'var(--acc)' : 'var(--mut)' }}>{c.diff ? `${c.diff > 0 ? '+' : ''}${c.diff} cm in ${c.days} days` : `Same as ${c.days} days ago`}</span>}
                 </div>
               ) : null;
@@ -843,6 +844,20 @@ function Body() {
       )}
       {open && <MeasureSheet onClose={() => setOpen(false)} onSave={(m) => setProfile({ measures: addMeasure(list, m) })} />}
     </section>
+  );
+}
+
+/** A tiny line of the values, oldest to newest; nothing under 3 points. */
+function Spark({ values }: { values: number[] }) {
+  if (values.length < 3) return null;
+  const xs = values.slice(-12);
+  const lo = Math.min(...xs);
+  const span = Math.max(...xs) - lo || 1;
+  const pts = xs.map((v, i) => `${2 + (i / (xs.length - 1)) * 96},${22 - ((v - lo) / span) * 18}`).join(' ');
+  return (
+    <svg viewBox="0 0 100 24" width="100%" height="24" preserveAspectRatio="none" aria-hidden="true">
+      <polyline points={pts} fill="none" stroke="var(--acc)" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+    </svg>
   );
 }
 
