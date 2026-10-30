@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Sheet } from './ui';
 
 /** Bump when there is something new to show; the sheet opens once per device for each id. */
-export const NEWS_ID = '2026-10-30g';
+export const NEWS_ID = '2026-10-30h';
 const KEY = 'fitness-news';
 const EVENT = 'fitness-show-news';
 
@@ -17,7 +17,7 @@ const NEWS: [title: string, body: string, href?: string][] = [
   ['See your progress', 'Month calendars for workouts and sleep, a chart per exercise (tap a bar for that day’s sets), when you last did each move, all-time totals, a search through your workouts and their notes, personal bests, your next badge (and a new Sleep diary badge), a weight chart on Fuel, and a recap of last week on Today each Monday.', '#/train?tab=history'],
   ['Coach without AI', 'Coach now opens with plain notes from your last week: what’s going up, what’s stuck, sleep and whether a lighter week is due.', '#/coach'],
   ['Undo instead of “Are you sure?”', 'Deleting a workout or night, removing a set or stopping a workout can all be undone for a few seconds.'],
-  ['Make it yours', 'In Profile: a training colour (mint, sky, rose or lime), larger text, which cards Today shows, which reminders you get (with a weekend workout time), vibration on or off, your wind-down steps, and CSV downloads. The app also follows your phone’s Reduce motion setting.', '#/profile?open=look'],
+  ['Make it yours', 'In Profile: a Black theme for night, a training colour, larger text, which page the app opens on, which cards Today shows, which reminders you get (with a weekend workout time and Pause for today), vibration on or off, your wind-down steps, and CSV downloads. Reset look and layout puts it all back. This list is under Profile too.', '#/profile?open=look'],
 ];
 
 const seen = () => {
