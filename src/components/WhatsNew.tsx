@@ -2,25 +2,18 @@ import { useState } from 'react';
 import { Sheet } from './ui';
 
 /** Bump when there is something new to show; the sheet opens once per device for each id. */
-export const NEWS_ID = '2026-10-29a';
+export const NEWS_ID = '2026-10-30a';
 const KEY = 'fitness-news';
 
 const NEWS: [title: string, body: string, href?: string][] = [
-  ['Going to sleep from Today', 'In the evening Today counts down to lights out, with your own wind-down checklist to tick and a Going to sleep button (Undo if you tap it by mistake). In the morning, rate your sleep in one tap.'],
-  ['Time your holds', 'Hold exercises get a timer: 3 s to get in position, a buzz at the bottom and top of the range, and Stop fills in the seconds.'],
-  ['Fix sets, add sets', 'Tap a logged set to change or remove it, add an extra set with + Set, and tap the workout name to jump to any exercise.'],
-  ['Beep and screen on', 'A beep when rest ends and the screen stays on during a workout. Both can be turned off.', '#/profile'],
-  ['Your progress per move', 'Open a move in Exercises to see your last 8 sessions as a chart.', '#/train?tab=moves'],
-  ['Edit and back-fill workouts', 'Edit a saved workout’s day, feel and note, or log one you did without the app.', '#/train?tab=history'],
-  ['Reorder your plan', 'Tap Reorder on a plan day to move exercises up or down. Changing only the rest time now saves too.', '#/train'],
-  ['Your week at a glance', 'This week on Today now totals workouts, sets and time. Tap a day to see what you did or what’s planned.'],
-  ['Personal bests', 'Badges now lists your best set for every move, newest first, with this week’s marked.', '#/train?tab=badges'],
-  ['Make it yours', 'Under Look in Profile: pick a training colour (mint, sky, rose or lime) and hide Today’s exercises, the Fuel Log card or This week.', '#/profile'],
-  ['Why this readiness?', 'Tap Readiness on Today to see how sleep, food and recovery add up.'],
-  ['Spreadsheets', 'Download your workouts or sleep as CSV from Backup in Profile.', '#/profile'],
-  ['Notes per exercise', 'In a workout, tap Add a note under the cues to remember a setup, like which strap or step. It shows every time and syncs.'],
-  ['Warm up first', 'Each workout starts with a 3-minute warm-up matched to the day’s moves. Tap Warmed up to hide it.'],
-  ['30 nights of sleep', 'The sleep chart can show 7, 14 or 30 nights, as hours slept or as bed and wake times against your targets.', '#/sleep'],
+  ['Fixed: your plan saves', 'Changing which workout is on a weekday, or only an exercise’s rest time, now saves. Before, those changes were quietly lost.', '#/train'],
+  ['Evenings and mornings on Today', 'Tick your own wind-down checklist and tap Going to sleep; tap I’m up and rate the night in one tap. Forgot to tap? Pick an earlier time.'],
+  ['Better workouts', 'A warm-up first, last time’s reps on every set, a timer for holds, extra sets, fix or remove a logged set, notes per exercise, and a beep when rest ends.'],
+  ['Your plan, your way', 'Reorder, rename, copy or delete workouts, change rest times as you go, and start or end a lighter week.', '#/train'],
+  ['See your progress', 'Month calendars for workouts and sleep, a chart per exercise, personal bests, badge progress, and week totals on Today.', '#/train?tab=history'],
+  ['Coach without AI', 'Coach now opens with plain notes from your last week: what’s going up, what’s stuck, sleep and whether a lighter week is due.', '#/coach'],
+  ['Undo instead of “Are you sure?”', 'Deleting a workout or night, removing a set or stopping a workout can all be undone for a few seconds.'],
+  ['Make it yours', 'In Profile: a training colour (mint, sky, rose or lime), which cards Today shows, your wind-down steps, and CSV downloads for a spreadsheet.', '#/profile'],
 ];
 
 const seen = () => {
