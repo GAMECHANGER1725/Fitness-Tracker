@@ -615,6 +615,8 @@ function EditSessionSheet({ session, onClose }: { session: Session; onClose: () 
   );
 }
 
+const agoText = (d: number) => (d <= 0 ? 'today' : d === 1 ? 'yesterday' : `${d} days ago`);
+
 function Moves() {
   const sessions = useStore((s) => s.sessions);
   const notes = useStore((s) => s.profile.exNotes);
@@ -625,6 +627,13 @@ function Moves() {
   const [query, setQuery] = useState('');
   const [only, setOnly] = useState<'all' | 'plan' | 'done'>('all');
   const [noteFor, setNoteFor] = useState<string | null>(null);
+  const today = useToday();
+  // Day each move was last done, for "3 days ago" on its row.
+  const lastDone = useMemo(() => {
+    const out: Record<string, string> = {};
+    for (const x of Object.values(sessions)) for (const y of x.sets) if (!out[y.exerciseId] || out[y.exerciseId] < x.date) out[y.exerciseId] = x.date;
+    return out;
+  }, [sessions]);
   const program = useStore((s) => s.program);
   const inPlan = new Set(program.days.flatMap((d) => d.slots.map((x) => x.exerciseId)));
   // Opened from a link (Today's list or a ladder chip): bring it into view.
@@ -669,7 +678,10 @@ function Moves() {
                   <button className="row" style={{ background: 'none', border: 0, padding: 0, color: 'var(--ink)', textAlign: 'left' }} onClick={() => setOpen(open === e.id ? null : e.id)} aria-expanded={open === e.id}>
                     <span className="grow">
                       <span className="bold" style={{ display: 'block' }}>{e.name}</span>
-                      <span className="small mut">{e.muscles}{e.equip.includes('pack') ? ' · backpack' : ''}{e.equip.includes('grip') ? ' · forearm trainer' : ''}</span>
+                      <span className="small mut">
+                        {e.muscles}{e.equip.includes('pack') ? ' · backpack' : ''}{e.equip.includes('grip') ? ' · forearm trainer' : ''}
+                        {lastDone[e.id] && ` · ${agoText(daysBetween(lastDone[e.id], today))}`}
+                      </span>
                     </span>
                     {b && <span className="pill">{b.reps}{e.unit === 'secs' ? ' s' : ''}{b.loadKg ? ` @ ${b.loadKg} kg` : ''}</span>}
                   </button>
@@ -788,7 +800,7 @@ function Trend({ ex, sessions }: { ex: Exercise; sessions: Record<string, Sessio
         </p>
       )}
       <p className="small mut">
-        Total {ex.unit === 'secs' ? 'seconds' : 'reps'} per session{loaded && pts.length <= 8 ? ', backpack load below' : ''}{range} · last best set {pts.at(-1)!.top.reps}{u}{pts.at(-1)!.top.loadKg ? ` @ ${pts.at(-1)!.top.loadKg} kg` : ''} · {ago === 0 ? 'done today' : ago === 1 ? 'yesterday' : `${ago} days ago`}
+        Total {ex.unit === 'secs' ? 'seconds' : 'reps'} per session{loaded && pts.length <= 8 ? ', backpack load below' : ''}{range} · last best set {pts.at(-1)!.top.reps}{u}{pts.at(-1)!.top.loadKg ? ` @ ${pts.at(-1)!.top.loadKg} kg` : ''} · {ago === 0 ? 'done today' : agoText(ago)}
       </p>
     </div>
   );
