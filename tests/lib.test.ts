@@ -3,7 +3,7 @@ import { DEFAULT_DATA, exportCsv, exportJson, importJson, normalize } from '../s
 import { DEFAULT_PROGRAM, addSlot, copyDay, deleteDay, nextPlanned, minutes, minutesLeft, packChange, dayWhen, workoutTimeOn, moveSlot, plannedDay, slotsFor, warmupFor, weekdayOf } from '../src/lib/program';
 import { EX, EXERCISES, bestText, easier, harder } from '../src/lib/exercises';
 import { applySession, deloadDue, diffPrograms, guardProgram, matchSession, newRecords, progressSlot, records, trendOf, moveSession, sessionText, vsLast, withLength, moveUpText, nearMisses, weeklySets } from '../src/lib/progress';
-import { readiness } from '../src/lib/readiness';
+import { readiness, vsUsual } from '../src/lib/readiness';
 import { lastWeekReport, weekNotes, weekReportText, yesterdayLine } from '../src/lib/notes';
 import { backupDue, lookDefaults, startHash } from '../src/lib/layout';
 import { addMeasure, measureChange } from '../src/lib/body';
@@ -612,5 +612,14 @@ describe('bestText', () => {
     expect(bestText({ reps: 40, loadKg: 0 }, { unit: 'secs' })).toBe('best 40 s');
     expect(bestText({ reps: 10, loadKg: 8 }, { unit: 'reps' })).toBe('best 10 @ 8 kg');
     expect(bestText(undefined, { unit: 'reps' })).toBeUndefined();
+  });
+});
+
+describe('vsUsual', () => {
+  it('compares with the average of the days before, once there are 3', () => {
+    expect(vsUsual(80, [70, 72])).toBeNull();
+    expect(vsUsual(80, [70, 72, 74])).toBe('8 above your usual');
+    expect(vsUsual(60, [70, 72, 74])).toBe('12 below your usual');
+    expect(vsUsual(70, [70, 72, 74])).toBe('About your usual');
   });
 });

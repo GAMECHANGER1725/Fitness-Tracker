@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useStore } from '../lib/store';
 import { EX, targetText } from '../lib/exercises';
 import { WEEKDAYS, inDeload, minutes, nextPlanned, plannedDay, slotsFor, workoutTimeOn } from '../lib/program';
 import { addDays, dateOf, daysBetween, fmtDate, keyOf, weekStart } from '../lib/dates';
 import { QUALITY, clock12, clockOf, durationMin, hm, minsOf, nightKey, onTime, pastAt, sleepIfNow, toBedtime, wakeOffset } from '../lib/sleep';
-import { BAND_LABEL, readiness } from '../lib/readiness';
+import { BAND_LABEL, readiness, vsUsual } from '../lib/readiness';
 import { nextBadge, weekSummary } from '../lib/game';
 import { historyOf, newRecords } from '../lib/progress';
 import { lastWeekReport, weekReportText, yesterdayLine } from '../lib/notes';
@@ -104,6 +104,7 @@ export default function Today() {
             <button onClick={() => setWhy(!why)} aria-expanded={why} style={{ background: 'none', border: 0, padding: 0, color: 'inherit', textAlign: 'left' }}>
               <span className="small bold" style={{ opacity: 0.75 }}>Readiness · {why ? 'hide' : 'why?'}</span>
               <p className="num" style={{ fontSize: 48, lineHeight: 1 }}>{ready.score}</p>
+              <Usual score={ready.score} />
             </button>
             <span className="pill">{low && ready.band !== 'easy' ? 'Easy today' : BAND_LABEL[ready.band]}</span>
           </div>
@@ -321,6 +322,20 @@ export default function Today() {
       </div>
     </main>
   );
+}
+
+/** "8 above your usual": today's readiness against the 6 days before, recomputed from what was logged then. */
+function Usual({ score }: { score: number }) {
+  const today = useToday();
+  const nights = useStore((s) => s.nights);
+  const sessions = useStore((s) => s.sessions);
+  const goalH = useStore((s) => s.settings.sleepGoalH);
+  const fuel = useFuelData();
+  const text = useMemo(() => {
+    const logged = Array.from({ length: 6 }, (_, i) => addDays(today, i - 6)).filter((d) => nights[d]);
+    return vsUsual(score, logged.map((d) => readiness({ today: d, night: nights[d], goalH, fuel, targets: fuel?.targets ?? null, sessions }).score));
+  }, [score, today, nights, sessions, goalH, fuel]);
+  return text ? <span className="small" style={{ opacity: 0.8, display: 'block', marginTop: 2 }}>{text}</span> : null;
 }
 
 /** Readiness for each of the last 7 days (today on the right), recomputed from what was logged then. */
