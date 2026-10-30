@@ -2,7 +2,7 @@ import { useStore } from '../lib/store';
 import { refreshFuel, useFuel, useSync } from '../lib/sync';
 import { FUEL_URL } from '../lib/fuel';
 import { addDays, daysBetween, fmtDate } from '../lib/dates';
-import { clockOf, lateMeal } from '../lib/sleep';
+import { clock12, clockOf, lateMeal, minsOf } from '../lib/sleep';
 import { Bar, Head, Icon, toast, useToday } from '../components/ui';
 import { useWeight } from '../components/data';
 
@@ -12,6 +12,9 @@ export default function Fuel() {
   const conn = useSync((s) => s.conn);
   const sessions = useStore((s) => s.sessions);
   const nights = useStore((s) => s.nights);
+  const bedtime = useStore((s) => s.settings.bedtime);
+  const mb = (minsOf(bedtime) - 150 + 1440) % 1440;
+  const mealBy = `${String(Math.floor(mb / 60)).padStart(2, '0')}:${String(mb % 60).padStart(2, '0')}`;
   const weight = useWeight();
   const t = data?.targets;
   const f = data?.days[today];
@@ -96,6 +99,9 @@ export default function Fuel() {
               <p className="bold">{f?.last ? clockOf(f.last) : '–'}</p>
             </div>
           </div>
+          <p className="small mut">
+            Last big meal by {clock12(mealBy)}, 2.5 h before lights out at {clock12(bedtime)}. A small snack later is fine.
+          </p>
         </section>
 
         <div className="grid2">
