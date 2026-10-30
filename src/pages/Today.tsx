@@ -477,7 +477,7 @@ function LastWeek() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
         {tiles.map(([label, v]) => (
           <div key={label} className="stack" style={{ gap: 0, background: 'var(--s2)', borderRadius: 14, padding: '8px 10px' }}>
-            <span className="num bold" style={{ fontSize: 18 }}>{v}</span>
+            <span className="num bold" style={{ fontSize: 17, whiteSpace: 'nowrap' }}>{v}</span>
             <span className="small mut">{label}</span>
           </div>
         ))}
