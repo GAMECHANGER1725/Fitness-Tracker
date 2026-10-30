@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { useStore } from '../lib/store';
+import { calendarIcs } from '../lib/calendar';
 import { useAuth } from '../lib/auth';
 import { AI_MODELS, GEMINI_MODELS, PROVIDER_NAME, friendlyError, hasAi, testKey, type Provider } from '../lib/ai';
 import { fuelAi, FUEL_STORE } from '../lib/fuel';
@@ -25,7 +26,7 @@ const SECTIONS: [id: string, label: string, card: ReactNode][] = [
   ['sync', 'Sync', <SyncCard />],
   ['wind', 'Wind-down & notes', <WindDownEdit />],
   ['workout', 'Workout', <PlayerPrefs />],
-  ['reminders', 'Reminders', <Reminders />],
+  ['reminders', 'Reminders', <><Reminders /><CalendarExport /></>],
   ['look', 'Look', <Look />],
   ['backup', 'Backup', <Backup />],
 ];
@@ -437,6 +438,31 @@ function Reminders() {
         </div>
       )}
       <p className="small mut">They work while the app is open or in the background.</p>
+    </section>
+  );
+}
+
+/** Weekly workouts and lights-out as an .ics file, so the phone's calendar can remind you with the app closed. */
+function CalendarExport() {
+  const program = useStore((s) => s.program);
+  const settings = useStore((s) => s.settings);
+  return (
+    <section className="card stack" style={{ gap: 8 }}>
+      <h2 className="h2">Calendar</h2>
+      <p className="small mut">Add your workouts and lights out to your phone’s calendar, with alerts that work even when this app is closed. Download it again after changing your plan or times.</p>
+      <button
+        className="btn sm"
+        style={{ alignSelf: 'flex-start' }}
+        onClick={() => {
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(new Blob([calendarIcs(program, settings, todayKey(), reminderKinds().lead)], { type: 'text/calendar' }));
+          a.download = 'fitness-tracker.ics';
+          a.click();
+          URL.revokeObjectURL(a.href);
+        }}
+      >
+        <Icon name="out" size={16} /> Add to my calendar
+      </button>
     </section>
   );
 }
