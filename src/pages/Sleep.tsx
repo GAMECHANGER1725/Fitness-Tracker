@@ -335,15 +335,16 @@ function SleepMonth({ onPick }: { onPick: (d: string) => void }) {
           const m = mins(k);
           const ok = m != null && m >= goal * 60 - 30;
           return (
-            <button key={k} disabled={k > today} onClick={() => onPick(k)} aria-label={`${fmtDate(k)}: ${m != null ? hm(m) : 'no night logged'}`} style={{ background: 'none', border: 0, padding: 0 }}>
-              <i className={k === today ? 'today' : ''} style={{ fontSize: 12, borderRadius: 10, background: ok ? 'var(--sleep)' : m != null ? 'var(--sleep-soft)' : undefined, color: ok ? 'var(--on-sleep)' : undefined }}>
+            <button key={k} disabled={k > today} onClick={() => onPick(k)} aria-label={`${fmtDate(k)}: ${m != null ? hm(m) : 'no night logged'}${nights[k]?.note ? `, note: ${nights[k].note}` : ''}`} style={{ background: 'none', border: 0, padding: 0 }}>
+              <i className={k === today ? 'today' : ''} style={{ fontSize: 12, borderRadius: 10, position: 'relative', background: ok ? 'var(--sleep)' : m != null ? 'var(--sleep-soft)' : undefined, color: ok ? 'var(--on-sleep)' : undefined }}>
                 {Number(k.slice(8))}
+                {nights[k]?.note && <span aria-hidden="true" style={{ position: 'absolute', top: 3, right: 3, width: 5, height: 5, borderRadius: 9, background: 'var(--warn)' }} />}
               </i>
             </button>
           );
         })}
       </div>
-      <p className="small mut">Filled: slept your {goal} h goal (or within 30 min). Pale: shorter. Tap a day to add or edit it.</p>
+      <p className="small mut">Filled: slept your {goal} h goal (or within 30 min). Pale: shorter. A dot means you wrote a note. Tap a day to add or edit it.</p>
     </section>
   );
 }
