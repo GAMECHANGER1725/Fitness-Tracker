@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useStore } from '../lib/store';
 import { EX, EXERCISES, PATTERN_LABEL, bestText, easier, harder, targetText, usable } from '../lib/exercises';
 import { WEEKDAYS, addSlot, copyDay, deleteDay, inDeload, minutes, moveSlot } from '../lib/program';
-import { PATTERN_CAP, matchSession, newRecords, records, sessionText, trendOf, weeklySets } from '../lib/progress';
+import { PATTERN_CAP, matchSession, moveUpText, newRecords, records, sessionText, trendOf, weeklySets } from '../lib/progress';
 import { addDays, addMonths, daysBetween, fmtDate, monthGrid } from '../lib/dates';
 import { hm } from '../lib/sleep';
 import { MEASURES, addMeasure, measureChange, type MeasureKey } from '../lib/body';
@@ -689,6 +689,10 @@ function Moves() {
                   {open === e.id && (
                     <>
                       <Trend ex={e} sessions={sessions} />
+                      {(() => {
+                        const sl = program.days.flatMap((d) => d.slots).find((x) => x.exerciseId === e.id);
+                        return sl ? <p className="small acc">{moveUpText(sl, e)}</p> : null;
+                      })()}
                       <button className="small" onClick={() => setNoteFor(e.id)} style={{ background: 'none', border: 0, padding: 0, textAlign: 'left', color: notes[e.id] ? 'var(--ink)' : 'var(--acc)', display: 'flex', gap: 6, alignItems: 'flex-start' }}>
                         <Icon name="pencil" size={14} />
                         {notes[e.id] ? <span><span className="bold">Your note:</span> {notes[e.id]}</span> : <span className="bold">Add a note</span>}
