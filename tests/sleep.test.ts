@@ -219,7 +219,7 @@ describe('monthSleep', () => {
   const all: Record<string, Night> = {
     '2026-09-03': N('2026-09-03', '22:00', '06:00'),
     '2026-09-20': N('2026-09-20', '21:00', '06:00'),
-    '2026-10-04': N('2026-10-04', '21:30', '06:00'),
+    '2026-10-06': N('2026-10-06', '21:30', '06:00'), // after Sydney's clocks go forward on 4 Oct
   };
   it('averages the month and compares with the same point last month', () => {
     expect(monthSleep(all, '2026-10-01', '2026-10-10')).toEqual({ avg: 510, diff: 30, partial: true });
