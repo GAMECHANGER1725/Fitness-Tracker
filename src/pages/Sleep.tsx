@@ -238,7 +238,10 @@ function Week({ onPick }: { onPick: (d: string) => void }) {
     <section className="card stack" style={{ gap: 12 }} aria-label={`Last ${span} nights`}>
       <div className="between">
         <h2 className="h2">Last {span} nights</h2>
-        <span className="small mut">{st.avgMin != null ? `avg ${hm(st.avgMin)}` : 'no nights yet'}</span>
+        <span className="small mut" style={{ textAlign: 'right' }}>
+          {st.avgMin != null ? `avg ${hm(st.avgMin)} · ` : ''}goal {goal} h ·{' '}
+          <a href="#/profile?open=times" style={{ color: 'var(--sleep)' }}>change</a>
+        </span>
       </div>
       <div className="seg" role="group" aria-label="Nights to show">
         {SPANS.map((n) => (
