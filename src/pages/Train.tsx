@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useStore } from '../lib/store';
 import { EX, EXERCISES, PATTERN_LABEL, bestText, easier, harder, targetText, usable } from '../lib/exercises';
 import { WEEKDAYS, addSlot, copyDay, dayWhen, deleteDay, inDeload, minutes, moveSlot } from '../lib/program';
-import { PATTERN_CAP, matchSession, moveUpText, newRecords, records, sessionText, trendOf, weeklySets } from '../lib/progress';
+import { PATTERN_CAP, matchSession, monthVs, moveUpText, newRecords, records, sessionText, trendOf, weeklySets } from '../lib/progress';
 import { addDays, addMonths, daysBetween, fmtDate, monthGrid } from '../lib/dates';
 import { hm } from '../lib/sleep';
 import { MEASURES, addMeasure, measureChange, type MeasureKey } from '../lib/body';
@@ -514,6 +514,13 @@ function MonthCard({ sessions, onPick }: { sessions: Record<string, Session>; on
           <span className="small mut">
             {count} day{count === 1 ? '' : 's'} trained{count ? ` · ${hm(mins)} · ${sets} set${sets === 1 ? '' : 's'}` : ''}
           </span>
+          {(() => {
+            if (!Object.keys(sessions).length) return null;
+            const v = monthVs(Object.values(sessions), month, today);
+            const prev = fmtDate(addMonths(month, -1), { month: 'short' });
+            const vs = v.partial ? `this point in ${prev}` : prev;
+            return <span className="small mut">{v.diff === 0 ? `Same as ${vs}` : `${Math.abs(v.diff)} ${v.diff > 0 ? 'more' : 'fewer'} day${Math.abs(v.diff) === 1 ? '' : 's'} than ${vs}`}</span>;
+          })()}
         </span>
         <button className="btn sm icon" aria-label="Next month" disabled={month >= today.slice(0, 8) + '01'} onClick={() => setMonth(addMonths(month, 1))}>
           <Icon name="right" size={18} />

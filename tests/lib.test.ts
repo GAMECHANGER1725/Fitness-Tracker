@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_DATA, exportCsv, exportJson, importJson, normalize } from '../src/lib/backup';
 import { DEFAULT_PROGRAM, addSlot, copyDay, deleteDay, nextPlanned, minutes, minutesLeft, packChange, dayWhen, workoutTimeOn, moveSlot, plannedDay, slotsFor, warmupFor, weekdayOf } from '../src/lib/program';
 import { EX, EXERCISES, bestText, easier, harder } from '../src/lib/exercises';
-import { applySession, deloadDue, diffPrograms, guardProgram, matchSession, newRecords, progressSlot, records, trendOf, moveSession, sessionText, vsLast, withLength, moveUpText, nearMisses, weeklySets, daysOff } from '../src/lib/progress';
+import { applySession, deloadDue, diffPrograms, guardProgram, matchSession, newRecords, progressSlot, records, trendOf, moveSession, sessionText, vsLast, withLength, moveUpText, nearMisses, weeklySets, daysOff, monthVs } from '../src/lib/progress';
 import { readiness, vsUsual } from '../src/lib/readiness';
 import { lastWeekReport, weekNotes, weekReportText, yesterdayLine } from '../src/lib/notes';
 import { backupDue, lookDefaults, startHash } from '../src/lib/layout';
@@ -628,5 +628,16 @@ describe('daysOff', () => {
   it('counts days since the last workout before today', () => {
     expect(daysOff([], '2026-10-30')).toBeNull();
     expect(daysOff([{ date: '2026-10-20' }, { date: '2026-10-22' }, { date: '2026-10-30' }], '2026-10-30')).toBe(8);
+  });
+});
+
+describe('monthVs', () => {
+  const ss = ['2026-09-02', '2026-09-10', '2026-09-28', '2026-10-01', '2026-10-03', '2026-10-05', '2026-10-05'].map((date) => ({ date }));
+  it('compares this month with the same point last month', () => {
+    expect(monthVs(ss, '2026-10-01', '2026-10-12')).toEqual({ diff: 1, partial: true });
+  });
+  it('compares whole months once one is over', () => {
+    expect(monthVs(ss, '2026-10-01', '2026-11-04')).toEqual({ diff: 0, partial: false });
+    expect(monthVs(ss, '2026-09-01', '2026-11-04')).toEqual({ diff: 3, partial: false });
   });
 });

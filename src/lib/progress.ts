@@ -8,7 +8,7 @@
 //    than set in Profile, at most 20 hard sets a week per movement pattern, and total weekly volume up by
 //    at most 20% at a time.
 
-import { daysBetween } from './dates';
+import { addMonths, daysBetween } from './dates';
 import type { Exercise, Pattern, PlanDay, Profile, Program, Session, SetLog, Slot } from './types';
 import { EX, easier, harder, usable } from './exercises';
 
@@ -352,4 +352,13 @@ export const COMEBACK_DAYS = 7;
 export function daysOff(sessions: Pick<Session, 'date'>[], today: string): number | null {
   const last = sessions.reduce<string | null>((m, s) => (s.date < today && (!m || s.date > m) ? s.date : m), null);
   return last ? daysBetween(last, today) : null;
+}
+
+/** Days trained in `month` (yyyy-MM-01) against the month before; this month only up to today's date in both,
+ * so a half-done month isn't compared with a whole one. */
+export function monthVs(sessions: Pick<Session, 'date'>[], month: string, today: string): { diff: number; partial: boolean } {
+  const partial = today.slice(0, 7) === month.slice(0, 7);
+  const upTo = partial ? today.slice(8) : '31';
+  const days = (m: string) => new Set(sessions.filter((s) => s.date.slice(0, 7) === m.slice(0, 7) && s.date.slice(8) <= upTo).map((s) => s.date)).size;
+  return { diff: days(month) - days(addMonths(month, -1)), partial };
 }
