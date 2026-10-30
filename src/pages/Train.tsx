@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useStore } from '../lib/store';
 import { EX, EXERCISES, PATTERN_LABEL, easier, harder, targetText, usable } from '../lib/exercises';
-import { WEEKDAYS, copyDay, deleteDay, minutes, moveSlot } from '../lib/program';
+import { WEEKDAYS, copyDay, deleteDay, inDeload, minutes, moveSlot } from '../lib/program';
 import { records, sessionText, trendOf, weeklySets } from '../lib/progress';
 import { addDays, daysBetween, fmtDate } from '../lib/dates';
 import { Bar, Head, Icon, ProfileLink, Sheet, Stepper, go, shareText, toast, useGame, useRoute, useToday } from '../components/ui';
@@ -36,6 +36,7 @@ export default function Train() {
 }
 
 function Plan() {
+  const today = useToday();
   const program = useStore((s) => s.program);
   const log = useStore((s) => s.programLog);
   const { setProgram, undoProgram, startWorkout } = useStore.getState();
@@ -67,6 +68,14 @@ function Plan() {
             </select>
           </label>
         ))}
+        {inDeload(program, today) && (
+          <div className="between small" style={{ background: 'var(--acc-soft)', borderRadius: 14, padding: '8px 12px' }}>
+            <span className="bold">Lighter week until {fmtDate(program.deloadUntil!, { weekday: 'short', day: 'numeric', month: 'short' })}</span>
+            <button className="btn sm" onClick={() => save({ ...program, deloadUntil: addDays(today, -1) }, 'Ended the lighter week')}>
+              End now
+            </button>
+          </div>
+        )}
         <p className="small mut">
           Weekly hard sets: {(Object.keys(wk) as Pattern[]).filter((k) => wk[k]).map((k) => `${PATTERN_LABEL[k].split(' ')[0]} ${wk[k]}`).join(' · ')}
         </p>

@@ -280,7 +280,8 @@ export function diffPrograms(a: Program, b: Program): string[] {
   }
   for (const da of a.days) if (!b.days.some((d) => d.id === da.id)) lines.push(`Deleted workout: ${da.name}`);
   if (a.week.join() !== b.week.join() && !lines.length) lines.push('Weekly schedule changed');
-  if (a.deloadUntil !== b.deloadUntil && b.deloadUntil) lines.push(`Lighter week until ${b.deloadUntil}`);
+  if (a.deloadUntil !== b.deloadUntil && b.deloadUntil)
+    lines.push(a.deloadUntil && b.deloadUntil < a.deloadUntil ? 'Lighter week ended early' : `Lighter week until ${b.deloadUntil}`);
   return lines;
 }
 

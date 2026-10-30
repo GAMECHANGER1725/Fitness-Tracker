@@ -171,6 +171,9 @@ describe('copyDay and deleteDay', () => {
     // A weekday moved on its own used to count as no change, so setProgram dropped it.
     const week = { ...DEFAULT_PROGRAM, week: [...DEFAULT_PROGRAM.week].reverse() };
     expect(diffPrograms(DEFAULT_PROGRAM, week)).toEqual(['Weekly schedule changed']);
+    const light = { ...DEFAULT_PROGRAM, deloadUntil: '2026-11-04' };
+    expect(diffPrograms(DEFAULT_PROGRAM, light)).toEqual(['Lighter week until 2026-11-04']);
+    expect(diffPrograms(light, { ...light, deloadUntil: '2026-10-28' })).toEqual(['Lighter week ended early']);
   });
 });
 
