@@ -10,7 +10,7 @@ const NEWS: [title: string, body: string, href?: string][] = [
   ['Evenings and mornings on Today', 'Tick your own wind-down checklist and tap Going to sleep; tap I’m up and rate the night in one tap. Forgot to tap? Pick an earlier time.'],
   ['Better workouts', 'A warm-up first, last time’s reps on every set, a timer for holds, extra sets, fix or remove a logged set, notes per exercise, and a beep when rest ends.'],
   ['Your plan, your way', 'Reorder, rename, copy or delete workouts, change rest times as you go, and start or end a lighter week.', '#/train'],
-  ['See your progress', 'Month calendars for workouts and sleep, a chart per exercise, personal bests, badge progress, and week totals on Today.', '#/train?tab=history'],
+  ['See your progress', 'Month calendars for workouts and sleep, a chart per exercise (and a search to find one), personal bests, badge progress, and week totals on Today.', '#/train?tab=history'],
   ['Coach without AI', 'Coach now opens with plain notes from your last week: what’s going up, what’s stuck, sleep and whether a lighter week is due.', '#/coach'],
   ['Undo instead of “Are you sure?”', 'Deleting a workout or night, removing a set or stopping a workout can all be undone for a few seconds.'],
   ['Make it yours', 'In Profile: a training colour (mint, sky, rose or lime), larger text, which cards Today shows and which reminders you get, your wind-down steps, and CSV downloads. The app also follows your phone’s Reduce motion setting.', '#/profile?open=look'],
