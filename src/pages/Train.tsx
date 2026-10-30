@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useStore } from '../lib/store';
 import { EX, EXERCISES, PATTERN_LABEL, easier, harder, targetText, usable } from '../lib/exercises';
 import { WEEKDAYS, copyDay, deleteDay, inDeload, minutes, moveSlot } from '../lib/program';
-import { PATTERN_CAP, records, sessionText, trendOf, weeklySets } from '../lib/progress';
+import { PATTERN_CAP, newRecords, records, sessionText, trendOf, weeklySets } from '../lib/progress';
 import { addDays, addMonths, daysBetween, fmtDate, monthGrid } from '../lib/dates';
 import { Bar, Head, Icon, ProfileLink, Sheet, Stepper, go, scrollMotion, shareText, toast, useGame, useRoute, useToday } from '../components/ui';
 import { useReadiness } from '../components/data';
@@ -327,6 +327,8 @@ function History() {
   const [open, setOpen] = useState<string | null>(null);
   const [edit, setEdit] = useState<Session | null>(null);
   const [only, setOnly] = useState<string | null>(null);
+  // Personal bests set in each session (against everything before it), for the medal on its card.
+  const bests = useMemo(() => Object.fromEntries(Object.values(sessions).map((x) => [x.id, new Set(newRecords(x, sessions).map((r) => r.exerciseId)).size])), [sessions]);
   const names = [...new Set(Object.values(sessions).map((x) => x.name))].sort();
   const list = Object.values(sessions)
     .filter((x) => !only || x.name === only)
@@ -377,6 +379,12 @@ function History() {
                 <span className="bold" style={{ display: 'block' }}>{s.name}</span>
                 <span className="small mut">
                   {fmtDate(s.date, { weekday: 'short', day: 'numeric', month: 'short' })} · {Math.max(1, Math.round((s.end - s.start) / 60_000))} min · {s.sets.length} set{s.sets.length === 1 ? '' : 's'}
+                  {bests[s.id] ? (
+                    <span className="acc bold">
+                      {' · '}
+                      <Icon name="medal" size={13} /> {bests[s.id]} new best{bests[s.id] === 1 ? '' : 's'}
+                    </span>
+                  ) : null}
                 </span>
               </span>
               <Icon name={isOpen ? 'minus' : 'plus'} size={18} />
