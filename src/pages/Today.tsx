@@ -240,6 +240,7 @@ function WakeCard() {
   const wakeTarget = useStore((s) => s.settings.wakeTarget);
   const goalH = useStore((s) => s.settings.sleepGoalH);
   const wokeUp = useStore((s) => s.wokeUp);
+  const [rerate, setRerate] = useState(false);
   const setNight = useStore((s) => s.setNight);
   const g = useGame();
   const hour = new Date().getHours();
@@ -273,7 +274,7 @@ function WakeCard() {
   if (hour >= 18) return null;
   const off = wakeOffset(night, wakeTarget) ?? 0;
   const dur = durationMin(night);
-  const rate = night.quality == null && hour < 12;
+  const rate = (night.quality == null || rerate) && hour < 12;
   return (
     <div className="card tight stack" style={{ gap: 10 }}>
       <a href="#/sleep" style={{ display: 'flex', alignItems: 'center', gap: 14, color: 'var(--ink)', textDecoration: 'none' }}>
@@ -297,12 +298,17 @@ function WakeCard() {
           {dur == null ? 'Add when you went to bed' : 'Add a note on last night'}
         </a>
       )}
+      {!rate && night.quality != null && hour < 12 && (
+        <button className="small mut" onClick={() => setRerate(true)} style={{ background: 'none', border: 0, padding: 0, textAlign: 'left', color: 'var(--mut)' }}>
+          Rated: <span className="bold">{QUALITY[night.quality - 1]}</span> · <span className="acc bold">change</span>
+        </button>
+      )}
       {rate && (
         <div className="stack" style={{ gap: 6 }}>
           <span className="small mut">How did you sleep?</span>
           <div className="grid4" style={{ gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 6 }} role="group" aria-label="Sleep quality">
             {QUALITY.map((q, i) => (
-              <button key={q} className="chip" style={{ padding: 0, fontSize: 13 }} onClick={() => (setNight(today, { quality: i + 1 }), toast(`Saved: ${q.toLowerCase()}`))}>
+              <button key={q} className="chip" style={{ padding: 0, fontSize: 13 }} aria-pressed={night.quality === i + 1} onClick={() => (setNight(today, { quality: i + 1 }), setRerate(false), toast(`Saved: ${q.toLowerCase()}`))}>
                 {q}
               </button>
             ))}
