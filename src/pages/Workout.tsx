@@ -429,10 +429,13 @@ function SwapSheet({ slot, onClose }: { slot: Slot; onClose: () => void }) {
   const [busy, setBusy] = useState(false);
   const [why, setWhy] = useState('');
   const [pick, setPick] = useState<string | null>(null);
-  const options = EXERCISES.filter((e) => e.pattern === ex?.pattern && e.id !== slot.exerciseId && usable(e, hasGrip));
+  // Not one already in this workout: sets are counted per exercise, so two slots of the same move would mix up.
+  const inWorkout = new Set(useStore.getState().active?.slots.map((x) => x.exerciseId));
+  const options = EXERCISES.filter((e) => e.pattern === ex?.pattern && !inWorkout.has(e.id) && usable(e, hasGrip));
 
   const apply = (forPlan: boolean) => {
     if (!pick) return;
+    if (inWorkout.has(pick)) return toast(`${EX[pick]?.name} is already in this workout. Pick another.`);
     const st = useStore.getState();
     const a = st.active!;
     const to = EX[pick];
