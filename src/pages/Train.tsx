@@ -3,7 +3,7 @@ import { useStore } from '../lib/store';
 import { EX, EXERCISES, PATTERN_LABEL, easier, harder, targetText, usable } from '../lib/exercises';
 import { WEEKDAYS, copyDay, deleteDay, inDeload, minutes, moveSlot } from '../lib/program';
 import { records, sessionText, trendOf, weeklySets } from '../lib/progress';
-import { addDays, daysBetween, fmtDate } from '../lib/dates';
+import { addDays, addMonths, daysBetween, fmtDate, monthGrid } from '../lib/dates';
 import { Bar, Head, Icon, ProfileLink, Sheet, Stepper, go, shareText, toast, useGame, useRoute, useToday } from '../components/ui';
 import { useReadiness } from '../components/data';
 import type { Exercise, Pattern, PlanDay, Program, Session, Slot } from '../lib/types';
@@ -337,6 +337,14 @@ function History() {
     <>
       {add}
       {sheet}
+      <MonthCard
+        sessions={sessions}
+        onPick={(id) => {
+          setOnly(null);
+          setOpen(id);
+          setTimeout(() => document.getElementById(`ses-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
+        }}
+      />
       {names.length > 1 && (
         <div className="row" style={{ flexWrap: 'wrap', gap: 6 }} role="group" aria-label="Show workouts">
           <button className="chip" aria-pressed={!only} onClick={() => setOnly(null)}>All</button>
@@ -350,7 +358,7 @@ function History() {
         for (const x of s.sets) by.set(x.exerciseId, [...(by.get(x.exerciseId) ?? []), x]);
         const isOpen = open === s.id;
         return (
-          <section key={s.id} className="card tight stack" style={{ gap: 8 }}>
+          <section key={s.id} id={`ses-${s.id}`} className="card tight stack" style={{ gap: 8 }}>
             <button className="row" style={{ background: 'none', border: 0, padding: 0, color: 'var(--ink)', textAlign: 'left' }} onClick={() => setOpen(isOpen ? null : s.id)} aria-expanded={isOpen}>
               <span className="grow">
                 <span className="bold" style={{ display: 'block' }}>{s.name}</span>
@@ -396,6 +404,45 @@ function History() {
 }
 
 const FEEL = ['Rough', 'Meh', 'OK', 'Good', 'Great'];
+
+/** A month of workouts: trained days filled in; tap one to open it below. */
+function MonthCard({ sessions, onPick }: { sessions: Record<string, Session>; onPick: (id: string) => void }) {
+  const today = useToday();
+  const [month, setMonth] = useState(today.slice(0, 8) + '01');
+  const byDay = new Map<string, Session[]>();
+  for (const x of Object.values(sessions)) byDay.set(x.date, [...(byDay.get(x.date) ?? []), x]);
+  const grid = monthGrid(month);
+  const count = grid.flat().filter((k) => k && byDay.has(k)).length;
+  return (
+    <section className="card stack" style={{ gap: 10 }} aria-label="Month">
+      <div className="between" style={{ alignItems: 'center' }}>
+        <button className="btn sm icon" aria-label="Previous month" onClick={() => setMonth(addMonths(month, -1))}>
+          <Icon name="left" size={18} />
+        </button>
+        <span className="stack" style={{ alignItems: 'center', gap: 0 }}>
+          <span className="bold">{fmtDate(month, { month: 'long', year: 'numeric' })}</span>
+          <span className="small mut">{count} day{count === 1 ? '' : 's'} trained</span>
+        </span>
+        <button className="btn sm icon" aria-label="Next month" disabled={month >= today.slice(0, 8) + '01'} onClick={() => setMonth(addMonths(month, 1))}>
+          <Icon name="right" size={18} />
+        </button>
+      </div>
+      <div className="week" style={{ gap: 4 }}>
+        {WEEKDAYS.map((w) => <div key={w}>{w[0]}</div>)}
+        {grid.flat().map((k, i) => {
+          const xs = k ? byDay.get(k) : undefined;
+          return k ? (
+            <button key={k} onClick={() => xs && onPick(xs[0].id)} disabled={!xs} aria-label={`${fmtDate(k)}${xs ? `: ${xs.map((x) => x.name).join(', ')}` : ''}`} style={{ background: 'none', border: 0, padding: 0 }}>
+              <i className={`${xs ? 'done' : ''}${k === today ? ' today' : ''}`} style={{ fontSize: 12, borderRadius: 10 }}>{Number(k.slice(8))}</i>
+            </button>
+          ) : (
+            <div key={`x${i}`} />
+          );
+        })}
+      </div>
+    </section>
+  );
+}
 
 /** Pick a plan day and the day you did it, then fill in the sets in the player as usual. */
 function PastSheet({ onClose }: { onClose: () => void }) {

@@ -6,7 +6,7 @@ import { applySession, deloadDue, diffPrograms, guardProgram, newRecords, progre
 import { readiness } from '../src/lib/readiness';
 import { weekNotes } from '../src/lib/notes';
 import { computeGame, weekSummary, workoutWeeks } from '../src/lib/game';
-import { addDays, atOn, weekStart } from '../src/lib/dates';
+import { addDays, addMonths, atOn, monthGrid, weekStart } from '../src/lib/dates';
 import type { Night, Session, SetLog, Slot } from '../src/lib/types';
 
 const prof = { packMaxKg: 15, hasGrip: true };
@@ -351,5 +351,17 @@ describe('weekNotes', () => {
     expect(notes.join(' ')).toMatch(/Same best set 3 times in a row: Backpack row/);
     expect(notes.join(' ')).toMatch(/Sleep averaged 7 h 30 m, about 1 h 00 m under your goal/);
     expect(weekNotes({ sessions: {}, nights: {}, program: DEFAULT_PROGRAM, settings: DEFAULT_DATA.settings }, '2026-10-26')[0]).toMatch(/No workouts logged yet/);
+  });
+});
+
+describe('monthGrid', () => {
+  it('lays out a month in Monday-first weeks', () => {
+    const oct = monthGrid('2026-10-15');
+    expect(oct[0]).toEqual([null, null, null, '2026-10-01', '2026-10-02', '2026-10-03', '2026-10-04']);
+    expect(oct.flat().filter(Boolean)).toHaveLength(31);
+    expect(oct.at(-1)).toEqual(['2026-10-26', '2026-10-27', '2026-10-28', '2026-10-29', '2026-10-30', '2026-10-31', null]);
+    expect(monthGrid('2026-02-01').flat().filter(Boolean)).toHaveLength(28);
+    expect(addMonths('2026-12-01', 1)).toBe('2027-01-01');
+    expect(addMonths('2026-01-31', -1)).toBe('2025-12-01');
   });
 });
