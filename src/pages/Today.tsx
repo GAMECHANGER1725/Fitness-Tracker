@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useStore } from '../lib/store';
 import { EX, targetText } from '../lib/exercises';
 import { WEEKDAYS, inDeload, minutes, nextPlanned, plannedDay, slotsFor } from '../lib/program';
-import { addDays, dateOf, fmtDate, weekStart } from '../lib/dates';
+import { addDays, dateOf, fmtDate, keyOf, weekStart } from '../lib/dates';
 import { QUALITY, clock12, clockOf, durationMin, hm, nightKey, onTime, pastAt, toBedtime, wakeOffset } from '../lib/sleep';
 import { BAND_LABEL, readiness } from '../lib/readiness';
 import { weekSummary } from '../lib/game';
@@ -71,7 +71,40 @@ export default function Today() {
             </div>
           )}
           <Briefing fallback={ready.notes.slice(0, 2).join('. ') + (ready.notes.length ? '.' : '')} />
-          {active ? (
+          {active && keyOf(new Date(active.start)) < today ? (
+            // Started on an earlier day and never finished: save what was logged, or let it go.
+            <div className="stack" style={{ gap: 8 }}>
+              <p className="bold">
+                Unfinished {active.name} from {fmtDate(keyOf(new Date(active.start)), { weekday: 'long' })}, {active.sets.length} set{active.sets.length === 1 ? '' : 's'} logged.
+              </p>
+              <div className="row">
+                <button
+                  className="btn"
+                  style={{ flex: 1 }}
+                  disabled={!active.sets.length}
+                  onClick={() => {
+                    // Saved as of its last set, not now.
+                    const last = Math.max(...active.sets.map((x) => x.at));
+                    const r = useStore.getState().finishWorkout(undefined, undefined, last);
+                    if (r) toast(`${r.session.name} saved`);
+                  }}
+                >
+                  Save it
+                </button>
+                <button
+                  className="btn"
+                  style={{ flex: 1 }}
+                  onClick={() => {
+                    const was = active;
+                    useStore.getState().cancelWorkout();
+                    toast('Workout discarded', { label: 'Undo', run: () => useStore.setState({ active: was }) });
+                  }}
+                >
+                  Discard
+                </button>
+              </div>
+            </div>
+          ) : active ? (
             <button className="btn block" onClick={() => go('workout')}>
               <Icon name="play" size={18} fill /> Resume {active.name}
             </button>

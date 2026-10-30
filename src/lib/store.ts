@@ -28,7 +28,7 @@ interface Actions {
   setRest: (end: number | null) => void;
   cancelWorkout: () => void;
   /** Saves the session and runs progression. Returns the session and what progression changed. */
-  finishWorkout: (feel?: number, note?: string) => { session: Session; lines: string[] } | null;
+  finishWorkout: (feel?: number, note?: string, endAt?: number) => { session: Session; lines: string[] } | null;
   deleteSession: (id: string) => void;
   /** Bring back a deleted session (under a new id, since the old one is in `tomb` and may have synced). */
   restoreSession: (s: Session) => void;
@@ -78,7 +78,7 @@ export const useStore = create<Store>()(
         goTo: (idx) => patchActive((a) => ({ idx: Math.max(0, Math.min(a.slots.length - 1, idx)), restEnd: null })),
         setRest: (end) => patchActive(() => ({ restEnd: end })),
         cancelWorkout: () => set({ active: null }),
-        finishWorkout: (feel, note) => {
+        finishWorkout: (feel, note, endAt) => {
           const s = get();
           const a = s.active;
           if (!a) return null;
@@ -86,9 +86,9 @@ export const useStore = create<Store>()(
             set({ active: null });
             return null;
           }
-          const now = Date.now();
+          const now = endAt ?? Date.now();
           // A workout logged for an earlier day is moved there, keeping its clock times, so it sorts in its place.
-          const session: Session = moveSession({ id: uid(), date: keyOf(new Date(a.start)), dayId: a.dayId, name: a.name, start: a.start, end: now, sets: a.sets, feel, note: note?.trim() || undefined, upd: now }, a.date);
+          const session: Session = moveSession({ id: uid(), date: keyOf(new Date(a.start)), dayId: a.dayId, name: a.name, start: a.start, end: now, sets: a.sets, feel, note: note?.trim() || undefined, upd: Date.now() }, a.date);
           const { program, lines } = dayById(s.program, a.dayId) ? applySession(s.program, session, s.sessions, s.profile) : { program: s.program, lines: [] };
           set({
             active: null,
