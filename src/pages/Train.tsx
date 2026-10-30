@@ -4,6 +4,7 @@ import { EX, EXERCISES, PATTERN_LABEL, bestText, easier, harder, targetText, usa
 import { WEEKDAYS, copyDay, deleteDay, inDeload, minutes, moveSlot } from '../lib/program';
 import { PATTERN_CAP, matchSession, newRecords, records, sessionText, trendOf, weeklySets } from '../lib/progress';
 import { addDays, addMonths, daysBetween, fmtDate, monthGrid } from '../lib/dates';
+import { hm } from '../lib/sleep';
 import { Bar, Head, Icon, ProfileLink, Sheet, Stepper, go, scrollMotion, shareText, toast, useGame, useRoute, useToday } from '../components/ui';
 import { useReadiness } from '../components/data';
 import type { Exercise, Pattern, PlanDay, Program, Session, Slot } from '../lib/types';
@@ -456,6 +457,9 @@ function MonthCard({ sessions, onPick }: { sessions: Record<string, Session>; on
   for (const x of Object.values(sessions)) byDay.set(x.date, [...(byDay.get(x.date) ?? []), x]);
   const grid = monthGrid(month);
   const count = grid.flat().filter((k) => k && byDay.has(k)).length;
+  const inMonth = Object.values(sessions).filter((x) => x.date.slice(0, 7) === month.slice(0, 7));
+  const mins = Math.round(inMonth.reduce((t, x) => t + Math.max(0, x.end - x.start), 0) / 60_000);
+  const sets = inMonth.reduce((t, x) => t + x.sets.length, 0);
   return (
     <section className="card stack" style={{ gap: 10 }} aria-label="Month">
       <div className="between" style={{ alignItems: 'center' }}>
@@ -464,7 +468,9 @@ function MonthCard({ sessions, onPick }: { sessions: Record<string, Session>; on
         </button>
         <span className="stack" style={{ alignItems: 'center', gap: 0 }}>
           <span className="bold">{fmtDate(month, { month: 'long', year: 'numeric' })}</span>
-          <span className="small mut">{count} day{count === 1 ? '' : 's'} trained</span>
+          <span className="small mut">
+            {count} day{count === 1 ? '' : 's'} trained{count ? ` · ${hm(mins)} · ${sets} set${sets === 1 ? '' : 's'}` : ''}
+          </span>
         </span>
         <button className="btn sm icon" aria-label="Next month" disabled={month >= today.slice(0, 8) + '01'} onClick={() => setMonth(addMonths(month, 1))}>
           <Icon name="right" size={18} />
