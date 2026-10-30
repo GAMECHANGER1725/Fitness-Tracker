@@ -30,6 +30,11 @@ export default function App() {
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', bg || '#0C1013');
   }, [theme]);
 
+  const large = useLayout((l) => l.large);
+  useEffect(() => {
+    // ponytail: CSS zoom scales the px-based design as a whole; fine on current Chrome, Safari and Samsung Internet.
+    document.documentElement.style.setProperty('zoom', large ? '1.12' : '');
+  }, [large]);
   const accent = useLayout((l) => l.accent);
   useEffect(() => {
     const root = document.documentElement;

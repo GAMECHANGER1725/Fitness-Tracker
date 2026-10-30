@@ -72,7 +72,7 @@ export default function Sleep() {
         </section>
         )}
 
-        <div className="row">
+        <div className="row" style={{ flexWrap: 'wrap' }}>
           {pendingBed ? (
             <>
               <button className="btn sleep" style={{ flex: 1 }} onClick={() => (wokeUp(), toast('Morning. Logged.'))}>

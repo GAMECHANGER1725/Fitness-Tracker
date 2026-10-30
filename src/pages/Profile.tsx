@@ -354,7 +354,7 @@ function Reminders() {
 function Look() {
   const theme = useStore((s) => s.settings.theme);
   const set = useStore((s) => s.setSettings);
-  const { hidden, toggle, accent, setAccent } = useLayout();
+  const { hidden, toggle, accent, setAccent, large, setLarge } = useLayout();
   return (
     <section className="card stack" style={{ gap: 10 }}>
       <h2 className="h2">Look</h2>
@@ -364,6 +364,11 @@ function Look() {
             {t === 'auto' ? 'Auto' : t === 'dark' ? 'Dark' : 'Light'}
           </button>
         ))}
+      </div>
+      <span className="label" style={{ marginTop: 6 }}>Text size</span>
+      <div className="seg" role="group" aria-label="Text size">
+        <button aria-pressed={!large} onClick={() => setLarge(false)}>Normal</button>
+        <button aria-pressed={large} onClick={() => setLarge(true)} style={{ fontSize: 16 }}>Large</button>
       </div>
       <span className="label" style={{ marginTop: 6 }}>Training colour</span>
       <div className="seg" role="group" aria-label="Training colour">
