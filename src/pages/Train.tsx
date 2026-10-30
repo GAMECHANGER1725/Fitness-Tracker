@@ -7,7 +7,7 @@ import { addDays, addMonths, daysBetween, fmtDate, monthGrid } from '../lib/date
 import { hm } from '../lib/sleep';
 import { MEASURES, addMeasure, measureChange, type MeasureKey } from '../lib/body';
 import { Bar, Head, Icon, ProfileLink, Sheet, Stepper, go, scrollMotion, shareText, toast, useGame, useRoute, useToday } from '../components/ui';
-import { useReadiness } from '../components/data';
+import { useFuelData, useReadiness } from '../components/data';
 import { NoteSheet } from './Workout';
 import type { Exercise, Measure, Pattern, PlanDay, Program, Session, Slot } from '../lib/types';
 
@@ -815,6 +815,7 @@ function Body() {
   const today = useToday();
   const last = list.at(-1);
   const [all, setAll] = useState(false);
+  const weighIns = useFuelData()?.weighIns ?? [];
   return (
     <section className="card stack" style={{ gap: 8 }} aria-label="Body measurements">
       <div className="between">
@@ -828,6 +829,18 @@ function Body() {
       ) : (
         <>
           <div className="grid2" style={{ gap: 8 }}>
+            {weighIns.length > 0 && (
+              <div className="tile">
+                <span className="small mut">Weight (Fuel Log)</span>
+                <p className="num" style={{ fontSize: 22 }}>{weighIns.at(-1)!.kg.toFixed(1)} kg</p>
+                <Spark values={weighIns.map((w) => w.kg)} />
+                {weighIns.length > 1 && (() => {
+                  const diff = Math.round((weighIns.at(-1)!.kg - weighIns[0].kg) * 10) / 10;
+                  const days = daysBetween(weighIns[0].date, weighIns.at(-1)!.date);
+                  return <span className="small" style={{ color: diff > 0 ? 'var(--acc)' : 'var(--mut)' }}>{diff ? `${diff > 0 ? '+' : ''}${diff} kg in ${days} days` : `Same as ${days} days ago`}</span>;
+                })()}
+              </div>
+            )}
             {MEASURES.map(([k, name]) => {
               const c = measureChange(list, k);
               return c ? (
