@@ -5,7 +5,7 @@ import { WEEKDAYS, inDeload, minutes, nextPlanned, plannedDay, slotsFor } from '
 import { addDays, dateOf, fmtDate, keyOf, weekStart } from '../lib/dates';
 import { QUALITY, clock12, clockOf, durationMin, hm, nightKey, onTime, pastAt, sleepIfNow, toBedtime, wakeOffset } from '../lib/sleep';
 import { BAND_LABEL, readiness } from '../lib/readiness';
-import { weekSummary } from '../lib/game';
+import { nextBadge, weekSummary } from '../lib/game';
 import { historyOf, newRecords } from '../lib/progress';
 import { lastWeekReport } from '../lib/notes';
 import { backupDue, useLayout } from '../lib/layout';
@@ -546,6 +546,7 @@ function WeekStrip() {
   const ws = weekStart(today);
   const done = new Set(Object.values(sessions).map((s) => s.date));
   const sum = weekSummary({ sessions, program }, ws);
+  const nb = nextBadge(g.badges);
   const detail = (k: string) => {
     const xs = Object.values(sessions).filter((s) => s.date === k);
     const day = fmtDate(k, { weekday: 'long' });
@@ -580,6 +581,15 @@ function WeekStrip() {
       <p className="small mut">
         {pick ? detail(pick) : `${sum.done} of ${sum.planned} workouts${sum.sets ? ` · ${sum.sets} sets · ${sum.minutes < 60 ? `${sum.minutes} min` : hm(sum.minutes)}` : ''}. Tap a day for more.`}
       </p>
+      {nb && (
+        <a href="#/train?tab=badges" className="stack" style={{ gap: 4, textDecoration: 'none', color: 'var(--ink)' }} aria-label={`Next badge: ${nb.name}, ${nb.have} of ${nb.need}`}>
+          <span className="between small">
+            <span><span className="bold">Next badge: {nb.name}</span> <span className="mut">· {nb.how}</span></span>
+            <span className="bold acc">{nb.have}/{nb.need}</span>
+          </span>
+          <Bar value={nb.have} max={nb.need} />
+        </a>
+      )}
     </section>
   );
 }

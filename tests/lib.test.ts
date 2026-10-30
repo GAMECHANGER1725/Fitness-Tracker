@@ -6,7 +6,7 @@ import { applySession, deloadDue, diffPrograms, guardProgram, matchSession, newR
 import { readiness } from '../src/lib/readiness';
 import { lastWeekReport, weekNotes } from '../src/lib/notes';
 import { backupDue } from '../src/lib/layout';
-import { computeGame, weekSummary, workoutWeeks } from '../src/lib/game';
+import { computeGame, nextBadge, weekSummary, workoutWeeks } from '../src/lib/game';
 import { addDays, addMonths, atOn, monthGrid, weekStart } from '../src/lib/dates';
 import type { Night, Session, SetLog, Slot } from '../src/lib/types';
 
@@ -360,6 +360,15 @@ describe('backup', () => {
     expect(d.program).toEqual(DEFAULT_PROGRAM);
     expect(Object.keys(d.nights)).toEqual(['2026-10-26']);
     expect(d.nights['2026-10-26'].quality).toBe(5);
+  });
+});
+
+describe('nextBadge', () => {
+  const b = (id: string, have: number, need: number) => ({ id, name: id, how: '', earned: have >= need, have, need });
+  it('picks the closest started badge, skipping earned, untouched and one-step ones', () => {
+    expect(nextBadge([b('a', 3, 10), b('b', 5, 7), b('c', 0, 4), b('d', 7, 7), b('e', 0, 1)])?.id).toBe('b');
+    expect(nextBadge([b('x', 1, 2), b('y', 5, 10)])?.id).toBe('x');
+    expect(nextBadge([b('c', 0, 4)])).toBeNull();
   });
 });
 

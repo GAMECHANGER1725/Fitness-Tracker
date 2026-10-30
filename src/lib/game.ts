@@ -15,6 +15,13 @@ export interface Badge {
   need: number;
 }
 
+/** The locked badge you're closest to (by share done, then fewest to go), once you've started on it. */
+export function nextBadge(badges: Badge[]): Badge | null {
+  const open = badges.filter((x) => !x.earned && x.have > 0 && x.need > 1);
+  open.sort((a, b) => b.have / b.need - a.have / a.need || a.need - a.have - (b.need - b.have));
+  return open[0] ?? null;
+}
+
 /** Weeks in a row (ending this week or last) with at least `per` workouts. This week counts once it reaches `per`. */
 export function workoutWeeks(d: Pick<AppData, 'sessions'>, today: string, per = 3): number {
   const counts = new Map<string, number>();
