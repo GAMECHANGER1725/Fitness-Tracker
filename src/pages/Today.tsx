@@ -394,6 +394,7 @@ function FuelStrip() {
 
 function WeekStrip() {
   const today = useToday();
+  const g = useGame();
   const program = useStore((s) => s.program);
   const sessions = useStore((s) => s.sessions);
   const [pick, setPick] = useState<string | null>(null);
@@ -410,7 +411,10 @@ function WeekStrip() {
   return (
     <section className="card stack" style={{ gap: 12 }} aria-label="This week">
       <div className="between">
-        <h2 className="h2">This week</h2>
+        <span className="row" style={{ gap: 8 }}>
+          <h2 className="h2">This week</h2>
+          {g.weeks >= 2 && <span className="pill">{g.weeks} weeks in a row</span>}
+        </span>
         <a href="#/train" className="small bold" style={{ textDecoration: 'none' }}>Plan</a>
       </div>
       <div className="week">
