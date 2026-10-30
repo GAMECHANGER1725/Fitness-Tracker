@@ -52,20 +52,20 @@ interface Layout {
   setStart: (s: StartPage) => void;
 }
 
+type Look = Pick<Layout, 'hidden' | 'accent' | 'large' | 'noteTags' | 'start'>;
+/** The look and layout a fresh install starts with (backup time and snooze aren't part of it). */
+export const lookDefaults = (): Look => ({ hidden: [], accent: 'mint', large: false, noteTags: [...NOTE_TAGS], start: 'today' });
+
 export const useLayout = create<Layout>()(
   persist(
     (set) => ({
-      hidden: [],
-      accent: 'mint',
-      large: false,
+      ...lookDefaults(),
       setLarge: (large) => set({ large }),
       backupAt: null,
       backupSnooze: null,
       set: (p) => set(p),
       setAccent: (accent) => set({ accent }),
-      noteTags: NOTE_TAGS,
       setNoteTags: (noteTags) => set({ noteTags }),
-      start: 'today',
       setStart: (start) => set({ start }),
       toggle: (c) => set((s) => ({ hidden: s.hidden.includes(c) ? s.hidden.filter((x) => x !== c) : [...s.hidden, c] })),
     }),

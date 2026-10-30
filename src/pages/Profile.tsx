@@ -7,7 +7,7 @@ import { currentAi } from '../lib/coach';
 import { exportCsv, exportJson, importJson } from '../lib/backup';
 import { isPaused, reminderKinds, remindersOn, remindersSupported, setKind, setLead, setPaused, setReminders } from '../lib/reminders';
 import { usePlayer } from '../lib/player';
-import { ACCENTS, START_PAGES, TODAY_CARDS, useLayout } from '../lib/layout';
+import { ACCENTS, START_PAGES, TODAY_CARDS, lookDefaults, useLayout } from '../lib/layout';
 import { showWhatsNew } from '../components/WhatsNew';
 import { install, useInstall } from '../lib/install';
 import { TOKEN_URL, connect, disconnect, fuelLogToken, syncNow, useSync } from '../lib/sync';
@@ -482,6 +482,17 @@ function Look() {
         </div>
       ))}
       <p className="small mut">Readiness and the sleep cards always show. These are for this device only.</p>
+      <button
+        className="btn sm"
+        style={{ alignSelf: 'flex-start' }}
+        onClick={() => {
+          const { hidden, accent, large, noteTags, start } = useLayout.getState();
+          useLayout.setState(lookDefaults());
+          toast('Look and layout reset', { label: 'Undo', run: () => useLayout.setState({ hidden, accent, large, noteTags, start }) });
+        }}
+      >
+        Reset look and layout
+      </button>
     </section>
   );
 }

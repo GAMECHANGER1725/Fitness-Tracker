@@ -5,7 +5,7 @@ import { EX, EXERCISES, bestText, easier, harder } from '../src/lib/exercises';
 import { applySession, deloadDue, diffPrograms, guardProgram, matchSession, newRecords, progressSlot, records, trendOf, moveSession, sessionText, vsLast, withLength, weeklySets } from '../src/lib/progress';
 import { readiness } from '../src/lib/readiness';
 import { lastWeekReport, weekNotes, weekReportText } from '../src/lib/notes';
-import { backupDue, startHash } from '../src/lib/layout';
+import { backupDue, lookDefaults, startHash } from '../src/lib/layout';
 import { computeGame, nextBadge, weekSummary, workoutWeeks } from '../src/lib/game';
 import { addDays, addMonths, atOn, monthGrid, weekStart } from '../src/lib/dates';
 import type { Night, Session, SetLog, Slot } from '../src/lib/types';
@@ -385,6 +385,16 @@ describe('startHash', () => {
     expect(startHash('#/profile', 'sleep')).toBeNull();
     expect(startHash('', 'today')).toBeNull();
     expect(startHash('', 'nope')).toBeNull();
+  });
+});
+
+describe('lookDefaults', () => {
+  it('is a fresh copy each time', () => {
+    const a = lookDefaults();
+    a.noteTags.push('x');
+    a.hidden.push('fuel');
+    expect(lookDefaults()).toMatchObject({ hidden: [], accent: 'mint', large: false, start: 'today' });
+    expect(lookDefaults().noteTags).not.toContain('x');
   });
 });
 
