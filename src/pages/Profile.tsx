@@ -8,6 +8,7 @@ import { exportCsv, exportJson, importJson } from '../lib/backup';
 import { remindersOn, remindersSupported, setReminders } from '../lib/reminders';
 import { usePlayer } from '../lib/player';
 import { ACCENTS, TODAY_CARDS, useLayout } from '../lib/layout';
+import { install, useInstall } from '../lib/install';
 import { TOKEN_URL, connect, disconnect, fuelLogToken, syncNow, useSync } from '../lib/sync';
 import { clock12, idealBedtime } from '../lib/sleep';
 import { todayKey } from '../lib/dates';
@@ -16,6 +17,7 @@ import { useWeight } from '../components/data';
 
 // Profile's cards in order, with the short names used by the jump chips at the top.
 const SECTIONS: [id: string, label: string, card: ReactNode][] = [
+  ['install', 'Install', <InstallCard />],
   ['you', 'You', <Me />],
   ['times', 'Times', <SleepGoals />],
   ['coach', 'AI coach', <AiCard />],
@@ -31,6 +33,7 @@ export default function ProfilePage() {
   // Links like #/profile?open=backup land on that card (after App's scroll-to-top on page change).
   const { params } = useRoute();
   const open = params.get('open');
+  const installed = useInstall((s) => s.installed);
   useEffect(() => {
     if (!open) return;
     const t = setTimeout(() => document.getElementById(`set-${open}`)?.scrollIntoView({ behavior: scrollMotion(), block: 'start' }), 80);
@@ -49,7 +52,7 @@ export default function ProfilePage() {
       />
       <div className="page">
         <nav className="row" style={{ flexWrap: 'wrap', gap: 6 }} aria-label="Settings sections">
-          {SECTIONS.map(([id, label]) => (
+          {SECTIONS.filter(([id]) => id !== 'install' || !installed).map(([id, label]) => (
             <button key={id} className="chip" style={{ fontSize: 13, minHeight: 34 }} onClick={() => document.getElementById(`set-${id}`)?.scrollIntoView({ behavior: scrollMotion(), block: 'start' })}>
               {label}
             </button>
@@ -394,6 +397,24 @@ function Look() {
         </div>
       ))}
       <p className="small mut">Readiness and the sleep cards always show. These are for this device only.</p>
+    </section>
+  );
+}
+
+function InstallCard() {
+  const { prompt, installed } = useInstall();
+  if (installed) return null;
+  return (
+    <section className="card stack" style={{ gap: 8 }}>
+      <h2 className="h2">Install the app</h2>
+      <p className="small">Installed, it opens full screen from your home screen, works offline, and reminders and your saved data hold up better.</p>
+      {prompt ? (
+        <button className="btn primary" style={{ alignSelf: 'flex-start' }} onClick={() => install().then((ok) => ok && toast('Installed. Open it from your home screen.'))}>
+          Install
+        </button>
+      ) : (
+        <p className="small mut">In your browser’s menu (⋮ or the share button), choose Add to Home screen or Install app.</p>
+      )}
     </section>
   );
 }
