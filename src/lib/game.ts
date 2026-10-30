@@ -3,13 +3,23 @@
 import type { AppData } from './types';
 import { addDays, weekStart } from './dates';
 import { durationMin, wakeStreak } from './sleep';
-import { records } from './progress';
+import { newRecords, records } from './progress';
 
 export interface Badge {
   id: string;
   name: string;
   how: string;
   earned: boolean;
+  /** Progress toward it: what you have now (capped at need) and what it takes. */
+  have: number;
+  need: number;
+}
+
+/** The locked badge you're closest to (by share done, then fewest to go), once you've started on it. */
+export function nextBadge(badges: Badge[]): Badge | null {
+  const open = badges.filter((x) => !x.earned && x.have > 0 && x.need > 1);
+  open.sort((a, b) => b.have / b.need - a.have / a.need || a.need - a.have - (b.need - b.have));
+  return open[0] ?? null;
 }
 
 /** Weeks in a row (ending this week or last) with at least `per` workouts. This week counts once it reaches `per`. */
@@ -21,6 +31,27 @@ export function workoutWeeks(d: Pick<AppData, 'sessions'>, today: string, per = 
   let n = 0;
   while ((counts.get(wk) ?? 0) >= per) n++, (wk = addDays(wk, -7));
   return n;
+}
+
+export interface WeekSummary {
+  /** Days in the week with at least one workout. */
+  done: number;
+  /** Days the plan has a workout on. */
+  planned: number;
+  sets: number;
+  minutes: number;
+}
+
+/** Totals for the Monday-to-Sunday week starting `ws`. */
+export function weekSummary(d: Pick<AppData, 'sessions' | 'program'>, ws: string): WeekSummary {
+  const end = addDays(ws, 6);
+  const xs = Object.values(d.sessions).filter((s) => s.date >= ws && s.date <= end);
+  return {
+    done: new Set(xs.map((s) => s.date)).size,
+    planned: d.program.week.filter(Boolean).length,
+    sets: xs.reduce((t, s) => t + s.sets.length, 0),
+    minutes: Math.round(xs.reduce((t, s) => t + Math.max(0, s.end - s.start), 0) / 60_000),
+  };
 }
 
 /** Longest run of nights at or over the sleep goal. */
@@ -47,17 +78,25 @@ export function computeGame(d: AppData, today: string) {
   const heaviest = Math.max(0, ...Object.values(recs).map((r) => r.loadKg));
   const sleepRun = bestSleepRun(d);
   const imported = Object.values(d.nights).some((n) => n.source === 'samsung');
-  const b = (id: string, name: string, how: string, earned: boolean): Badge => ({ id, name, how, earned });
+  const logged = Object.values(d.nights).filter((n) => n.wake != null).length;
+  const bestCount = sessions.reduce((t, s) => t + new Set(newRecords(s, d.sessions).map((r) => r.exerciseId)).size, 0);
+  const steps = d.profile.windDown;
+  const windNights = steps.length ? Object.values(d.nights).filter((n) => steps.every((x) => n.done?.includes(x))).length : 0;
+  const b = (id: string, name: string, how: string, have: number, need: number): Badge => ({ id, name, how, earned: have >= need, have: Math.min(have, need), need });
   const badges = [
-    b('first', 'First rep', 'Finish your first workout', sessions.length >= 1),
-    b('ten', 'Ten down', 'Finish 10 workouts', sessions.length >= 10),
-    b('fifty', 'Half century', 'Finish 50 workouts', sessions.length >= 50),
-    b('week4', 'Habit', '4 weeks in a row with 3+ workouts', weeks >= 4),
-    b('loaded', 'Loaded', 'Use 10 kg in the backpack', heaviest >= 10),
-    b('wake7', 'Early bird', 'Up on time 7 days in a row', wake >= 7),
-    b('wake30', 'Like clockwork', 'Up on time 30 days in a row', wake >= 30),
-    b('sleep7', 'Well rested', 'Sleep your goal 7 nights in a row', sleepRun >= 7),
-    b('watch', 'Synced up', 'Import sleep from Samsung Health', imported),
+    b('first', 'First rep', 'Finish your first workout', sessions.length, 1),
+    b('ten', 'Ten down', 'Finish 10 workouts', sessions.length, 10),
+    b('fifty', 'Half century', 'Finish 50 workouts', sessions.length, 50),
+    b('week4', 'Habit', '4 weeks in a row with 3+ workouts', weeks, 4),
+    b('loaded', 'Loaded', 'Use 10 kg in the backpack', heaviest, 10),
+    b('wake7', 'Early bird', 'Up on time 7 days in a row', wake, 7),
+    b('wake30', 'Like clockwork', 'Up on time 30 days in a row', wake, 30),
+    b('sleep7', 'Well rested', 'Sleep your goal 7 nights in a row', sleepRun, 7),
+    b('diary30', 'Sleep diary', 'Log 30 nights', logged, 30),
+    b('tape5', 'Tape measure', 'Measure on 5 days', d.profile.measures?.length ?? 0, 5),
+    b('watch', 'Synced up', 'Import sleep from Samsung Health', imported ? 1 : 0, 1),
+    b('bests10', 'Record breaker', 'Set 10 personal bests', bestCount, 10),
+    b('wind7', 'Wound down', 'Finish your wind-down on 7 nights', windNights, 7),
   ];
   return { wake, weeks, sessions: sessions.length, badges };
 }

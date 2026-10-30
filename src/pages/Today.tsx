@@ -1,15 +1,27 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useStore } from '../lib/store';
 import { EX, targetText } from '../lib/exercises';
-import { WEEKDAYS, inDeload, minutes, plannedDay, slotsFor } from '../lib/program';
-import { addDays, dateOf, fmtDate, weekStart } from '../lib/dates';
-import { clock12, clockOf, durationMin, hm, onTime, wakeOffset } from '../lib/sleep';
-import { BAND_LABEL } from '../lib/readiness';
+import { WEEKDAYS, inDeload, minutes, nextPlanned, plannedDay, slotsFor, workoutTimeOn } from '../lib/program';
+import { addDays, dateOf, daysBetween, fmtDate, keyOf, weekStart } from '../lib/dates';
+import { QUALITY, clock12, clockOf, durationMin, hm, minsOf, nightKey, onTime, pastAt, sleepIfNow, toBedtime, wakeOffset } from '../lib/sleep';
+import { BAND_LABEL, readiness, vsUsual } from '../lib/readiness';
+import { nextBadge, weekSummary } from '../lib/game';
+import { COMEBACK_DAYS, daysOff, historyOf, newRecords } from '../lib/progress';
+import { lastWeekReport, weekReportText, yesterdayLine } from '../lib/notes';
+import { backupDue, useLayout } from '../lib/layout';
+import { FOCUSES, focusLabel, focusProgress, loadFocus, saveFocus, type Focus } from '../lib/focus';
+import { useSync } from '../lib/sync';
 import { currentAi, morningBriefing, useCoach } from '../lib/coach';
 import { friendlyError, hasAi } from '../lib/ai';
-import { Head, Icon, ProfileLink, go, toast, useGame, useToday } from '../components/ui';
+import { Bar, Head, Icon, ProfileLink, go, shareText, toast, useGame, useNow, useToday } from '../components/ui';
 import { useFuelData, useReadiness } from '../components/data';
 import type { PlanDay } from '../lib/types';
+
+const REST_DAY = ['An easy 10 to 15 min walk outside', '30 s each: hip flexor stretch, hamstring stretch, chest stretch on a doorway', '10 slow cat-cows and 10 deep breaths lying down'];
+
+const SKIP_KEY = 'fitness-skip';
+const FEEL_KEY = 'fitness-feel';
+const FEELS = [['fresh', 'Fresh'], ['ok', 'OK'], ['sore', 'Sore'], ['tired', 'Tired']] as const;
 
 export default function Today() {
   const today = useToday();
@@ -21,7 +33,38 @@ export default function Today() {
   const planned = plannedDay(program, today);
   const doneToday = Object.values(sessions).filter((s) => s.date === today);
   const [pick, setPick] = useState(false);
-  const easy = ready.band === 'easy';
+  const [why, setWhy] = useState(false);
+  // Readiness picks the lighter version on an Easy day; you can flip it either way (until you leave Today).
+  const [choice, setChoice] = useState<boolean | null>(null);
+  // How you feel today (per device, for today only): sore or tired picks the lighter version.
+  const [feel, setFeelState] = useState<string | null>(() => {
+    try {
+      const f = JSON.parse(localStorage.getItem(FEEL_KEY) ?? 'null');
+      return f?.date === today ? f.v : null;
+    } catch {
+      return null;
+    }
+  });
+  const setFeel = (v: string | null) => {
+    try {
+      localStorage.setItem(FEEL_KEY, JSON.stringify({ date: today, v }));
+    } catch {
+      /* just for now, then */
+    }
+    setFeelState(v);
+  };
+  const low = feel === 'sore' || feel === 'tired';
+  // Back after a week or more off (sick, holidays): start lighter.
+  const off = daysOff(Object.values(sessions), today);
+  const comeback = off != null && off >= COMEBACK_DAYS;
+  const easy = choice ?? (low || comeback || ready.band === 'easy');
+  const hidden = useLayout((l) => l.hidden);
+  const exNotes = useStore((s) => s.profile.exNotes);
+  const lastNight = useStore((s) => s.nights[today]);
+  const lastMeasure = useStore((s) => s.profile.measures.at(-1)?.date);
+  const measureAgo = lastMeasure ? daysBetween(lastMeasure, today) : null;
+  const fuelData = useFuelData();
+  const yLine = yesterdayLine(sessions, fuelData?.days[addDays(today, -1)], addDays(today, -1));
 
   const start = (day: PlanDay) => {
     startWorkout(day, easy);
@@ -29,69 +72,302 @@ export default function Today() {
   };
 
   const day = planned;
+  // Yesterday's planned workout, if nothing was done that day.
+  const yd = addDays(today, -1);
+  // "Skip it" hides the offer for that day, on this device.
+  const [skipped, setSkippedState] = useState(() => {
+    try {
+      return localStorage.getItem(SKIP_KEY);
+    } catch {
+      return null;
+    }
+  });
+  const setSkipped = (d: string) => {
+    try {
+      localStorage.setItem(SKIP_KEY, d);
+    } catch {
+      /* shows again next time; harmless */
+    }
+    setSkippedState(d);
+  };
+  // Only once there's a history, so a new log doesn't start with "missed".
+  const missed = Object.keys(sessions).length && !Object.values(sessions).some((x) => x.date === yd) ? plannedDay(program, yd) : null;
+  const next = nextPlanned(program, today);
   const slots = day ? slotsFor(program, day, today, easy) : [];
+  const planAt = workoutTimeOn(useStore((s) => s.settings), today);
 
   return (
     <main>
       <Head over={fmtDate(today, { weekday: 'long', day: 'numeric', month: 'long' })} title={doneToday.length ? 'Done for today' : day ? day.name : 'Rest day'} right={<ProfileLink />} />
       <div className="page">
         <WakeCard />
+        <BedCard />
 
         <section className="card hot stack" style={{ gap: 14 }} aria-label="Readiness">
           <div className="between" style={{ alignItems: 'flex-start' }}>
-            <div>
-              <span className="small bold" style={{ opacity: 0.75 }}>Readiness</span>
+            <button onClick={() => setWhy(!why)} aria-expanded={why} style={{ background: 'none', border: 0, padding: 0, color: 'inherit', textAlign: 'left' }}>
+              <span className="small bold" style={{ opacity: 0.75 }}>Readiness · {why ? 'hide' : 'why?'}</span>
               <p className="num" style={{ fontSize: 48, lineHeight: 1 }}>{ready.score}</p>
-            </div>
-            <span className="pill">{BAND_LABEL[ready.band]}</span>
+              <Usual score={ready.score} />
+            </button>
+            <span className="pill">{low && ready.band !== 'easy' ? 'Easy today' : BAND_LABEL[ready.band]}</span>
           </div>
+          {why && (
+            <div className="stack" style={{ gap: 8 }}>
+              {([['Sleep last night', ready.sleep, 40], ['Food yesterday', ready.fuel, 30], ['Recovery from training', ready.load, 30]] as const).map(([l, v, max]) => (
+                <div key={l} className="stack" style={{ gap: 4 }}>
+                  <div className="between small"><span>{l}</span><span className="bold">{v} / {max}</span></div>
+                  <div className="bar" style={{ background: 'color-mix(in srgb, var(--on-acc) 22%, transparent)' }}><i style={{ width: `${(v / max) * 100}%`, background: 'var(--on-acc)' }} /></div>
+                </div>
+              ))}
+              {ready.notes.length > 0 && <p className="small" style={{ opacity: 0.9 }}>{ready.notes.join('. ')}.</p>}
+              <ReadinessWeek />
+              <p className="small" style={{ opacity: 0.75 }}>Missing data counts as average. Under 55 plans about a quarter fewer sets.</p>
+            </div>
+          )}
           <Briefing fallback={ready.notes.slice(0, 2).join('. ') + (ready.notes.length ? '.' : '')} />
-          {active ? (
-            <button className="btn block" onClick={() => go('workout')}>
-              <Icon name="play" size={18} fill /> Resume {active.name}
-            </button>
+          {new Date().getHours() < 12 && yLine && <p className="small" style={{ opacity: 0.85 }}>{yLine}</p>}
+          {!lastNight?.wake && new Date().getHours() >= 14 && (
+            <a href={`#/sleep?night=${today}`} className="small bold" style={{ color: 'inherit', opacity: 0.9 }}>Log last night’s sleep</a>
+          )}
+          {active && keyOf(new Date(active.start)) < today ? (
+            // Started on an earlier day and never finished: save what was logged, or let it go.
+            <div className="stack" style={{ gap: 8 }}>
+              <p className="bold">
+                Unfinished {active.name} from {fmtDate(keyOf(new Date(active.start)), { weekday: 'long' })}, {active.sets.length} set{active.sets.length === 1 ? '' : 's'} logged.
+              </p>
+              <div className="row">
+                <button
+                  className="btn"
+                  style={{ flex: 1 }}
+                  disabled={!active.sets.length}
+                  onClick={() => {
+                    // Saved as of its last set, not now.
+                    const last = Math.max(...active.sets.map((x) => x.at));
+                    const r = useStore.getState().finishWorkout(undefined, undefined, last);
+                    if (r) toast(`${r.session.name} saved`);
+                  }}
+                >
+                  Save it
+                </button>
+                <button
+                  className="btn"
+                  style={{ flex: 1 }}
+                  onClick={() => {
+                    const was = active;
+                    useStore.getState().cancelWorkout();
+                    toast('Workout discarded', { label: 'Undo', run: () => useStore.setState({ active: was }) });
+                  }}
+                >
+                  Discard
+                </button>
+              </div>
+            </div>
+          ) : active ? (
+            <>
+              <button className="btn block" onClick={() => go('workout')}>
+                <Icon name="play" size={18} fill /> Resume {active.name}
+              </button>
+              {(() => {
+                // Left open well after the last set: offer to save it as it was.
+                const last = active.sets.length ? Math.max(...active.sets.map((x) => x.at)) : 0;
+                const idle = last ? Math.floor((Date.now() - last) / 60_000) : 0;
+                return idle > 60 ? (
+                  <p className="small" style={{ textAlign: 'center', opacity: 0.9 }}>
+                    Last set {hm(idle)} ago ·{' '}
+                    <button
+                      className="small bold"
+                      style={{ background: 'none', border: 0, padding: 0, color: 'inherit', textDecoration: 'underline' }}
+                      onClick={() => {
+                        const r = useStore.getState().finishWorkout(undefined, undefined, last + 60_000);
+                        if (r) toast(`${r.session.name} saved, ending at the last set`);
+                      }}
+                    >
+                      Save it as done
+                    </button>
+                  </p>
+                ) : null;
+              })()}
+            </>
           ) : doneToday.length ? (
-            <p className="bold">{doneToday.map((s) => s.name).join(' and ')} done. Eat well and get to bed on time.</p>
+            <div className="stack" style={{ gap: 4 }}>
+              {doneToday.map((x) => {
+                const b = new Set(newRecords(x, sessions).map((r) => r.exerciseId)).size;
+                return (
+                  <p key={x.id} className="bold">
+                    {x.name} done: {Math.max(1, Math.round((x.end - x.start) / 60_000))} min, {x.sets.length} set{x.sets.length === 1 ? '' : 's'}
+                    {b ? `, ${b} new best${b === 1 ? '' : 's'}` : ''}.
+                  </p>
+                );
+              })}
+              <p className="small" style={{ opacity: 0.85 }}>Eat well and get to bed on time.</p>
+            </div>
           ) : day ? (
-            <button className="btn block" onClick={() => start(day)}>
-              <Icon name="play" size={18} fill /> Start workout · {minutes(slots)} min{easy ? ', lighter' : ''}
-            </button>
+            <>
+              <div className="row" style={{ gap: 6, flexWrap: 'wrap' }} role="group" aria-label="How do you feel?">
+                <span className="small" style={{ opacity: 0.85 }}>Feeling</span>
+                {FEELS.map(([k, label]) => (
+                  <button
+                    key={k}
+                    className="chip"
+                    aria-pressed={feel === k}
+                    onClick={() => (setFeel(feel === k ? null : k), setChoice(null))}
+                    style={{ minHeight: 32, fontSize: 13, padding: '0 10px', background: feel === k ? 'var(--on-acc)' : 'rgba(255,255,255,0.18)', color: feel === k ? 'var(--acc)' : 'inherit' }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {low && choice == null && <p className="small" style={{ opacity: 0.9 }}>Lighter today, since you’re {feel}. Moving still helps; skip anything that hurts.</p>}
+              {!low && comeback && choice == null && !doneToday.length && <p className="small" style={{ opacity: 0.9 }}>First workout in {off} days, so lighter today to ease back in. Full sets again next time.</p>}
+              <button className="btn block" onClick={() => start(day)}>
+                <Icon name="play" size={18} fill /> Start workout · {minutes(slots)} min{easy ? ', lighter' : ''}
+              </button>
+              {new Date().getHours() * 60 + new Date().getMinutes() < minsOf(planAt) && (
+                <p className="small" style={{ opacity: 0.85, textAlign: 'center' }}>Planned for {clock12(planAt)} · <a href="#/profile?open=times" style={{ color: 'inherit' }}>change</a></p>
+              )}
+              <button className="small bold" onClick={() => setChoice(!easy)} style={{ background: 'none', border: 0, padding: 0, color: 'inherit', opacity: 0.85, textDecoration: 'underline', alignSelf: 'center' }}>
+                {easy ? 'Do the full workout instead' : 'Do a lighter version (about a quarter fewer sets)'}
+              </button>
+              {program.days.length > 1 && (
+                <button className="small bold" onClick={() => setPick(!pick)} aria-expanded={pick} style={{ background: 'none', border: 0, padding: 0, color: 'inherit', opacity: 0.85, textDecoration: 'underline', alignSelf: 'center' }}>
+                  {pick ? 'Keep today’s workout' : 'Do a different workout today'}
+                </button>
+              )}
+            </>
           ) : (
             <button className="btn block" onClick={() => setPick(!pick)}>
               Rest day. Train anyway?
             </button>
           )}
-          {pick && !day && (
-            <div className="row" style={{ flexWrap: 'wrap' }}>
-              {program.days.map((d) => (
-                <button key={d.id} className="chip" onClick={() => start(d)}>{d.name}</button>
+          {missed && !active && !doneToday.length && missed.id !== day?.id && skipped !== yd && (
+            <p className="small" style={{ opacity: 0.9 }}>
+              Missed {missed.name} yesterday ·{' '}
+              <button className="small bold" style={{ background: 'none', border: 0, padding: 0, color: 'inherit', textDecoration: 'underline' }} onClick={() => start(missed)}>
+                Do it now
+              </button>{' '}
+              ·{' '}
+              <button className="small" style={{ background: 'none', border: 0, padding: 0, color: 'inherit', textDecoration: 'underline' }} onClick={() => setSkipped(yd)}>
+                Skip it
+              </button>
+            </p>
+          )}
+          {(doneToday.length > 0 || !day) && !active && next && (
+            <p className="small" style={{ opacity: 0.85 }}>
+              Next: {next.day.name}, {next.date === addDays(today, 1) ? 'tomorrow' : fmtDate(next.date, { weekday: 'long' })}
+            </p>
+          )}
+          {pick && !active && !doneToday.length && (
+            <div className="row" style={{ flexWrap: 'wrap' }} role="group" aria-label="Pick a workout">
+              {program.days.filter((d) => d.id !== day?.id).map((d) => (
+                <button key={d.id} className="chip" onClick={() => start(d)}>{d.name} · {minutes(slotsFor(program, d, today, easy))} min</button>
               ))}
             </div>
           )}
         </section>
 
-        {day && !doneToday.length && (
+        {!day && !doneToday.length && !active && !hidden.includes('exercises') && (
+          <section className="card soft stack" style={{ gap: 8 }} aria-label="Rest day">
+            <span className="label">Rest day, about 15 min if you feel like it</span>
+            <ul className="small" style={{ margin: 0, paddingLeft: 18 }}>
+              {REST_DAY.map((x) => <li key={x}>{x}</li>)}
+            </ul>
+            <p className="small mut">Muscles grow on rest days. Eat to your target and get to bed on time.</p>
+          </section>
+        )}
+
+        {day && !doneToday.length && !hidden.includes('exercises') && (
           <section className="card" style={{ padding: '6px 18px' }} aria-label="Today's exercises">
             {inDeload(program, today) && <p className="small mut" style={{ paddingTop: 12 }}>Lighter week: fewer sets so your body can catch up.</p>}
             {slots.map((s) => {
               const e = EX[s.exerciseId];
               return (
-                <div className="item" key={s.exerciseId}>
-                  <span className="grow bold">{e?.name ?? s.exerciseId}</span>
+                <a className="item" key={s.exerciseId} href={`#/train?tab=moves&open=${s.exerciseId}`} style={{ color: 'var(--ink)', textDecoration: 'none' }}>
+                  <span className="grow" style={{ minWidth: 0 }}>
+                    <span className="bold" style={{ display: 'block' }}>{e?.name ?? s.exerciseId}</span>
+                    {(() => {
+                      const last = historyOf(sessions, s.exerciseId)[0];
+                      return last ? <span className="small mut">Last time {last.map((x) => x.reps).join(', ')}{e?.unit === 'secs' ? ' s' : ''}{last[0].loadKg ? ` @ ${last[0].loadKg} kg` : ''}</span> : null;
+                    })()}
+                    {exNotes[s.exerciseId] && (
+                      <span className="small" style={{ display: 'block', fontStyle: 'italic', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>“{exNotes[s.exerciseId]}”</span>
+                    )}
+                  </span>
                   <span className="small mut" style={{ textAlign: 'right' }}>
                     {s.sets} × {targetText(e, s.low, s.high)}
                     {s.loadKg ? ` · ${s.loadKg} kg` : ''}
                   </span>
-                </div>
+                </a>
               );
             })}
           </section>
         )}
 
-        <FuelStrip />
-        <WeekStrip />
+        <BackupNudge />
+        {!hidden.includes('recap') && <LastWeek />}
+        {!hidden.includes('fuel') && <FuelStrip />}
+        {!hidden.includes('focus') && <FocusCard />}
+        {!hidden.includes('week') && <WeekStrip />}
+        <div className="row" style={{ flexWrap: 'wrap', gap: 6, justifyContent: 'center' }} role="group" aria-label="Quick log">
+          <span className="small mut" style={{ width: '100%', textAlign: 'center' }}>Quick log</span>
+          <a className="chip" href={`#/sleep?night=${today}`} style={{ textDecoration: 'none', color: 'var(--ink)' }}>
+            <Icon name="moon" size={14} /> Last night
+          </a>
+          <a className="chip" href="#/train?tab=history&past=1" style={{ textDecoration: 'none', color: 'var(--ink)' }}>
+            <Icon name="plus" size={14} /> A workout I already did
+          </a>
+          <a className="chip" href="#/train?tab=badges" style={{ textDecoration: 'none', color: 'var(--ink)' }}>
+            <Icon name="plus" size={14} /> {measureAgo != null && measureAgo >= 28 ? `Measure (${measureAgo} days)` : 'Measurements'}
+          </a>
+        </div>
+        {hidden.length > 0 && (
+          <a href="#/profile?open=look" className="small mut" style={{ textAlign: 'center' }}>
+            {hidden.length} card{hidden.length === 1 ? '' : 's'} hidden · change in Profile
+          </a>
+        )}
       </div>
     </main>
+  );
+}
+
+/** "8 above your usual": today's readiness against the 6 days before, recomputed from what was logged then. */
+function Usual({ score }: { score: number }) {
+  const today = useToday();
+  const nights = useStore((s) => s.nights);
+  const sessions = useStore((s) => s.sessions);
+  const goalH = useStore((s) => s.settings.sleepGoalH);
+  const fuel = useFuelData();
+  const text = useMemo(() => {
+    const logged = Array.from({ length: 6 }, (_, i) => addDays(today, i - 6)).filter((d) => nights[d]);
+    return vsUsual(score, logged.map((d) => readiness({ today: d, night: nights[d], goalH, fuel, targets: fuel?.targets ?? null, sessions }).score));
+  }, [score, today, nights, sessions, goalH, fuel]);
+  return text ? <span className="small" style={{ opacity: 0.8, display: 'block', marginTop: 2 }}>{text}</span> : null;
+}
+
+/** Readiness for each of the last 7 days (today on the right), recomputed from what was logged then. */
+function ReadinessWeek() {
+  const today = useToday();
+  const nights = useStore((s) => s.nights);
+  const sessions = useStore((s) => s.sessions);
+  const goalH = useStore((s) => s.settings.sleepGoalH);
+  const fuel = useFuelData();
+  const days = Array.from({ length: 7 }, (_, i) => addDays(today, i - 6));
+  const scores = days.map((d) => readiness({ today: d, night: nights[d], goalH, fuel, targets: fuel?.targets ?? null, sessions }).score);
+  return (
+    <div className="stack" style={{ gap: 4 }}>
+      <span className="small">Last 7 days</span>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 6, alignItems: 'end', height: 56 }} role="img" aria-label={`Readiness, last 7 days: ${scores.join(', ')}`}>
+        {scores.map((v, i) => (
+          <div key={days[i]} className="stack" style={{ gap: 2, alignItems: 'center', height: '100%', justifyContent: 'flex-end' }}>
+            <span style={{ fontSize: 10, opacity: 0.85 }}>{v}</span>
+            <i style={{ display: 'block', width: '100%', height: `${6 + Math.max(0, v - 40) * 0.6}px`, borderRadius: 4, background: 'var(--on-acc)', opacity: i === 6 ? 1 : 0.45 }} />
+          </div>
+        ))}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 6, fontSize: 10, opacity: 0.8, textAlign: 'center' }}>
+        {days.map((d) => <span key={d}>{fmtDate(d, { weekday: 'narrow' })}</span>)}
+      </div>
+    </div>
   );
 }
 
@@ -99,49 +375,265 @@ function WakeCard() {
   const today = useToday();
   const night = useStore((s) => s.nights[today]);
   const wakeTarget = useStore((s) => s.settings.wakeTarget);
+  const goalH = useStore((s) => s.settings.sleepGoalH);
   const wokeUp = useStore((s) => s.wokeUp);
+  const [rerate, setRerate] = useState(false);
+  const setNight = useStore((s) => s.setNight);
   const g = useGame();
   const hour = new Date().getHours();
   if (night?.wake == null) {
     if (hour >= 14) return null;
+    const up = (at?: number) => {
+      wokeUp(at);
+      const n = useStore.getState().nights[today];
+      toast(onTime(n, wakeTarget) ? 'Up on time. Nice.' : 'Logged. Aim for the target tomorrow.');
+    };
     return (
-      <button
-        className="card"
-        style={{ display: 'flex', alignItems: 'center', gap: 14, border: 0, textAlign: 'left', color: 'var(--ink)', width: '100%' }}
-        onClick={() => {
-          wokeUp();
-          const n = useStore.getState().nights[today];
-          toast(onTime(n, wakeTarget) ? 'Up on time. Nice.' : 'Logged. Aim for the target tomorrow.');
-        }}
-      >
-        <span style={{ width: 52, height: 52, borderRadius: 18, background: 'var(--sleep)', color: 'var(--on-sleep)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
-          <Icon name="sun" size={26} />
+      <div className="card stack" style={{ gap: 10 }}>
+        <button
+          style={{ display: 'flex', alignItems: 'center', gap: 14, border: 0, padding: 0, background: 'none', textAlign: 'left', color: 'var(--ink)', width: '100%' }}
+          onClick={() => up()}
+        >
+          <span style={{ width: 52, height: 52, borderRadius: 18, background: 'var(--sleep)', color: 'var(--on-sleep)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
+            <Icon name="sun" size={26} />
+          </span>
+          <span className="grow">
+            <span className="h2" style={{ display: 'block' }}>I’m up</span>
+            <span className="small mut">Target {clock12(wakeTarget)}{g.wake ? ` · ${g.wake}-day streak` : ''}</span>
+          </span>
+          <Icon name="right" />
+        </button>
+        <EarlierTime label="Got up earlier? Pick the time" initial={wakeTarget} onPick={(t) => up(pastAt(t, Date.now()))} />
+      </div>
+    );
+  }
+  // Evenings belong to the Going to sleep card; this morning's summary is still on Sleep.
+  if (hour >= 18) return null;
+  const off = wakeOffset(night, wakeTarget) ?? 0;
+  const dur = durationMin(night);
+  const rate = (night.quality == null || rerate) && hour < 12;
+  return (
+    <div className="card tight stack" style={{ gap: 10 }}>
+      <a href="#/sleep" style={{ display: 'flex', alignItems: 'center', gap: 14, color: 'var(--ink)', textDecoration: 'none' }}>
+        <span style={{ width: 46, height: 46, borderRadius: 16, background: 'var(--sleep-soft)', color: 'var(--sleep)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
+          <Icon name="sun" />
         </span>
         <span className="grow">
-          <span className="h2" style={{ display: 'block' }}>I’m up</span>
-          <span className="small mut">Target {clock12(wakeTarget)}{g.wake ? ` · ${g.wake}-day streak` : ''}</span>
+          <span className="bold" style={{ display: 'block' }}>
+            Up at {clockOf(night.wake)}, {off <= 15 ? (off < -5 ? 'early' : 'on time') : `${off} min late`}
+          </span>
+          <span className="small mut">
+            {dur != null ? `${hm(dur)} sleep, ${dur >= goalH * 60 - 10 ? 'goal met' : `${hm(goalH * 60 - dur)} short`}` : 'No bedtime logged'}
+            {g.wake ? ` · ${g.wake}-day wake streak` : ''}
+          </span>
+        </span>
+      </a>
+      {night.note ? (
+        <a href={`#/sleep?night=${today}`} className="small mut" style={{ fontStyle: 'italic', textDecoration: 'none' }}>“{night.note}”</a>
+      ) : (
+        <a href={`#/sleep?night=${today}`} className="small acc bold" style={{ textDecoration: 'none' }}>
+          {dur == null ? 'Add when you went to bed' : 'Add a note on last night'}
+        </a>
+      )}
+      {!rate && night.quality != null && hour < 12 && (
+        <button className="small mut" onClick={() => setRerate(true)} style={{ background: 'none', border: 0, padding: 0, textAlign: 'left', color: 'var(--mut)' }}>
+          Rated: <span className="bold">{QUALITY[night.quality - 1]}</span> · <span className="acc bold">change</span>
+        </button>
+      )}
+      {rate && (
+        <div className="stack" style={{ gap: 6 }}>
+          <span className="small mut">How did you sleep?</span>
+          <div className="grid4" style={{ gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 6 }} role="group" aria-label="Sleep quality">
+            {QUALITY.map((q, i) => (
+              <button key={q} className="chip" style={{ padding: 0, fontSize: 13 }} aria-pressed={night.quality === i + 1} onClick={() => (setNight(today, { quality: i + 1 }), setRerate(false), toast(`Saved: ${q.toLowerCase()}`))}>
+                {q}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Evenings: one tap for "Going to sleep", counting down to lights out; afterwards a quiet line with Undo. */
+function BedCard() {
+  const now = useNow(60_000);
+  const bedtime = useStore((s) => s.settings.bedtime);
+  const wakeTarget = useStore((s) => s.settings.wakeTarget);
+  const key = nightKey(now);
+  const night = useStore((s) => s.nights[key]);
+  const goalH = useStore((s) => s.settings.sleepGoalH);
+  const g = useGame();
+  const left = toBedtime(now, bedtime);
+  const ifNow = sleepIfNow(now, wakeTarget);
+  // From 2 h before lights out until 6 h after it.
+  if (left > 120 || left <= -360) return null;
+  const { goingToSleep, deleteNight } = useStore.getState();
+  if (night?.bed != null && night.wake == null) {
+    return (
+      <div className="card tight" style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+        <span style={{ width: 46, height: 46, borderRadius: 16, background: 'var(--sleep-soft)', color: 'var(--sleep)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
+          <Icon name="moon" />
+        </span>
+        <span className="grow">
+          <span className="bold" style={{ display: 'block' }}>Asleep since {clockOf(night.bed)}</span>
+          <span className="small mut">Up at {clock12(wakeTarget)}</span>
+        </span>
+        <button className="btn sm ghost" onClick={() => (deleteNight(key), toast('Undone.'))}>
+          <Icon name="undo" size={16} /> Undo
+        </button>
+      </div>
+    );
+  }
+  return (
+    <div className="card stack" style={{ gap: 12 }}>
+      <WindDown nightDone={night?.done ?? []} />
+      <button
+        style={{ display: 'flex', alignItems: 'center', gap: 14, border: 0, padding: 0, background: 'none', textAlign: 'left', color: 'var(--ink)', width: '100%' }}
+        onClick={() => (goingToSleep(), toast(`Sleep well. Up at ${clock12(wakeTarget)}.`))}
+      >
+        <span style={{ width: 52, height: 52, borderRadius: 18, background: 'var(--sleep)', color: 'var(--on-sleep)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
+          <Icon name="moon" size={26} />
+        </span>
+        <span className="grow">
+          <span className="h2" style={{ display: 'block' }}>Going to sleep</span>
+          <span className="small mut">
+            Lights out {clock12(bedtime)} · {left > 0 ? `in ${hm(left)}` : left === 0 ? 'now' : `${hm(-left)} past`}
+          </span>
+          <span className="small" style={{ display: 'block', color: ifNow < goalH * 60 - 10 ? 'var(--warn)' : 'var(--sleep)' }}>
+            Sleep now for {hm(ifNow)}
+          </span>
+          {g.wake >= 2 && <span className="small mut" style={{ display: 'block' }}>Up on time in the morning keeps your {g.wake}-day wake streak</span>}
         </span>
         <Icon name="right" />
       </button>
+      <EarlierTime label="Went to bed earlier? Pick the time" initial={bedtime} onPick={(t) => (goingToSleep(pastAt(t, Date.now())), toast(`Asleep since ${clock12(t)}. Up at ${clock12(wakeTarget)}.`))} />
+    </div>
+  );
+}
+
+/** "Forgot to tap" helper: a link that opens a time picker and logs that time instead of now. */
+function EarlierTime({ label, initial, onPick }: { label: string; initial: string; onPick: (hhmm: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [t, setT] = useState(initial);
+  if (!open)
+    return (
+      <button className="small mut" onClick={() => setOpen(true)} style={{ background: 'none', border: 0, padding: 0, textAlign: 'left', textDecoration: 'underline' }}>
+        {label}
+      </button>
     );
-  }
-  const off = wakeOffset(night, wakeTarget) ?? 0;
-  const dur = durationMin(night);
   return (
-    <a href="#/sleep" className="card tight" style={{ display: 'flex', alignItems: 'center', gap: 14, color: 'var(--ink)', textDecoration: 'none' }}>
-      <span style={{ width: 46, height: 46, borderRadius: 16, background: 'var(--sleep-soft)', color: 'var(--sleep)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
-        <Icon name="sun" />
-      </span>
-      <span className="grow">
-        <span className="bold" style={{ display: 'block' }}>
-          Up at {clockOf(night.wake)}, {off <= 15 ? (off < -5 ? 'early' : 'on time') : `${off} min late`}
+    <div className="row" style={{ gap: 8 }}>
+      <input className="input" type="time" value={t} onChange={(e) => setT(e.target.value)} style={{ flex: 1, minHeight: 44 }} aria-label="Time" />
+      <button className="btn sm primary" disabled={!t} onClick={() => onPick(t)}>Save</button>
+      <button className="btn sm" onClick={() => setOpen(false)}>Cancel</button>
+    </div>
+  );
+}
+
+/** Tonight's wind-down steps from Profile, ticked one tap at a time (saved on tonight's night). */
+function WindDown({ nightDone }: { nightDone: string[] }) {
+  const list = useStore((s) => s.profile.windDown);
+  const toggle = useStore((s) => s.toggleWindDown);
+  if (!list.length) return null;
+  const n = list.filter((l) => nightDone.includes(l)).length;
+  return (
+    <div className="stack" style={{ gap: 6 }}>
+      <div className="between small">
+        <span className="bold">Wind down · {n} of {list.length}</span>
+        <a href="#/profile?open=wind" className="mut" style={{ fontSize: 12 }}>Edit</a>
+      </div>
+      <div className="row" style={{ flexWrap: 'wrap', gap: 6 }} role="group" aria-label="Wind-down steps">
+        {list.map((l) => (
+          <button key={l} className="chip" aria-pressed={nightDone.includes(l)} onClick={() => toggle(l)} style={{ fontSize: 13, minHeight: 36 }}>
+            {nightDone.includes(l) && <Icon name="check" size={14} stroke={3} />} {l}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** Once a month, if sync is off: save a backup file, since the data only lives on this phone. */
+const RECAP_KEY = 'fitness-recap';
+
+/** Monday to Wednesday: last week in a few numbers, until dismissed (per device). */
+function LastWeek() {
+  const today = useToday();
+  const sessions = useStore((s) => s.sessions);
+  const nights = useStore((s) => s.nights);
+  const program = useStore((s) => s.program);
+  const settings = useStore((s) => s.settings);
+  const [gone, setGone] = useState(() => {
+    try {
+      return localStorage.getItem(RECAP_KEY);
+    } catch {
+      return null;
+    }
+  });
+  if ((dateOf(today).getDay() + 6) % 7 > 2) return null;
+  const r = lastWeekReport({ sessions, nights, program, settings }, today);
+  if (!r || gone === r.ws) return null;
+  const close = () => {
+    try {
+      localStorage.setItem(RECAP_KEY, r.ws);
+    } catch {
+      /* shows again next time; harmless */
+    }
+    setGone(r.ws);
+  };
+  const tiles: [string, string][] = [
+    ['Workouts', r.planned ? `${r.workouts} of ${r.planned}` : String(r.workouts)],
+    ['Training time', r.minutes ? hm(r.minutes) : '–'],
+    ['New bests', String(r.bests)],
+    ['Average sleep', r.avgMin != null ? hm(r.avgMin) : '–'],
+    ['Up on time', r.withWake ? `${r.onTime} of ${r.withWake}` : '–'],
+    ['Nights', `${r.nights} of 7`],
+  ];
+  return (
+    <section className="card stack" style={{ gap: 10 }} aria-label="Last week">
+      <div className="between">
+        <span className="stack" style={{ gap: 0 }}>
+          <h2 className="h2">Last week</h2>
+          <span className="small mut">{fmtDate(r.ws, { day: 'numeric', month: 'short' })} – {fmtDate(addDays(r.ws, 6), { day: 'numeric', month: 'short' })}</span>
         </span>
-        <span className="small mut">
-          {dur != null ? `${hm(dur)} sleep` : 'No bedtime logged'}
-          {g.wake ? ` · ${g.wake}-day wake streak` : ''}
+        <span className="row" style={{ gap: 6 }}>
+          <button className="btn sm icon" aria-label="Share last week" onClick={() => shareText(weekReportText(r))}>
+            <Icon name="out" size={16} />
+          </button>
+          <button className="btn sm icon" aria-label="Hide last week" onClick={close}>
+            <Icon name="close" size={16} />
+          </button>
         </span>
-      </span>
-    </a>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
+        {tiles.map(([label, v]) => (
+          <div key={label} className="stack" style={{ gap: 0, background: 'var(--s2)', borderRadius: 14, padding: '8px 8px' }}>
+            <span className="num bold" style={{ fontSize: 16, whiteSpace: 'nowrap' }}>{v}</span>
+            <span className="small mut">{label}</span>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function BackupNudge() {
+  const synced = useSync((s) => !!s.conn);
+  const sessions = useStore((s) => Object.keys(s.sessions).length);
+  const nights = useStore((s) => Object.keys(s.nights).length);
+  const { backupAt, backupSnooze, set } = useLayout();
+  if (!backupDue(Date.now(), { synced, sessions, nights, backupAt, snooze: backupSnooze })) return null;
+  return (
+    <section className="card tight stack" style={{ gap: 8, boxShadow: 'inset 0 0 0 1.5px var(--line2)' }} aria-label="Backup reminder">
+      <span className="bold">Back up your workouts and sleep</span>
+      <span className="small mut">Sync is off, so everything lives only on this phone. Save a backup file, or turn on sync in Profile.</span>
+      <div className="row">
+        <a className="btn sm primary" href="#/profile?open=backup">Back up</a>
+        <button className="btn sm" onClick={() => set({ backupSnooze: Date.now() + 7 * 86_400_000 })}>Not now</button>
+      </div>
+    </section>
   );
 }
 
@@ -187,22 +679,92 @@ function FuelStrip() {
       <span className="grow">
         <span className="small mut" style={{ display: 'block' }}>From Fuel Log</span>
         <span className="bold">{text}</span>
+        {t && (
+          <span className="stack" style={{ gap: 4, marginTop: 6 }}>
+            <Bar value={f?.kcal ?? 0} max={t.kcal} color="var(--fuel)" height={6} label="Energy today" />
+            <Bar value={f?.protein ?? 0} max={t.protein} color="var(--pro)" height={6} label="Protein today" />
+          </span>
+        )}
       </span>
       <Icon name="right" />
     </a>
   );
 }
 
+/** One goal for the week: pick it here, see how it's going. */
+function FocusCard() {
+  const today = useToday();
+  const ws = weekStart(today);
+  const d = useStore();
+  const [pick, setPickState] = useState(() => loadFocus(ws));
+  const set = (f: Focus | '' | null) => (saveFocus(ws, f), setPickState(f));
+  useEffect(() => setPickState(loadFocus(ws)), [ws]);
+  if (pick === '') return null;
+  if (pick == null)
+    return (
+      <section className="card stack" style={{ gap: 10 }} aria-label="This week's focus">
+        <div className="between">
+          <h2 className="h2">Pick a focus for this week</h2>
+          <button className="btn sm icon" aria-label="Not this week" onClick={() => (set(''), toast('No focus this week', { label: 'Undo', run: () => set(null) }))}>
+            <Icon name="close" size={16} />
+          </button>
+        </div>
+        <p className="small mut">One thing to get right this week. Today shows how it’s going.</p>
+        <div className="row" style={{ flexWrap: 'wrap' }}>
+          {FOCUSES.map((f) => (
+            <button key={f} className="chip" onClick={() => set(f)}>{focusLabel(f, d.settings)}</button>
+          ))}
+        </div>
+      </section>
+    );
+  const { have, need } = focusProgress(pick, d, ws);
+  const done = have >= need;
+  const daysLeft = 6 - daysBetween(ws, today);
+  return (
+    <section className="card stack" style={{ gap: 8 }} aria-label="This week's focus">
+      <div className="between" style={{ alignItems: 'baseline' }}>
+        <span className="label">This week’s focus</span>
+        <button className="small" style={{ background: 'none', border: 0, padding: 0, color: 'var(--acc)' }} onClick={() => set(null)}>change</button>
+      </div>
+      <div className="between" style={{ alignItems: 'baseline', gap: 8 }}>
+        <span className="bold">{focusLabel(pick, d.settings)}</span>
+        <span className="num" style={{ fontSize: 20, whiteSpace: 'nowrap' }}>{Math.min(have, need)}/{need}</span>
+      </div>
+      <Bar value={have} max={need} label={focusLabel(pick, d.settings)} />
+      <p className="small mut">
+        {done ? 'Done for this week. Nice work.' : need - have > daysLeft + 1 ? 'Out of reach this week; every one still counts.' : `${need - have} to go, ${daysLeft === 0 ? 'last day' : `${daysLeft + 1} days left`}.`}
+      </p>
+    </section>
+  );
+}
+
 function WeekStrip() {
   const today = useToday();
+  const g = useGame();
   const program = useStore((s) => s.program);
   const sessions = useStore((s) => s.sessions);
+  const [pick, setPick] = useState<string | null>(null);
+  const nights = useStore((s) => s.nights);
   const ws = weekStart(today);
   const done = new Set(Object.values(sessions).map((s) => s.date));
+  const sum = weekSummary({ sessions, program }, ws);
+  const nb = nextBadge(g.badges);
+  const detail = (k: string) => {
+    const xs = Object.values(sessions).filter((s) => s.date === k);
+    const day = fmtDate(k, { weekday: 'long' });
+    const m = nights[k] ? durationMin(nights[k]) : null;
+    const slept = m != null ? `. Slept ${hm(m)} the night before` : '';
+    if (xs.length) return `${day}: ${xs.map((s) => `${s.name}, ${Math.max(1, Math.round((s.end - s.start) / 60_000))} min, ${s.sets.length} set${s.sets.length === 1 ? '' : 's'}`).join(' · ')}${slept}.`;
+    const plan = plannedDay(program, k);
+    return `${day}: ${plan ? `${plan.name}${k < today ? ', missed' : ' planned'}` : 'rest day'}${slept}${slept ? '.' : ''}`;
+  };
   return (
     <section className="card stack" style={{ gap: 12 }} aria-label="This week">
       <div className="between">
-        <h2 className="h2">This week</h2>
+        <span className="row" style={{ gap: 8 }}>
+          <h2 className="h2">This week</h2>
+          {g.weeks >= 2 && <span className="pill">{g.weeks} weeks in a row</span>}
+        </span>
         <a href="#/train" className="small bold" style={{ textDecoration: 'none' }}>Plan</a>
       </div>
       <div className="week">
@@ -211,15 +773,27 @@ function WeekStrip() {
           const plan = program.week[i];
           const cls = done.has(k) ? 'done' : plan && k >= today ? 'plan' : '';
           return (
-            <div key={w}>
+            <button key={w} onClick={() => setPick(pick === k ? null : k)} aria-pressed={pick === k} style={{ background: 'none', border: 0, padding: 0, fontFamily: 'inherit' }}>
               <i className={`${cls}${k === today ? ' today' : ''}`} aria-label={`${w}: ${done.has(k) ? 'done' : plan ? 'planned' : 'rest'}`}>
                 {done.has(k) ? <Icon name="check" size={18} stroke={3} /> : dateOf(k).getDate()}
               </i>
               {w}
-            </div>
+            </button>
           );
         })}
       </div>
+      <p className="small mut">
+        {pick ? detail(pick) : `${sum.done} of ${sum.planned} workouts${sum.sets ? ` · ${sum.sets} set${sum.sets === 1 ? '' : 's'} · ${hm(sum.minutes)}` : ''}. Tap a day for more.`}
+      </p>
+      {nb && (
+        <a href="#/train?tab=badges" className="stack" style={{ gap: 4, textDecoration: 'none', color: 'var(--ink)' }} aria-label={`Next badge: ${nb.name}, ${nb.have} of ${nb.need}`}>
+          <span className="between small">
+            <span><span className="bold">Next badge: {nb.name}</span> <span className="mut">· {nb.how}</span></span>
+            <span className="bold acc">{nb.have}/{nb.need}</span>
+          </span>
+          <Bar value={nb.have} max={nb.need} />
+        </a>
+      )}
     </section>
   );
 }

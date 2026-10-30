@@ -8,6 +8,7 @@
 //    than set in Profile, at most 20 hard sets a week per movement pattern, and total weekly volume up by
 //    at most 20% at a time.
 
+import { addMonths, daysBetween } from './dates';
 import type { Exercise, Pattern, PlanDay, Profile, Program, Session, SetLog, Slot } from './types';
 import { EX, easier, harder, usable } from './exercises';
 
@@ -100,6 +101,19 @@ export function applySession(program: Program, session: Session, sessions: Recor
   return { program: lines.length ? { ...program, days } : program, lines };
 }
 
+/** Moves a session to another day, keeping its clock times (and set order) so sorting by start still works. */
+export function moveSession(s: Session, date: string): Session {
+  const n = daysBetween(s.date, date);
+  if (!n) return s;
+  // Calendar days, not 24 h steps, so a move across a daylight-saving change keeps the clock time.
+  const shift = (ms: number) => {
+    const d = new Date(ms);
+    d.setDate(d.getDate() + n);
+    return d.getTime();
+  };
+  return { ...s, date, start: shift(s.start), end: shift(s.end), sets: s.sets.map((x) => ({ ...x, at: shift(x.at) })) };
+}
+
 // ----- Records -----------------------------------------------------------------
 
 export interface Best {
@@ -116,6 +130,27 @@ export function records(sessions: Record<string, Session>): Record<string, Best>
   for (const s of Object.values(sessions).sort((a, b) => a.start - b.start))
     for (const x of s.sets) if (better(x, out[x.exerciseId])) out[x.exerciseId] = { reps: x.reps, loadKg: x.loadKg, date: s.date };
   return out;
+}
+
+export interface TrendPoint {
+  date: string;
+  /** Best set that session (heaviest, then most reps). */
+  top: { reps: number; loadKg: number };
+  /** Reps (or seconds) across all its sets. */
+  total: number;
+}
+
+/** The last `n` sessions of one exercise, oldest first, for a small chart. */
+export function trendOf(sessions: Record<string, Session>, exerciseId: string, n = 8): TrendPoint[] {
+  return Object.values(sessions)
+    .sort((a, b) => a.start - b.start)
+    .flatMap((s) => {
+      const xs = s.sets.filter((x) => x.exerciseId === exerciseId);
+      if (!xs.length) return [];
+      const top = xs.reduce<SetLog>((b, x) => (better(x, b) ? x : b), xs[0]);
+      return [{ date: s.date, top: { reps: top.reps, loadKg: top.loadKg }, total: xs.reduce((t, x) => t + x.reps, 0) }];
+    })
+    .slice(-n);
 }
 
 /** Sets in a session that beat everything before it. */
@@ -220,13 +255,18 @@ export function diffPrograms(a: Program, b: Program): string[] {
   const name = (id: string) => EX[id]?.name ?? id;
   for (const db of b.days) {
     const da = a.days.find((d) => d.id === db.id);
-    if (!da) continue;
+    if (!da) {
+      lines.push(`New workout: ${db.name}`);
+      continue;
+    }
+    if (da.name !== db.name) lines.push(`${da.name} renamed to ${db.name}`);
     const aIds = da.slots.map((s) => s.exerciseId);
     const bIds = db.slots.map((s) => s.exerciseId);
     const gone = aIds.filter((id) => !bIds.includes(id));
     const added = bIds.filter((id) => !aIds.includes(id));
     gone.forEach((id, i) => lines.push(added[i] ? `${db.name}: ${name(id)} → ${name(added[i])}` : `${db.name}: drop ${name(id)}`));
     added.slice(gone.length).forEach((id) => lines.push(`${db.name}: add ${name(id)}`));
+    if (!gone.length && !added.length && aIds.join() !== bIds.join()) lines.push(`${db.name}: new order, ${bIds.map(name).join(', ')}`);
     for (const sb of db.slots) {
       const sa = da.slots.find((s) => s.exerciseId === sb.exerciseId);
       if (!sa) continue;
@@ -234,10 +274,14 @@ export function diffPrograms(a: Program, b: Program): string[] {
       if (sa.sets !== sb.sets) bits.push(`${sa.sets} → ${sb.sets} sets`);
       if (sa.low !== sb.low || sa.high !== sb.high) bits.push(`${sa.low}–${sa.high} → ${sb.low}–${sb.high}`);
       if (sa.loadKg !== sb.loadKg) bits.push(`${sa.loadKg} → ${sb.loadKg} kg`);
+      if (sa.restS !== sb.restS) bits.push(`rest ${sa.restS} → ${sb.restS} s`);
       if (bits.length) lines.push(`${name(sb.exerciseId)}: ${bits.join(', ')}`);
     }
   }
-  if (a.deloadUntil !== b.deloadUntil && b.deloadUntil) lines.push(`Lighter week until ${b.deloadUntil}`);
+  for (const da of a.days) if (!b.days.some((d) => d.id === da.id)) lines.push(`Deleted workout: ${da.name}`);
+  if (a.week.join() !== b.week.join() && !lines.length) lines.push('Weekly schedule changed');
+  if (a.deloadUntil !== b.deloadUntil && b.deloadUntil)
+    lines.push(a.deloadUntil && b.deloadUntil < a.deloadUntil ? 'Lighter week ended early' : `Lighter week until ${b.deloadUntil}`);
   return lines;
 }
 
@@ -249,4 +293,72 @@ export function deloadDue(sessions: Record<string, Session>, program: Program, t
   let wk = addDays(weekStart(today), -7);
   for (let i = 0; i < 5; i++, wk = addDays(wk, -7)) if ((counts.get(wk) ?? 0) < 3) return false;
   return true;
+}
+
+/** Does a workout match a History search? Every word has to appear in its name, an exercise name or its note. */
+export function matchSession(s: Session, query: string): boolean {
+  const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+  if (!words.length) return true;
+  const text = [s.name, s.note ?? '', ...new Set(s.sets.map((x) => EX[x.exerciseId]?.name ?? x.exerciseId))].join(' ').toLowerCase();
+  return words.every((w) => text.includes(w));
+}
+
+/** Moves in a finished workout that got some planned sets to the top of the range, but not all: the near misses. */
+export function nearMisses(session: Session, slots: Slot[]): { exerciseId: string; hit: number; sets: number; high: number }[] {
+  return slots.flatMap((sl) => {
+    const work = session.sets.filter((x) => x.exerciseId === sl.exerciseId).slice(0, sl.sets);
+    const hit = work.filter((x) => x.reps >= sl.high).length;
+    return hit > 0 && hit < sl.sets ? [{ exerciseId: sl.exerciseId, hit, sets: sl.sets, high: sl.high }] : [];
+  });
+}
+
+/** What progressSlot needs to step this slot up: every planned set at the top of the range, not mostly all-out. */
+export function moveUpText(slot: Slot, ex: Pick<Exercise, 'unit'>): string {
+  return `To move up: ${slot.high}${ex.unit === 'secs' ? ' s' : ' reps'} on all ${slot.sets} set${slot.sets === 1 ? '' : 's'}, effort mostly Solid or easier.`;
+}
+
+/** A workout with its length set to `minutes` (1 to 300), keeping its start. */
+export function withLength(s: Session, minutes: number): Session {
+  return { ...s, end: s.start + Math.round(Math.min(300, Math.max(1, minutes))) * 60_000 };
+}
+
+/** A plain-text summary of a workout for sharing: one line per exercise with its sets. */
+export function sessionText(s: Session, when: string): string {
+  const by = new Map<string, SetLog[]>();
+  for (const x of s.sets) by.set(x.exerciseId, [...(by.get(x.exerciseId) ?? []), x]);
+  const mins = Math.max(1, Math.round((s.end - s.start) / 60_000));
+  const lines = [...by.entries()].map(([id, xs]) => {
+    const e = EX[id];
+    const kg = [...new Set(xs.map((x) => x.loadKg))].filter(Boolean);
+    return `${e?.name ?? id}: ${xs.map((x) => x.reps).join(', ')}${e?.unit === 'secs' ? ' s' : ''}${kg.length ? ` @ ${kg.join('/')} kg` : ''}`;
+  });
+  return [`${s.name} · ${when} · ${mins} min · ${s.sets.length} set${s.sets.length === 1 ? '' : 's'}`, ...lines, ...(s.note ? [`Note: ${s.note}`] : [])].join('\n');
+}
+
+/** This session against the last one of the same plan day: change in total reps (seconds count as reps) and sets. */
+export function vsLast(s: Session, all: Record<string, Session>): { date: string; reps: number; sets: number } | null {
+  const prev = Object.values(all)
+    .filter((x) => x.id !== s.id && x.dayId === s.dayId && x.start < s.start)
+    .sort((a, b) => b.start - a.start)[0];
+  if (!prev) return null;
+  const total = (x: Session) => x.sets.reduce((t, y) => t + y.reps, 0);
+  return { date: prev.date, reps: total(s) - total(prev), sets: s.sets.length - prev.sets.length };
+}
+
+/** A break long enough to ease back in after (sick, holidays): this many days with no workout. */
+export const COMEBACK_DAYS = 7;
+
+/** Days since the last workout before today, or null with none logged. */
+export function daysOff(sessions: Pick<Session, 'date'>[], today: string): number | null {
+  const last = sessions.reduce<string | null>((m, s) => (s.date < today && (!m || s.date > m) ? s.date : m), null);
+  return last ? daysBetween(last, today) : null;
+}
+
+/** Days trained in `month` (yyyy-MM-01) against the month before; this month only up to today's date in both,
+ * so a half-done month isn't compared with a whole one. */
+export function monthVs(sessions: Pick<Session, 'date'>[], month: string, today: string): { diff: number; partial: boolean } {
+  const partial = today.slice(0, 7) === month.slice(0, 7);
+  const upTo = partial ? today.slice(8) : '31';
+  const days = (m: string) => new Set(sessions.filter((s) => s.date.slice(0, 7) === m.slice(0, 7) && s.date.slice(8) <= upTo).map((s) => s.date)).size;
+  return { diff: days(month) - days(addMonths(month, -1)), partial };
 }

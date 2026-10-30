@@ -111,6 +111,10 @@ export interface Night {
   light?: number;
   awake?: number;
   score?: number;
+  /** Wind-down steps ticked that evening (labels from Profile.windDown). */
+  done?: string[];
+  /** Your own note on the night ("woke at 2 am"). */
+  note?: string;
   /** Last change, for syncing. */
   m: number;
 }
@@ -125,6 +129,21 @@ export interface Profile {
   /** Heaviest the backpack can be packed, kg. */
   packMaxKg: number;
   hasGrip: boolean;
+  /** Your own reminder per exercise id ("blue strap", "feet on the second step"), shown in the player. */
+  exNotes: Record<string, string>;
+  /** Your evening wind-down steps, ticked on Today before Going to sleep. */
+  windDown: string[];
+  /** Tape-measure log, oldest first, one per day (`body.ts`). */
+  measures: Measure[];
+}
+
+/** Circumferences in cm on one day; any can be missing. */
+export interface Measure {
+  date: string;
+  arm?: number;
+  chest?: number;
+  waist?: number;
+  thigh?: number;
 }
 
 export interface Settings {
@@ -134,7 +153,10 @@ export interface Settings {
   /** Lights-out target, "HH:mm". The sleep coach can move it a little each week. */
   bedtime: string;
   workoutTime: string;
-  theme: 'auto' | 'dark' | 'light';
+  /** Saturday and Sunday workout reminder, "HH:mm"; empty = same as `workoutTime`. */
+  weekendWorkoutTime: string;
+  /** 'black' is dark with a true-black background (OLED). */
+  theme: 'auto' | 'dark' | 'light' | 'black';
   /** Own AI keys; empty = use Fuel Log's. */
   aiKey: string;
   aiModel: string;

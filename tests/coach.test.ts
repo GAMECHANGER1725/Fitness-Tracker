@@ -64,5 +64,16 @@ describe('snapshot', () => {
     expect(s.profile.weightKg).toBe(59);
     expect(s.program.week[0]).toBe('Mon: Upper A');
     expect(JSON.stringify(s)).not.toContain('aiKey');
+    expect(s.profile.measurementsCm).toBeUndefined();
+    expect(s.feelingToday).toBeUndefined();
+    const g = globalThis as { localStorage?: unknown };
+    g.localStorage = { getItem: () => JSON.stringify({ date: k, v: 'sore' }) };
+    try {
+      expect(snapshot(data, fuel).feelingToday).toBe('sore');
+    } finally {
+      delete g.localStorage;
+    }
+    const m = snapshot({ ...data, profile: { ...data.profile, measures: [{ date: '2026-10-01', arm: 27.2 }, { date: '2026-10-29', arm: 28.5, waist: 70 }] } }, fuel);
+    expect(m.profile.measurementsCm).toEqual(['arm 28.5 (+1.3 in 28 days)', 'waist 70']);
   });
 });

@@ -3,11 +3,14 @@
 // Teens need 8–10 hours (the default goal is 8.5); the wake target is 6:00 every day.
 
 import type { Night } from './types';
-import { addDays, atOn, keyOf } from './dates';
+import { addDays, addMonths, atOn, dateOf, keyOf } from './dates';
 
 const MIN = 60_000;
 const HOUR = 60 * MIN;
 /** Up within this long after the target counts as on time. */
+/** Labels for Night.quality 1–5. */
+export const QUALITY = ['Awful', 'Poor', 'OK', 'Good', 'Great'];
+
 export const ON_TIME_MIN = 15;
 /** Minutes it usually takes to fall asleep, added before lights-out. */
 export const FALL_ASLEEP_MIN = 15;
@@ -21,7 +24,40 @@ export function durationMin(n: Pick<Night, 'bed' | 'wake' | 'awake'>): number | 
   return m > 0 && m < 20 * 60 ? m : null;
 }
 
-export const hm = (min: number) => `${Math.floor(min / 60)} h ${String(Math.round(min % 60)).padStart(2, '0')} m`;
+/** Quick notes offered in the night sheet. */
+export const NOTE_TAGS = ['Woke in the night', 'Late homework', 'Phone in bed', 'Noisy', 'Sore', 'Sick'];
+
+/** The quick note that goes with the most lost sleep over the last 28 nights: average minutes with it vs without.
+ * Needs 3 nights each side and at least 20 min less; null otherwise. */
+export function noteEffect(nights: Record<string, Night>, today: string, tags = NOTE_TAGS): { tag: string; less: number } | null {
+  const recent = Object.values(nights).filter((n) => n.date > addDays(today, -28) && n.date <= today && durationMin(n) != null);
+  const avg = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
+  let best: { tag: string; less: number } | null = null;
+  for (const tag of tags) {
+    const has = (n: Night) => !!n.note?.split(', ').includes(tag);
+    const w = recent.filter(has).map((n) => durationMin(n)!);
+    const wo = recent.filter((n) => !has(n)).map((n) => durationMin(n)!);
+    if (w.length < 3 || wo.length < 3) continue;
+    const less = Math.round(avg(wo) - avg(w));
+    if (less >= 20 && (!best || less > best.less)) best = { tag, less };
+  }
+  return best;
+}
+
+/** True when the last food on `day` came within 2.5 h of lights out that night (the night keyed the next morning). */
+export const lateMeal = (last: number | null | undefined, nights: Record<string, Night>, day: string) => {
+  const bed = nights[addDays(day, 1)]?.bed;
+  return last != null && bed != null && bed > last && bed - last < 2.5 * 3_600_000;
+};
+
+/** Minutes of sleep you'd get going to sleep at `now`, up to the wake target the next morning (or this morning, after midnight). */
+export const sleepIfNow = (now: number, wakeTarget: string) => Math.max(0, Math.round((atOn(nightKey(now), wakeTarget) - now) / MIN));
+
+/** "8 h 05 m", or "40 min" under an hour. */
+export const hm = (min: number) => {
+  const r = Math.round(min);
+  return r < 60 ? `${r} min` : `${Math.floor(r / 60)} h ${String(r % 60).padStart(2, '0')} m`;
+};
 
 /** Minutes after midnight of "HH:mm". */
 export const minsOf = (hhmm: string) => {
@@ -44,6 +80,20 @@ export const clockOf = (ms: number) => {
 };
 
 /** Lights-out time that gives `goalH` hours before the wake target. */
+/** Where a clock time sits on a night chart running from `fromHour` (default 8 pm) for 12 h: 0–720 minutes, clamped. */
+export function nightPos(ms: number, fromHour = 20): number {
+  const d = new Date(ms);
+  const m = (((d.getHours() - fromHour) * 60 + d.getMinutes()) % 1440 + 1440) % 1440;
+  return m > 1080 ? 0 : Math.min(720, m);
+}
+
+/** Minutes from `now` until lights out (negative once it's past), within half a day either side. */
+export function toBedtime(now: number, bedtime: string): number {
+  const d = new Date(now);
+  const diff = minsOf(bedtime) - (d.getHours() * 60 + d.getMinutes());
+  return ((((diff + 720) % 1440) + 1440) % 1440) - 720;
+}
+
 export const idealBedtime = (wakeTarget: string, goalH: number) => hhmm(minsOf(wakeTarget) - goalH * 60 - FALL_ASLEEP_MIN);
 
 /** Minutes late (positive) or early (negative) against the wake target, for a night's wake time. */
@@ -231,8 +281,81 @@ export function mergeImported(cur: Record<string, Night>, add: Night[]): { night
   for (const n of add) {
     const old = out[n.date];
     if (old?.source === 'manual') continue;
-    out[n.date] = { ...n, ...(old?.quality != null ? { quality: old.quality } : {}) };
+    out[n.date] = { ...n, ...(old?.quality != null ? { quality: old.quality } : {}), ...(old?.done ? { done: old.done } : {}), ...(old?.note ? { note: old.note } : {}) };
     count++;
   }
   return { nights: out, count };
+}
+
+/** Average quality rating (1–5) on nights with lights out within 15 min of the bedtime target vs later, over the last 28.
+ * Null until each side has 3 rated nights. */
+export function bedtimeEffect(nights: Record<string, Night>, bedtime: string, today: string): { onTime: number; late: number } | null {
+  const on: number[] = [];
+  const late: number[] = [];
+  for (const n of Object.values(nights)) {
+    if (n.date <= addDays(today, -28) || n.date > today || n.bed == null || n.quality == null) continue;
+    const target = atOn(bedtime >= '12:00' ? addDays(n.date, -1) : n.date, bedtime);
+    (n.bed <= target + 15 * MIN ? on : late).push(n.quality);
+  }
+  if (on.length < 3 || late.length < 3) return null;
+  const avg = (xs: number[]) => Math.round((xs.reduce((a, b) => a + b, 0) / xs.length) * 10) / 10;
+  return { onTime: avg(on), late: avg(late) };
+}
+
+/** Average minutes slept on nights with every wind-down step ticked vs nights with some missed, over the last 28.
+ * Null until each side has 3 nights. Nights with no ticks at all count as missed only once you've ever ticked. */
+export function windDownEffect(nights: Record<string, Night>, steps: string[], today: string): { full: number; partial: number } | null {
+  if (!steps.length) return null;
+  const recent = Object.values(nights).filter((n) => n.date > addDays(today, -28) && n.date <= today);
+  if (!recent.some((n) => n.done?.length)) return null;
+  const full: number[] = [];
+  const partial: number[] = [];
+  for (const n of recent) {
+    const m = durationMin(n);
+    if (m == null) continue;
+    (steps.every((s) => n.done?.includes(s)) ? full : partial).push(m);
+  }
+  if (full.length < 3 || partial.length < 3) return null;
+  const avg = (xs: number[]) => Math.round(xs.reduce((a, b) => a + b, 0) / xs.length);
+  return { full: avg(full), partial: avg(partial) };
+}
+
+/** The last time the clock read `hhmm` at or before `now`: today, or yesterday if that's still to come. */
+export function pastAt(hhmmStr: string, now: number): number {
+  const today = keyOf(new Date(now));
+  const t = atOn(today, hhmmStr);
+  return t <= now ? t : atOn(addDays(today, -1), hhmmStr);
+}
+
+const NIGHT_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+/** The evening of the week you sleep least, over the last 6 weeks: named by the evening you went to bed.
+ * Null until 4 evenings have 2+ nights each, or when the shortest is under 30 min below the average. */
+export function shortestEvening(nights: Record<string, Night>, today: string): { name: string; avg: number; under: number } | null {
+  const by: number[][] = Array.from({ length: 7 }, () => []);
+  for (const n of Object.values(nights)) {
+    const m = n.date > addDays(today, -42) && n.date <= today ? durationMin(n) : null;
+    if (m != null) by[dateOf(addDays(n.date, -1)).getDay()].push(m);
+  }
+  const avgs = by.map((xs) => (xs.length >= 2 ? xs.reduce((a, b) => a + b, 0) / xs.length : null));
+  const known = avgs.filter((x): x is number => x != null);
+  if (known.length < 4) return null;
+  const all = by.flat();
+  const mean = all.reduce((a, b) => a + b, 0) / all.length;
+  const i = avgs.reduce<number>((lo, x, j) => (x != null && (avgs[lo] == null || x < avgs[lo]!) ? j : lo), 0);
+  const under = Math.round(mean - avgs[i]!);
+  return under >= 30 ? { name: NIGHT_NAMES[i], avg: Math.round(avgs[i]!), under } : null;
+}
+
+/** Average sleep in `month` (yyyy-MM-01) and the change from the month before; this month only up to today's date in both. */
+export function monthSleep(nights: Record<string, Night>, month: string, today: string): { avg: number | null; diff: number | null; partial: boolean } {
+  const partial = today.slice(0, 7) === month.slice(0, 7);
+  const upTo = partial ? today.slice(8) : '31';
+  const avgOf = (m: string) => {
+    const xs = Object.values(nights).filter((n) => n.date.slice(0, 7) === m.slice(0, 7) && n.date.slice(8) <= upTo).map(durationMin).filter((x): x is number => x != null);
+    return xs.length ? Math.round(xs.reduce((a, b) => a + b, 0) / xs.length) : null;
+  };
+  const avg = avgOf(month);
+  const prev = avgOf(addMonths(month, -1));
+  return { avg, diff: avg != null && prev != null ? avg - prev : null, partial };
 }

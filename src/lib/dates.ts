@@ -50,3 +50,21 @@ export function hash(s: string): number {
   for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
   return h >>> 0;
 }
+
+/** The weeks (Monday first) covering the month of `k`, as date keys, with null outside the month. */
+export function monthGrid(k: string): (string | null)[][] {
+  const [y, m] = k.split('-').map(Number);
+  const first = `${y}-${pad(m)}-01`;
+  const days = new Date(y, m, 0).getDate();
+  const lead = (dateOf(first).getDay() + 6) % 7;
+  const cells: (string | null)[] = [...Array(lead).fill(null), ...Array.from({ length: days }, (_, i) => `${y}-${pad(m)}-${pad(i + 1)}`)];
+  while (cells.length % 7) cells.push(null);
+  return Array.from({ length: cells.length / 7 }, (_, w) => cells.slice(w * 7, w * 7 + 7));
+}
+
+/** The 1st of the month `n` months from `k`'s month. */
+export function addMonths(k: string, n: number): string {
+  const [y, m] = k.split('-').map(Number);
+  const d = new Date(y, m - 1 + n, 1, 12);
+  return keyOf(d);
+}

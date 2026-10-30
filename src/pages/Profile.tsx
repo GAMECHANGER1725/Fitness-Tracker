@@ -1,18 +1,46 @@
-import { useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useStore } from '../lib/store';
+import { calendarIcs } from '../lib/calendar';
 import { useAuth } from '../lib/auth';
 import { AI_MODELS, GEMINI_MODELS, PROVIDER_NAME, friendlyError, hasAi, testKey, type Provider } from '../lib/ai';
 import { fuelAi, FUEL_STORE } from '../lib/fuel';
 import { currentAi } from '../lib/coach';
-import { exportJson, importJson } from '../lib/backup';
-import { remindersOn, remindersSupported, setReminders } from '../lib/reminders';
+import { exportCsv, exportJson, importJson } from '../lib/backup';
+import { isPaused, reminderKinds, remindersOn, remindersSupported, setKind, setLead, setPaused, setReminders } from '../lib/reminders';
+import { usePlayer } from '../lib/player';
+import { ACCENTS, START_PAGES, TODAY_CARDS, lookDefaults, useLayout } from '../lib/layout';
+import { showWhatsNew } from '../components/WhatsNew';
+import { install, useInstall } from '../lib/install';
 import { TOKEN_URL, connect, disconnect, fuelLogToken, syncNow, useSync } from '../lib/sync';
-import { clock12, idealBedtime } from '../lib/sleep';
+import { NOTE_TAGS, clock12, idealBedtime } from '../lib/sleep';
 import { todayKey } from '../lib/dates';
-import { Head, Icon, Stepper, Switch, go, toast } from '../components/ui';
+import { Head, Icon, Stepper, Switch, go, scrollMotion, toast, useRoute } from '../components/ui';
 import { useWeight } from '../components/data';
 
+// Profile's cards in order, with the short names used by the jump chips at the top.
+const SECTIONS: [id: string, label: string, card: ReactNode][] = [
+  ['install', 'Install', <InstallCard />],
+  ['you', 'You', <Me />],
+  ['times', 'Times', <SleepGoals />],
+  ['coach', 'AI coach', <AiCard />],
+  ['sync', 'Sync', <SyncCard />],
+  ['wind', 'Wind-down & notes', <WindDownEdit />],
+  ['workout', 'Workout', <PlayerPrefs />],
+  ['reminders', 'Reminders', <><Reminders /><CalendarExport /></>],
+  ['look', 'Look', <Look />],
+  ['backup', 'Backup', <Backup />],
+];
+
 export default function ProfilePage() {
+  // Links like #/profile?open=backup land on that card (after App's scroll-to-top on page change).
+  const { params } = useRoute();
+  const open = params.get('open');
+  const installed = useInstall((s) => s.installed);
+  useEffect(() => {
+    if (!open) return;
+    const t = setTimeout(() => document.getElementById(`set-${open}`)?.scrollIntoView({ behavior: scrollMotion(), block: 'start' }), 80);
+    return () => clearTimeout(t);
+  }, [open]);
   return (
     <main>
       <Head
@@ -25,17 +53,27 @@ export default function ProfilePage() {
         }
       />
       <div className="page">
-        <Me />
-        <SleepGoals />
-        <AiCard />
-        <SyncCard />
-        <Reminders />
-        <Look />
-        <Backup />
+        <nav className="row" style={{ flexWrap: 'wrap', gap: 6 }} aria-label="Settings sections">
+          {SECTIONS.filter(([id]) => id !== 'install' || !installed).map(([id, label]) => (
+            <button key={id} className="chip" style={{ fontSize: 13, minHeight: 34 }} onClick={() => document.getElementById(`set-${id}`)?.scrollIntoView({ behavior: scrollMotion(), block: 'start' })}>
+              {label}
+            </button>
+          ))}
+        </nav>
+        {SECTIONS.map(([id, , card]) => (
+          <div key={id} id={`set-${id}`} style={{ scrollMarginTop: 12 }}>
+            {card}
+          </div>
+        ))}
         <button className="btn block ghost" onClick={() => useAuth.getState().lock()}>
           Log out
         </button>
-        <p className="small dim" style={{ textAlign: 'center' }}>Fitness Tracker · pairs with Fuel Log</p>
+        <p className="small dim" style={{ textAlign: 'center' }}>
+          Fitness Tracker · pairs with Fuel Log ·{' '}
+          <button className="small bold" style={{ background: 'none', border: 0, padding: 0, color: 'var(--acc)' }} onClick={showWhatsNew}>
+            What’s new
+          </button>
+        </p>
       </div>
     </main>
   );
@@ -97,6 +135,17 @@ function SleepGoals() {
           <span>Workout reminder</span>
           <input className="input" type="time" value={s.workoutTime} onChange={(e) => e.target.value && set({ workoutTime: e.target.value })} />
         </label>
+      </div>
+      <div className="field">
+        <span>Weekend workout reminder</span>
+        {s.weekendWorkoutTime ? (
+          <div className="row">
+            <input className="input" style={{ flex: 1 }} type="time" value={s.weekendWorkoutTime} aria-label="Weekend workout reminder" onChange={(e) => e.target.value && set({ weekendWorkoutTime: e.target.value })} />
+            <button className="btn sm" onClick={() => set({ weekendWorkoutTime: '' })}>Same as weekdays</button>
+          </div>
+        ) : (
+          <button className="btn sm" style={{ alignSelf: 'flex-start' }} onClick={() => set({ weekendWorkoutTime: '10:00' })}>Same as weekdays · set a different time</button>
+        )}
       </div>
       <label className="field">
         <span>Sleep goal (8–10 h is right at your age)</span>
@@ -258,8 +307,87 @@ function SyncCard() {
   );
 }
 
+function WindDownEdit() {
+  const list = useStore((s) => s.profile.windDown);
+  const setProfile = useStore((s) => s.setProfile);
+  const [text, setText] = useState(list.join('\n'));
+  const lines = [...new Set(text.split('\n').map((l) => l.trim().slice(0, 40)).filter(Boolean))].slice(0, 6);
+  const changed = lines.join('\n') !== list.join('\n');
+  return (
+    <section className="card stack" style={{ gap: 10 }}>
+      <h2 className="h2">Wind-down and night notes</h2>
+      <label className="field">
+        <span>One step per line, up to 6. You tick them on Today in the evening.</span>
+        <textarea className="input" rows={4} value={text} onChange={(e) => setText(e.target.value)} placeholder={'Screens off\nBag packed for tomorrow\nTeeth brushed'} />
+      </label>
+      <button className="btn sm primary" style={{ alignSelf: 'flex-start' }} disabled={!changed} onClick={() => (setProfile({ windDown: lines }), toast(lines.length ? 'Checklist saved' : 'Checklist turned off'))}>
+        Save checklist
+      </button>
+      <NoteTagsEdit />
+    </section>
+  );
+}
+
+function NoteTagsEdit() {
+  const { noteTags, setNoteTags } = useLayout();
+  const [text, setText] = useState(noteTags.join('\n'));
+  const lines = [...new Set(text.split('\n').map((l) => l.trim().replace(/,/g, '').slice(0, 30)).filter(Boolean))].slice(0, 8);
+  const changed = lines.join('\n') !== noteTags.join('\n');
+  return (
+    <>
+      <label className="field" style={{ marginTop: 6 }}>
+        <span>Quick notes for a night, one per line, up to 8. Tap them when you log a night; Insights shows which ones cost you sleep. This device only.</span>
+        <textarea className="input" rows={4} value={text} onChange={(e) => setText(e.target.value)} />
+      </label>
+      <div className="row">
+        <button className="btn sm primary" disabled={!changed} onClick={() => (setNoteTags(lines), toast('Quick notes saved'))}>Save quick notes</button>
+        <button className="btn sm" onClick={() => (setNoteTags(NOTE_TAGS), setText(NOTE_TAGS.join('\n')), toast('Quick notes reset'))}>Reset</button>
+      </div>
+    </>
+  );
+}
+
+function PlayerPrefs() {
+  const { beep, awake, auto, buzz, set } = usePlayer();
+  return (
+    <section className="card stack" style={{ gap: 10 }}>
+      <h2 className="h2">During a workout</h2>
+      <div className="row" style={{ justifyContent: 'space-between' }}>
+        <span className="grow">
+          <span className="bold" style={{ display: 'block' }}>Beep when rest ends</span>
+          <span className="small mut">A short two-tone sound</span>
+        </span>
+        <Switch on={beep} label="Beep when rest ends" onChange={(v) => set({ beep: v })} />
+      </div>
+      <div className="row" style={{ justifyContent: 'space-between' }}>
+        <span className="grow">
+          <span className="bold" style={{ display: 'block' }}>Vibrate</span>
+          <span className="small mut">When rest ends, at hold marks and for a new best</span>
+        </span>
+        <Switch on={buzz} label="Vibrate" onChange={(v) => set({ buzz: v })} />
+      </div>
+      <div className="row" style={{ justifyContent: 'space-between' }}>
+        <span className="grow">
+          <span className="bold" style={{ display: 'block' }}>Keep the screen on</span>
+          <span className="small mut">So the timer stays in view</span>
+        </span>
+        <Switch on={awake} label="Keep the screen on" onChange={(v) => set({ awake: v })} />
+      </div>
+      <div className="row" style={{ justifyContent: 'space-between' }}>
+        <span className="grow">
+          <span className="bold" style={{ display: 'block' }}>Go to the next exercise by itself</span>
+          <span className="small mut">When the rest after the last set ends</span>
+        </span>
+        <Switch on={auto} label="Go to the next exercise by itself" onChange={(v) => set({ auto: v })} />
+      </div>
+      <p className="small mut">These are for this device only.</p>
+    </section>
+  );
+}
+
 function Reminders() {
   const [on, setOn] = useState(remindersOn());
+  const [kinds, setKinds] = useState(reminderKinds);
   if (!remindersSupported()) return null;
   return (
     <section className="card stack" style={{ gap: 8 }}>
@@ -275,7 +403,66 @@ function Reminders() {
           }}
         />
       </div>
-      <p className="small mut">Wind down before lights out, your workout on planned days, and a nudge if “I’m up” isn’t logged by 15 min after your wake time. They work while the app is open or in the background.</p>
+      {on && (
+        <div className="stack" style={{ gap: 8 }}>
+          {([['bed', 'Wind down', 'Screens off before lights out'], ['workout', 'Workout', 'At your workout time on planned days'], ['wake', 'Up yet?', '15 min after your wake time if I’m up isn’t logged']] as const).map(([k, name, how]) => (
+            <div key={k} className="row" style={{ justifyContent: 'space-between' }}>
+              <span className="grow">
+                <span className="bold" style={{ display: 'block' }}>{name}</span>
+                <span className="small mut">{how}</span>
+              </span>
+              <Switch on={!kinds.off.includes(k)} label={`${name} reminder`} onChange={(v) => (setKind(k, v), setKinds(reminderKinds()))} />
+            </div>
+          ))}
+          {!kinds.off.includes('bed') && <span className="small mut">Wind-down nudge, before lights out:</span>}
+          {!kinds.off.includes('bed') && (
+            <div className="seg" role="group" aria-label="Wind-down reminder, minutes before lights out">
+              {[20, 40, 60].map((m) => (
+                <button key={m} aria-pressed={kinds.lead === m} onClick={() => (setLead(m), setKinds(reminderKinds()))}>
+                  {m} min
+                </button>
+              ))}
+            </div>
+          )}
+          {(() => {
+            const paused = isPaused(kinds.paused, todayKey());
+            return (
+              <div className="row" style={{ justifyContent: 'space-between', marginTop: 4 }}>
+                <span className="small mut">{paused ? 'Paused for today. They start again tomorrow.' : 'Sick, away or a day off?'}</span>
+                <button className="btn sm" onClick={() => (setPaused(paused ? '' : todayKey()), setKinds(reminderKinds()), toast(paused ? 'Reminders back on' : 'No reminders for the rest of today'))}>
+                  {paused ? 'Resume' : 'Pause for today'}
+                </button>
+              </div>
+            );
+          })()}
+        </div>
+      )}
+      <p className="small mut">They work while the app is open or in the background.</p>
+    </section>
+  );
+}
+
+/** Weekly workouts and lights-out as an .ics file, so the phone's calendar can remind you with the app closed. */
+function CalendarExport() {
+  const program = useStore((s) => s.program);
+  const settings = useStore((s) => s.settings);
+  return (
+    <section className="card stack" style={{ gap: 8 }}>
+      <h2 className="h2">Calendar</h2>
+      <p className="small mut">Add your workouts and lights out to your phone’s calendar, with alerts that work even when this app is closed. Download it again after changing your plan or times.</p>
+      <button
+        className="btn sm"
+        style={{ alignSelf: 'flex-start' }}
+        onClick={() => {
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(new Blob([calendarIcs(program, settings, todayKey(), reminderKinds().lead)], { type: 'text/calendar' }));
+          a.download = 'fitness-tracker.ics';
+          a.click();
+          URL.revokeObjectURL(a.href);
+        }}
+      >
+        <Icon name="out" size={16} /> Add to my calendar
+      </button>
     </section>
   );
 }
@@ -283,17 +470,84 @@ function Reminders() {
 function Look() {
   const theme = useStore((s) => s.settings.theme);
   const set = useStore((s) => s.setSettings);
+  const { hidden, toggle, accent, setAccent, large, setLarge, start, setStart } = useLayout();
   return (
     <section className="card stack" style={{ gap: 10 }}>
       <h2 className="h2">Look</h2>
       <div className="seg" role="group" aria-label="Theme">
-        {(['auto', 'dark', 'light'] as const).map((t) => (
+        {(['auto', 'dark', 'black', 'light'] as const).map((t) => (
           <button key={t} aria-pressed={theme === t} onClick={() => set({ theme: t })}>
-            {t === 'auto' ? 'Auto' : t === 'dark' ? 'Dark' : 'Light'}
+            {t === 'auto' ? 'Auto' : t === 'dark' ? 'Dark' : t === 'black' ? 'Black' : 'Light'}
           </button>
         ))}
       </div>
+      <span className="label" style={{ marginTop: 6 }}>Open on</span>
+      <div className="seg" role="group" aria-label="Open the app on">
+        {START_PAGES.map(([id, name]) => (
+          <button key={id} aria-pressed={start === id} onClick={() => setStart(id)}>{name}</button>
+        ))}
+      </div>
+      <span className="label" style={{ marginTop: 6 }}>Text size</span>
+      <div className="seg" role="group" aria-label="Text size">
+        <button aria-pressed={!large} onClick={() => setLarge(false)}>Normal</button>
+        <button aria-pressed={large} onClick={() => setLarge(true)} style={{ fontSize: 16 }}>Large</button>
+      </div>
+      <span className="label" style={{ marginTop: 6 }}>Training colour</span>
+      <div className="seg" role="group" aria-label="Training colour">
+        {ACCENTS.map(([id, name]) => (
+          <button key={id} aria-pressed={accent === id} onClick={() => setAccent(id)}>
+            {name}
+          </button>
+        ))}
+      </div>
+      <span className="label" style={{ marginTop: 6 }}>Show on Today</span>
+      {TODAY_CARDS.map(([id, name]) => (
+        <div key={id} className="row" style={{ justifyContent: 'space-between' }}>
+          <span className="bold">{name}</span>
+          <Switch on={!hidden.includes(id)} label={`Show ${name} on Today`} onChange={() => toggle(id)} />
+        </div>
+      ))}
+      <p className="small mut">Readiness and the sleep cards always show. These are for this device only.</p>
+      <button
+        className="btn sm"
+        style={{ alignSelf: 'flex-start' }}
+        onClick={() => {
+          const { hidden, accent, large, noteTags, start } = useLayout.getState();
+          useLayout.setState(lookDefaults());
+          toast('Look and layout reset', { label: 'Undo', run: () => useLayout.setState({ hidden, accent, large, noteTags, start }) });
+        }}
+      >
+        Reset look and layout
+      </button>
     </section>
+  );
+}
+
+function InstallCard() {
+  const { prompt, installed } = useInstall();
+  if (installed) return null;
+  return (
+    <section className="card stack" style={{ gap: 8 }}>
+      <h2 className="h2">Install the app</h2>
+      <p className="small">Installed, it opens full screen from your home screen, works offline, and reminders and your saved data hold up better.</p>
+      {prompt ? (
+        <button className="btn primary" style={{ alignSelf: 'flex-start' }} onClick={() => install().then((ok) => ok && toast('Installed. Open it from your home screen.'))}>
+          Install
+        </button>
+      ) : (
+        <p className="small mut">In your browser’s menu (⋮ or the share button), choose Add to Home screen or Install app.</p>
+      )}
+    </section>
+  );
+}
+
+function BackupAge() {
+  const at = useLayout((l) => l.backupAt);
+  const days = at == null ? null : Math.floor((Date.now() - at) / 86_400_000);
+  return (
+    <p className="small mut">
+      Last backup file from this phone: {days == null ? 'never' : days === 0 ? 'today' : days === 1 ? 'yesterday' : `${days} days ago`}. With sync off, your data is only on this phone, so save one now and then.
+    </p>
   );
 }
 
@@ -303,6 +557,7 @@ function Backup() {
   return (
     <section className="card stack" style={{ gap: 10 }}>
       <h2 className="h2">Backup</h2>
+      <BackupAge />
       <div className="grid2">
         <button
           className="btn"
@@ -313,6 +568,7 @@ function Backup() {
             a.download = `fitness-tracker-${todayKey()}.json`;
             a.click();
             URL.revokeObjectURL(a.href);
+            useLayout.getState().set({ backupAt: Date.now(), backupSnooze: null });
           }}
         >
           Export
@@ -339,6 +595,24 @@ function Backup() {
             }}
           />
         </label>
+      </div>
+      <span className="label">For a spreadsheet (CSV)</span>
+      <div className="grid3">
+        {(['workouts', 'sleep', 'body'] as const).map((name) => (
+          <button
+            key={name}
+            className="btn sm"
+            onClick={() => {
+              const a = document.createElement('a');
+              a.href = URL.createObjectURL(new Blob([exportCsv(useStore.getState())[name]], { type: 'text/csv' }));
+              a.download = `fitness-${name}-${todayKey()}.csv`;
+              a.click();
+              URL.revokeObjectURL(a.href);
+            }}
+          >
+            <Icon name="out" size={16} /> {name === 'workouts' ? 'Workouts' : name === 'sleep' ? 'Sleep' : 'Body'}
+          </button>
+        ))}
       </div>
       <button className="btn danger" onClick={() => confirm('Delete all workouts, nights and plan changes? This syncs to your other devices.') && (reset(), toast('Reset'))}>
         Reset everything

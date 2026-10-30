@@ -2,7 +2,7 @@ import { useStore } from '../lib/store';
 import { refreshFuel, useFuel, useSync } from '../lib/sync';
 import { FUEL_URL } from '../lib/fuel';
 import { addDays, daysBetween, fmtDate } from '../lib/dates';
-import { clockOf } from '../lib/sleep';
+import { clock12, clockOf, lateMeal, minsOf } from '../lib/sleep';
 import { Bar, Head, Icon, toast, useToday } from '../components/ui';
 import { useWeight } from '../components/data';
 
@@ -11,6 +11,10 @@ export default function Fuel() {
   const { data, local, gist, at, error } = useFuel();
   const conn = useSync((s) => s.conn);
   const sessions = useStore((s) => s.sessions);
+  const nights = useStore((s) => s.nights);
+  const bedtime = useStore((s) => s.settings.bedtime);
+  const mb = (minsOf(bedtime) - 150 + 1440) % 1440;
+  const mealBy = `${String(Math.floor(mb / 60)).padStart(2, '0')}:${String(mb % 60).padStart(2, '0')}`;
   const weight = useWeight();
   const t = data?.targets;
   const f = data?.days[today];
@@ -95,6 +99,9 @@ export default function Fuel() {
               <p className="bold">{f?.last ? clockOf(f.last) : '–'}</p>
             </div>
           </div>
+          <p className="small mut">
+            Last big meal by {clock12(mealBy)}, 2.5 h before lights out at {clock12(bedtime)}. A small snack later is fine.
+          </p>
         </section>
 
         <div className="grid2">
@@ -113,6 +120,28 @@ export default function Fuel() {
             </span>
           </section>
         </div>
+
+        {w.length >= 3 && (() => {
+          const pts = w.slice(-12);
+          const lo = Math.min(...pts.map((x) => x.kg)) - 0.3;
+          const hi = Math.max(...pts.map((x) => x.kg)) + 0.3;
+          const xy = pts.map((x, i) => [4 + (i / (pts.length - 1)) * 292, 70 - ((x.kg - lo) / (hi - lo)) * 60] as const);
+          return (
+            <section className="card stack" style={{ gap: 8 }} aria-label="Weight trend">
+              <div className="between">
+                <h2 className="h2">Weight</h2>
+                <span className="small mut">last {pts.length} weigh-ins</span>
+              </div>
+              <svg viewBox="0 0 300 80" width="100%" height="80" preserveAspectRatio="none" role="img" aria-label={`Weight from ${pts[0].kg} to ${pts.at(-1)!.kg} kg`}>
+                <polyline points={xy.map(([x, y]) => `${x},${y}`).join(' ')} fill="none" stroke="var(--fuel)" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+              </svg>
+              <div className="between small mut">
+                <span>{fmtDate(pts[0].date, { day: 'numeric', month: 'short' })} · {pts[0].kg.toFixed(1)} kg</span>
+                <span>{fmtDate(pts.at(-1)!.date, { day: 'numeric', month: 'short' })} · <span className="bold" style={{ color: 'var(--ink)' }}>{pts.at(-1)!.kg.toFixed(1)} kg</span></span>
+              </div>
+            </section>
+          );
+        })()}
 
         {tk != null && rk != null && (
           <section className="card stack" style={{ gap: 12 }} aria-label="Training days vs rest days">
@@ -140,7 +169,10 @@ export default function Fuel() {
               <div className="item" key={k}>
                 <span className="grow">
                   <span className="bold" style={{ display: 'block' }}>{fmtDate(k, { weekday: 'short', day: 'numeric', month: 'short' })}{trained.has(k) ? ' · trained' : ''}</span>
-                  <span className="small mut">last food {d!.last ? clockOf(d!.last) : '–'}</span>
+                  <span className="small mut">
+                    last food {d!.last ? clockOf(d!.last) : '–'}
+                    {lateMeal(d!.last, nights, k) && <span style={{ color: 'var(--warn)' }}> · late, close to bed</span>}
+                  </span>
                 </span>
                 <span className="stack" style={{ gap: 2, alignItems: 'flex-end' }}>
                   <span className="bold" style={{ color: t && d!.kcal >= t.kcal * 0.95 ? 'var(--acc)' : undefined }}>{d!.kcal.toLocaleString('en-AU')} kcal</span>

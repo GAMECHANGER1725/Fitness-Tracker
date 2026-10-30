@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useStore } from '../lib/store';
-import { addDays, atOn, fmtDate, hhmmOf } from '../lib/dates';
-import { clock12, clockOf, durationMin, hm, idealBedtime, minsOf, nightKey, onTime, samsungNights, sleepStats, wakeOffset } from '../lib/sleep';
+import { addDays, addMonths, atOn, fmtDate, hhmmOf, isKey, monthGrid } from '../lib/dates';
+import { QUALITY, clock12, clockOf, nightPos, durationMin, hm, idealBedtime, minsOf, windDownEffect, bedtimeEffect, noteEffect, shortestEvening, monthSleep, nightKey, onTime, samsungNights, sleepStats, wakeOffset } from '../lib/sleep';
 import { currentAi, tonightPlan, useCoach } from '../lib/coach';
 import { friendlyError, hasAi } from '../lib/ai';
-import { Head, Icon, ProfileLink, Sheet, toast, useGame, useToday } from '../components/ui';
+import { Head, Icon, ProfileLink, Sheet, Stepper, toast, useGame, useRoute, useToday } from '../components/ui';
 import { useFuelData } from '../components/data';
+import { reminderKinds } from '../lib/reminders';
+import { useLayout } from '../lib/layout';
 import type { Night } from '../lib/types';
 
-const QUALITY = ['Awful', 'Poor', 'OK', 'Good', 'Great'];
 
 export default function Sleep() {
   const today = useToday();
@@ -16,6 +17,13 @@ export default function Sleep() {
   const settings = useStore((s) => s.settings);
   const { goingToSleep, wokeUp, setNight } = useStore.getState();
   const [edit, setEdit] = useState<string | null>(null);
+  // #/sleep?night=<date> (from Today) opens that night's sheet; the link is then dropped so Back doesn't reopen it.
+  const night = useRoute().params.get('night');
+  useEffect(() => {
+    if (!night || !isKey(night)) return;
+    setEdit(night);
+    history.replaceState(null, '', '#/sleep');
+  }, [night]);
   const last = nights[today];
   const dur = last ? durationMin(last) : null;
   const hour = new Date().getHours();
@@ -73,7 +81,7 @@ export default function Sleep() {
         </section>
         )}
 
-        <div className="row">
+        <div className="row" style={{ flexWrap: 'wrap' }}>
           {pendingBed ? (
             <>
               <button className="btn sleep" style={{ flex: 1 }} onClick={() => (wokeUp(), toast('Morning. Logged.'))}>
@@ -101,6 +109,7 @@ export default function Sleep() {
 
         <Tonight />
         <Week onPick={setEdit} />
+        <SleepMonth onPick={setEdit} />
         <Insights />
         <SamsungImport />
         <Recent onPick={setEdit} />
@@ -133,6 +142,7 @@ function Tonight() {
   const today = useToday();
   const t = useCoach((c) => c.tonight);
   const bedtime = useStore((s) => s.settings.bedtime);
+  const wake = useStore((s) => s.settings.wakeTarget);
   const [busy, setBusy] = useState(false);
   const ai = hasAi(currentAi());
   const hour = new Date().getHours();
@@ -150,7 +160,10 @@ function Tonight() {
     return (
       <section className="card stack" style={{ gap: 6 }}>
         <span className="row label"><Icon name="spark" size={16} /> Tonight</span>
-        <p>Screens off by {clock12(minsToHhmm(minsOf(bedtime) - 40))}, lights out at {clock12(bedtime)}.</p>
+        <p>Screens off by {clock12(minsToHhmm(minsOf(bedtime) - reminderKinds().lead))}, lights out at {clock12(bedtime)}.</p>
+        <p className="small">
+          Last big meal by {clock12(minsToHhmm(minsOf(bedtime) - 150))}, so it doesn’t keep you up. In bed on time, you get {hm((minsOf(wake) - minsOf(bedtime) + 1440) % 1440)} before {clock12(wake)}.
+        </p>
         <p className="small mut">Add an AI key in Fuel Log for a plan that looks at your food and training.</p>
       </section>
     );
@@ -190,45 +203,164 @@ const minsToHhmm = (m: number) => {
   return `${String(Math.floor(x / 60)).padStart(2, '0')}:${String(x % 60).padStart(2, '0')}`;
 };
 
+const SPANS = [7, 14, 30] as const;
+const SPAN_KEY = 'fitness-sleep-span';
+const readSpan = (): number => {
+  try {
+    const v = Number(localStorage.getItem(SPAN_KEY));
+    return (SPANS as readonly number[]).includes(v) ? v : 7;
+  } catch {
+    return 7;
+  }
+};
+
 function Week({ onPick }: { onPick: (d: string) => void }) {
   const today = useToday();
   const nights = useStore((s) => s.nights);
   const goal = useStore((s) => s.settings.sleepGoalH);
   const wake = useStore((s) => s.settings.wakeTarget);
-  const days = Array.from({ length: 7 }, (_, i) => addDays(today, i - 6));
-  const st = sleepStats(nights, today, 7, goal, wake);
+  const [span, setSpanState] = useState(readSpan);
+  const [times, setTimes] = useState(false);
+  const bedtime = useStore((s) => s.settings.bedtime);
+  const setSpan = (n: number) => {
+    setSpanState(n);
+    try {
+      localStorage.setItem(SPAN_KEY, String(n));
+    } catch {
+      /* private mode: just this visit */
+    }
+  };
+  const days = Array.from({ length: span }, (_, i) => addDays(today, i - span + 1));
+  const st = sleepStats(nights, today, span, goal, wake);
   const max = 11 * 60;
+  const cols = { gridTemplateColumns: `repeat(${span}, minmax(0, 1fr))`, gap: span > 14 ? 2 : span > 7 ? 4 : 8 };
   return (
-    <section className="card stack" style={{ gap: 12 }} aria-label="Last 7 nights">
+    <section className="card stack" style={{ gap: 12 }} aria-label={`Last ${span} nights`}>
       <div className="between">
-        <h2 className="h2">Last 7 nights</h2>
-        <span className="small mut">{st.avgMin != null ? `avg ${hm(st.avgMin)}` : 'no nights yet'}</span>
+        <h2 className="h2">Last {span} nights</h2>
+        <span className="small mut" style={{ textAlign: 'right' }}>
+          {st.avgMin != null ? `avg ${hm(st.avgMin)} · ` : ''}goal {goal} h ·{' '}
+          <a href="#/profile?open=times" style={{ color: 'var(--sleep)' }}>change</a>
+        </span>
       </div>
-      <div className="bars">
-        <div className="goal" style={{ bottom: `${((goal * 60) / max) * 100}%` }} aria-hidden="true" />
-        {days.map((d) => {
-          const m = nights[d] ? durationMin(nights[d]) : null;
+      <div className="seg" role="group" aria-label="Nights to show">
+        {SPANS.map((n) => (
+          <button key={n} aria-pressed={span === n} onClick={() => setSpan(n)}>
+            {n} nights
+          </button>
+        ))}
+      </div>
+      <div className="seg" role="group" aria-label="Chart">
+        <button aria-pressed={!times} onClick={() => setTimes(false)}>Hours slept</button>
+        <button aria-pressed={times} onClick={() => setTimes(true)}>Bed and wake times</button>
+      </div>
+      {times ? (
+        <div className="bars" style={{ ...cols, height: 180 }} aria-label="Bed and wake times, 8 pm at the top to 8 am at the bottom">
+          {([[bedtime, 'lights out'], [wake, 'wake']] as const).map(([t, l]) => (
+            <div key={l} className="goal" style={{ top: `${(nightPos(atOn(today, t)) / 720) * 100}%`, bottom: 'auto' }} aria-hidden="true" />
+          ))}
+          {days.map((d) => {
+            const n = nights[d];
+            const top = n?.bed ? nightPos(n.bed) : null;
+            const end = n?.wake ? nightPos(n.wake) : null;
+            return (
+              <button key={d} onClick={() => onPick(d)} aria-label={`${fmtDate(d)}: ${n?.bed ? clockOf(n.bed) : '?'} to ${n?.wake ? clockOf(n.wake) : '?'}`} style={{ background: 'none', border: 0, padding: 0, height: '100%', position: 'relative', minWidth: 0 }}>
+                {top != null && end != null && end > top && <i style={{ position: 'absolute', left: 0, right: 0, top: `${(top / 720) * 100}%`, height: `${((end - top) / 720) * 100}%`, borderRadius: span > 14 ? 3 : undefined }} />}
+              </button>
+            );
+          })}
+        </div>
+      ) : (
+      <div className="bars" style={cols}>
+          <div className="goal" style={{ bottom: `${((goal * 60) / max) * 100}%` }} aria-hidden="true" />
+          {days.map((d) => {
+            const m = nights[d] ? durationMin(nights[d]) : null;
+            return (
+              <button key={d} onClick={() => onPick(d)} aria-label={`${fmtDate(d)}: ${m != null ? hm(m) : 'no data'}`} style={{ background: 'none', border: 0, padding: 0, height: '100%', display: 'flex', alignItems: 'flex-end', minWidth: 0 }}>
+                <i className={m != null && m < goal * 60 - 30 ? 'short' : ''} style={{ width: '100%', borderRadius: span > 14 ? 3 : undefined, height: `${m != null ? Math.min(100, (m / max) * 100) : 3}%` }} />
+              </button>
+            );
+          })}
+        </div>
+      )}
+      {span <= 14 ? (
+        <div className="week" style={cols}>
+          {days.map((d) => {
+            const n = nights[d];
+            return (
+              <div key={d} style={{ color: n && onTime(n, wake) ? 'var(--acc)' : undefined }}>
+                {fmtDate(d, { weekday: 'narrow' })}
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="between small mut">
+          <span>{fmtDate(days[0])}</span>
+          <span>Today</span>
+        </div>
+      )}
+      <p className="small mut">
+        {times ? `8 pm at the top, 8 am at the bottom. Dashed lines: lights out ${clock12(bedtime)} and up at ${clock12(wake)}.` : `Dashed line: your ${goal} h goal.`}{span <= 14 ? ' Green days: up on time.' : ` Up on time ${st.onTime} of ${st.withWake} mornings.`}
+      </p>
+    </section>
+  );
+}
+
+/** A month of nights: filled when you slept your goal (within 30 min), pale when short; tap any day to add or edit it. */
+function SleepMonth({ onPick }: { onPick: (d: string) => void }) {
+  const today = useToday();
+  const nights = useStore((s) => s.nights);
+  const goal = useStore((s) => s.settings.sleepGoalH);
+  const [month, setMonth] = useState(today.slice(0, 8) + '01');
+  const grid = monthGrid(month);
+  const days = grid.flat().filter((k): k is string => !!k && k <= today);
+  const mins = (k: string) => (nights[k] ? durationMin(nights[k]) : null);
+  const met = days.filter((k) => (mins(k) ?? 0) >= goal * 60 - 30).length;
+  const logged = days.filter((k) => mins(k) != null).length;
+  return (
+    <section className="card stack" style={{ gap: 10 }} aria-label="Sleep month">
+      <div className="between" style={{ alignItems: 'center' }}>
+        <button className="btn sm icon" aria-label="Previous month" onClick={() => setMonth(addMonths(month, -1))}>
+          <Icon name="left" size={18} />
+        </button>
+        <span className="stack" style={{ alignItems: 'center', gap: 0 }}>
+          <span className="bold">{fmtDate(month, { month: 'long', year: 'numeric' })}</span>
+          <span className="small mut">{logged ? `${met} of ${logged} nights on goal` : 'no nights logged'}</span>
+          {(() => {
+            const v = monthSleep(nights, month, today);
+            if (v.avg == null) return null;
+            const prev = fmtDate(addMonths(month, -1), { month: 'short' });
+            const vs = v.diff == null ? '' : Math.abs(v.diff) < 5 ? ` · same as ${v.partial ? `this point in ${prev}` : prev}` : ` · ${hm(Math.abs(v.diff))} ${v.diff > 0 ? 'more' : 'less'} than ${v.partial ? `this point in ${prev}` : prev}`;
+            return <span className="small mut" style={{ textAlign: 'center' }}>Average {hm(v.avg)}{vs}</span>;
+          })()}
+        </span>
+        <button className="btn sm icon" aria-label="Next month" disabled={month >= today.slice(0, 8) + '01'} onClick={() => setMonth(addMonths(month, 1))}>
+          <Icon name="right" size={18} />
+        </button>
+      </div>
+      <div className="week" style={{ gap: 4 }}>
+        {WEEK_LETTERS.map((w, i) => <div key={i}>{w}</div>)}
+        {grid.flat().map((k, i) => {
+          if (!k) return <div key={`x${i}`} />;
+          const m = mins(k);
+          const ok = m != null && m >= goal * 60 - 30;
           return (
-            <button key={d} onClick={() => onPick(d)} aria-label={`${fmtDate(d)}: ${m != null ? hm(m) : 'no data'}`} style={{ background: 'none', border: 0, padding: 0, height: '100%', display: 'flex', alignItems: 'flex-end' }}>
-              <i className={m != null && m < goal * 60 - 30 ? 'short' : ''} style={{ width: '100%', height: `${m != null ? Math.min(100, (m / max) * 100) : 3}%` }} />
+            <button key={k} disabled={k > today} onClick={() => onPick(k)} aria-label={`${fmtDate(k)}: ${m != null ? hm(m) : 'no night logged'}${nights[k]?.note ? `, note: ${nights[k].note}` : ''}`} style={{ background: 'none', border: 0, padding: 0 }}>
+              <i className={k === today ? 'today' : ''} style={{ fontSize: 12, borderRadius: 10, position: 'relative', background: ok ? 'var(--sleep)' : m != null ? 'var(--sleep-soft)' : undefined, color: ok ? 'var(--on-sleep)' : undefined }}>
+                {Number(k.slice(8))}
+                {nights[k]?.note && <span aria-hidden="true" style={{ position: 'absolute', top: 3, right: 3, width: 5, height: 5, borderRadius: 9, background: 'var(--warn)' }} />}
+              </i>
             </button>
           );
         })}
       </div>
-      <div className="week" style={{ gap: 8 }}>
-        {days.map((d) => {
-          const n = nights[d];
-          return (
-            <div key={d} style={{ color: n && onTime(n, wake) ? 'var(--acc)' : undefined }}>
-              {fmtDate(d, { weekday: 'narrow' })}
-            </div>
-          );
-        })}
-      </div>
-      <p className="small mut">Dashed line: your {goal} h goal. Green days: up on time.</p>
+      <p className="small mut">Filled: slept your {goal} h goal (or within 30 min). Pale: shorter. A dot means you wrote a note. Tap a day to add or edit it.</p>
     </section>
   );
 }
+
+const WEEK_LETTERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
 function Insights() {
   const today = useToday();
@@ -237,6 +369,8 @@ function Insights() {
   const { sleepGoalH: goal, wakeTarget: wake, bedtime } = useStore((s) => s.settings);
   const fuel = useFuelData();
   const g = useGame();
+  const steps = useStore((s) => s.profile.windDown);
+  const noteTags = useLayout((l) => l.noteTags);
   const lines = useMemo(() => {
     const st = sleepStats(nights, today, 14, goal, wake);
     const out: string[] = [];
@@ -264,10 +398,18 @@ function Insights() {
       const d = Math.round(after.reduce((a, b) => a + b, 0) / after.length - rest.reduce((a, b) => a + b, 0) / rest.length);
       if (Math.abs(d) >= 20) out.push(d > 0 ? `You sleep ${d} min longer after a workout. Your body is using it.` : `You sleep ${-d} min less after workouts. Train earlier or wind down longer on those days.`);
     }
+    const wd = windDownEffect(nights, steps, today);
+    if (wd && Math.abs(wd.full - wd.partial) >= 15) out.push(wd.full > wd.partial ? `On nights you finish your wind-down you sleep ${wd.full - wd.partial} min longer. Worth keeping up.` : `Your wind-down doesn’t seem to add sleep yet (${hm(wd.full)} vs ${hm(wd.partial)}). Try swapping a step.`);
+    const ne = noteEffect(nights, today, noteTags);
+    if (ne) out.push(`On nights you note “${ne.tag.toLowerCase()}”, you sleep ${hm(ne.less)} less.`);
+    const se = shortestEvening(nights, today);
+    if (se) out.push(`${se.name} nights are your shortest: ${hm(se.avg)}, ${hm(se.under)} under your usual. Plan an earlier start to that evening.`);
+    const be = bedtimeEffect(nights, bedtime, today);
+    if (be && be.onTime - be.late >= 0.5) out.push(`You rate your sleep ${be.onTime} out of 5 when lights are out by ${clock12(bedtime)}, and ${be.late} when it’s later.`);
     const ideal = idealBedtime(wake, goal);
     if (ideal !== bedtime) out.push(`For ${goal} h before ${clock12(wake)}, lights out at ${clock12(ideal)}. Your coach set ${clock12(bedtime)}.`);
     return out;
-  }, [nights, sessions, fuel, today, goal, wake, bedtime, g.wake]);
+  }, [nights, sessions, fuel, today, goal, wake, bedtime, g.wake, steps, noteTags]);
   return (
     <section className="card stack" style={{ gap: 10 }} aria-label="Insights">
       <h2 className="h2">Insights</h2>
@@ -328,8 +470,12 @@ function SamsungImport() {
 
 function Recent({ onPick }: { onPick: (d: string) => void }) {
   const nights = useStore((s) => s.nights);
+  const steps = useStore((s) => s.profile.windDown);
   const wake = useStore((s) => s.settings.wakeTarget);
-  const list = Object.values(nights).sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 14);
+  const goal = useStore((s) => s.settings.sleepGoalH);
+  const [count, setCount] = useState(14);
+  const all = Object.values(nights).sort((a, b) => (a.date < b.date ? 1 : -1));
+  const list = all.slice(0, count);
   if (!list.length) return null;
   return (
     <section className="card" style={{ padding: '14px 18px 6px' }} aria-label="Recent nights">
@@ -345,15 +491,23 @@ function Recent({ onPick }: { onPick: (d: string) => void }) {
                 {n.bed ? clockOf(n.bed) : '?'} → {n.wake ? clockOf(n.wake) : '?'}
                 {n.quality ? ` · ${QUALITY[n.quality - 1]}` : ''}
                 {n.source === 'samsung' ? ' · watch' : ''}
+                {n.awake ? ` · ${hm(n.awake)} awake` : ''}
+                {n.done?.length && steps.length ? ` · wind-down ${steps.filter((x) => n.done!.includes(x)).length}/${steps.length}` : ''}
               </span>
+              {n.note && <span className="small mut" style={{ display: 'block', fontStyle: 'italic' }}>“{n.note}”</span>}
             </span>
             <span className="stack" style={{ gap: 2, alignItems: 'flex-end' }}>
-              <span className="bold">{m != null ? hm(m) : '–'}</span>
+              <span className="bold" style={m != null && m < goal * 60 - 30 ? { color: 'var(--warn)' } : undefined}>{m != null ? hm(m) : '–'}</span>
               {off != null && <span className="small" style={{ color: off <= 15 ? 'var(--acc)' : 'var(--warn)' }}>{off <= 15 ? 'on time' : `+${off} min`}</span>}
             </span>
           </button>
         );
       })}
+      {all.length > count && (
+        <button className="btn sm ghost" style={{ width: '100%', margin: '6px 0 8px' }} onClick={() => setCount(count + 30)}>
+          Show older nights ({all.length - count})
+        </button>
+      )}
     </section>
   );
 }
@@ -362,16 +516,25 @@ function NightSheet({ date, onClose }: { date: string; onClose: () => void }) {
   const n = useStore((s) => s.nights[date]);
   const { setNight, deleteNight } = useStore.getState();
   const [d, setD] = useState(date);
-  const [bed, setBed] = useState(n?.bed ? hhmmOf(n.bed) : '21:30');
-  const [wake, setWake] = useState(n?.wake ? hhmmOf(n.wake) : '06:00');
+  const settings = useStore((s) => s.settings);
+  const nights = useStore((s) => s.nights);
+  // New nights start from your targets.
+  const [bed, setBed] = useState(n?.bed ? hhmmOf(n.bed) : settings.bedtime);
+  const [wake, setWake] = useState(n?.wake ? hhmmOf(n.wake) : settings.wakeTarget);
   const [q, setQ] = useState<number | undefined>(n?.quality);
+  const [awake, setAwake] = useState(n?.awake ?? 0);
+  const noteTags = useLayout((l) => l.noteTags);
+  const [note, setNote] = useState(n?.note ?? '');
+  // A bedtime after noon belongs to the evening before.
+  const bedAt = atOn(bed >= '12:00' ? addDays(d, -1) : d, bed);
+  const wakeAt = atOn(d, wake);
+  const mins = Math.round((wakeAt - bedAt) / 60_000);
+  const prev = nights[addDays(d, -1)];
   const save = () => {
-    // A bedtime after noon belongs to the evening before.
-    const bedAt = atOn(bed >= '12:00' ? addDays(d, -1) : d, bed);
-    const wakeAt = atOn(d, wake);
     if (wakeAt <= bedAt) return toast('Wake time has to be after bedtime.');
     if (d !== date && n) deleteNight(date);
-    setNight(d, { bed: bedAt, wake: wakeAt, quality: q, source: n?.source === 'samsung' && d === date ? 'samsung' : 'manual' });
+    // Moving a night to another morning takes its wind-down ticks along.
+    setNight(d, { bed: bedAt, wake: wakeAt, quality: q, awake: awake || undefined, note: note.trim() || undefined, ...(d !== date && n?.done ? { done: n.done } : {}), source: n?.source === 'samsung' && d === date ? 'samsung' : 'manual' });
     toast('Night saved');
     onClose();
   };
@@ -392,6 +555,20 @@ function NightSheet({ date, onClose }: { date: string; onClose: () => void }) {
           <input className="input" type="time" value={wake} onChange={(e) => setWake(e.target.value)} />
         </label>
       </div>
+      <div className="between small">
+        <span className={mins > 0 ? 'bold' : ''} style={{ color: mins > 0 ? 'var(--sleep)' : 'var(--danger)' }}>
+          {mins > 0 ? `${hm(mins)} in bed${awake ? `, ${hm(Math.max(0, mins - awake))} asleep` : ''}` : 'Wake time has to be after bedtime'}
+        </span>
+        {prev?.bed && prev.wake && (
+          <button className="chip" style={{ fontSize: 13, minHeight: 34 }} onClick={() => (setBed(hhmmOf(prev.bed!)), setWake(hhmmOf(prev.wake!)))}>
+            Same as the night before
+          </button>
+        )}
+      </div>
+      <label className="field">
+        <span>Awake in the night</span>
+        <Stepper value={awake} onChange={setAwake} label="minutes awake in the night" step={5} min={0} max={240} unit="min" />
+      </label>
       <div className="stack" style={{ gap: 6 }}>
         <span className="label">How did you sleep?</span>
         <div className="grid4" style={{ gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 6 }}>
@@ -402,9 +579,33 @@ function NightSheet({ date, onClose }: { date: string; onClose: () => void }) {
           ))}
         </div>
       </div>
+      <label className="field">
+        <span>Note (optional)</span>
+        <input className="input" value={note} maxLength={200} placeholder="Woke at 2 am, late study…" onChange={(e) => setNote(e.target.value)} />
+      </label>
+      <div className="row" style={{ flexWrap: 'wrap', gap: 6 }} role="group" aria-label="Quick notes">
+        {noteTags.map((t) => {
+          const on = note.split(', ').includes(t);
+          return (
+            <button key={t} className="chip" style={{ fontSize: 13, minHeight: 34 }} aria-pressed={on} onClick={() => setNote(on ? note.split(', ').filter((x) => x !== t).join(', ') : [note.trim(), t].filter(Boolean).join(', ').slice(0, 200))}>
+              {t}
+            </button>
+          );
+        })}
+      </div>
       <div className="row">
         {n && (
-          <button className="btn danger" aria-label="Delete night" onClick={() => (deleteNight(date), onClose())}>
+          <button
+            className="btn danger"
+            aria-label="Delete night"
+            onClick={() => {
+              const was = n;
+              deleteNight(date);
+              onClose();
+              // A night brought back is newer than its tombstone, so sync keeps it.
+              toast('Night deleted', { label: 'Undo', run: () => useStore.getState().setNight(date, { ...was }) });
+            }}
+          >
             <Icon name="trash" size={18} />
           </button>
         )}

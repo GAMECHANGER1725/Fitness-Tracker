@@ -71,3 +71,10 @@ export function readiness(input: {
   const band: Band = score >= 75 ? 'hard' : score >= 55 ? 'normal' : 'easy';
   return { score, band, sleep: Math.round(sleep), fuel: Math.round(food), load, notes };
 }
+
+/** Today's score against the average of the days before it: "8 above your usual", or null with under 3 days. */
+export function vsUsual(score: number, before: number[]): string | null {
+  if (before.length < 3) return null;
+  const d = Math.round(score - before.reduce((a, b) => a + b, 0) / before.length);
+  return Math.abs(d) < 5 ? 'About your usual' : `${Math.abs(d)} ${d > 0 ? 'above' : 'below'} your usual`;
+}

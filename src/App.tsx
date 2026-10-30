@@ -14,6 +14,8 @@ import { startSync, useSync } from './lib/sync';
 import { autoDue, checkIn, currentAi, useCoach } from './lib/coach';
 import { hasAi } from './lib/ai';
 import { startReminders } from './lib/reminders';
+import { WhatsNewOnce } from './components/WhatsNew';
+import { useLayout } from './lib/layout';
 
 export default function App() {
   const theme = useStore((s) => s.settings.theme);
@@ -23,10 +25,24 @@ export default function App() {
   useEffect(() => {
     const root = document.documentElement;
     if (theme === 'auto') root.removeAttribute('data-theme');
-    else root.setAttribute('data-theme', theme);
+    // Black is the dark theme (every dark rule still applies) with a black background on top.
+    else root.setAttribute('data-theme', theme === 'black' ? 'dark' : theme);
+    root.toggleAttribute('data-black', theme === 'black');
     const bg = getComputedStyle(root).getPropertyValue('--bg').trim();
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', bg || '#0C1013');
   }, [theme]);
+
+  const large = useLayout((l) => l.large);
+  useEffect(() => {
+    // ponytail: CSS zoom scales the px-based design as a whole; fine on current Chrome, Safari and Samsung Internet.
+    document.documentElement.style.setProperty('zoom', large ? '1.12' : '');
+  }, [large]);
+  const accent = useLayout((l) => l.accent);
+  useEffect(() => {
+    const root = document.documentElement;
+    if (accent === 'mint') root.removeAttribute('data-accent');
+    else root.setAttribute('data-accent', accent);
+  }, [accent]);
 
   useEffect(() => {
     navigator.storage?.persist?.().catch(() => {});
@@ -64,7 +80,7 @@ export default function App() {
   return (
     <div className="app">
       {sync.status === 'error' && sync.kind !== 'offline' && sync.kind !== 'rate' && path !== 'profile' && (
-        <a href="#/profile" className="card tight" style={{ display: 'block', margin: '12px 16px 0', color: 'var(--ink)', textDecoration: 'none', boxShadow: 'inset 0 0 0 1.5px var(--danger)' }}>
+        <a href="#/profile?open=sync" className="card tight" style={{ display: 'block', margin: '12px 16px 0', color: 'var(--ink)', textDecoration: 'none', boxShadow: 'inset 0 0 0 1.5px var(--danger)' }}>
           <span className="bold" style={{ color: 'var(--danger)' }}>Sync problem</span>
           <span className="small" style={{ display: 'block' }}>{sync.error} Tap to fix.</span>
         </a>
@@ -72,6 +88,7 @@ export default function App() {
       {page}
       {path !== 'workout' && <Nav path={path} />}
       <Badges />
+      {path !== 'workout' && <WhatsNewOnce />}
       <Toast />
     </div>
   );

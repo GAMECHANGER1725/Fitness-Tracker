@@ -1,21 +1,23 @@
 // Defaults, backup export and import. Anything loaded from storage, a backup or the gist goes through
 // normalize(), which re-validates every field and fills gaps from DEFAULT_DATA.
 
-import type { ActiveWorkout, AppData, Night, PlanDay, Program, ProgramChange, Session, SetLog, Slot } from './types';
+import type { ActiveWorkout, AppData, Measure, Night, PlanDay, Program, ProgramChange, Session, SetLog, Slot } from './types';
 import { DEFAULT_GEMINI_MODEL, DEFAULT_MODEL } from './ai';
 import { DEFAULT_PROGRAM } from './program';
 import { EX } from './exercises';
-import { isKey } from './dates';
+import { hhmmOf, isKey } from './dates';
+import { durationMin } from './sleep';
 
 // Personal app: starts set up for its one user (same stats as Fuel Log).
 export const DEFAULT_DATA: AppData = {
   v: 1,
-  profile: { name: 'Vaidik', age: 15, sex: 'male', heightCm: 182, weightKg: 58.3, packMaxKg: 15, hasGrip: true },
+  profile: { name: 'Vaidik', age: 15, sex: 'male', heightCm: 182, weightKg: 58.3, packMaxKg: 15, hasGrip: true, exNotes: {}, windDown: ['Screens off', 'Bag packed for tomorrow', 'Teeth brushed'], measures: [] },
   settings: {
     wakeTarget: '06:00',
     sleepGoalH: 8.5,
     bedtime: '21:15',
     workoutTime: '16:30',
+    weekendWorkoutTime: '',
     theme: 'auto',
     aiKey: '',
     aiModel: DEFAULT_MODEL,
@@ -106,7 +108,26 @@ function night(k: string, v: unknown): Night | null {
     const val = opt(n[f], 0, f === 'quality' ? 5 : 1000);
     if (val != null) out[f] = Math.round(val);
   }
+  const done = arr(n.done).map((x) => str(x, 40)).filter(Boolean).slice(0, 10);
+  if (done.length) out.done = done;
+  const note = str(n.note, 200).trim();
+  if (note) out.note = note;
   return out;
+}
+
+function measures(v: unknown): Measure[] {
+  const byDay = new Map<string, Measure>();
+  for (const x of arr(v)) {
+    const o = obj(x);
+    if (!isKey(o.date)) continue;
+    const m: Measure = { date: o.date };
+    for (const k of ['arm', 'chest', 'waist', 'thigh'] as const) {
+      const val = opt(o[k], 10, 250);
+      if (val != null) m[k] = Math.round(val * 10) / 10;
+    }
+    if (Object.keys(m).length > 1) byDay.set(m.date, m);
+  }
+  return [...byDay.values()].sort((a, b) => (a.date < b.date ? -1 : 1)).slice(-100);
 }
 
 function active(v: unknown): ActiveWorkout | null {
@@ -160,13 +181,17 @@ export function normalize(v: unknown): AppData {
       weightKg: num(p.weightKg, D.profile.weightKg, 25, 250),
       packMaxKg: num(p.packMaxKg, D.profile.packMaxKg, 0, 40),
       hasGrip: typeof p.hasGrip === 'boolean' ? p.hasGrip : D.profile.hasGrip,
+      windDown: Array.isArray(p.windDown) ? [...new Set(arr(p.windDown).map((x) => str(x, 40).trim()).filter(Boolean))].slice(0, 6) : D.profile.windDown,
+      measures: measures(p.measures),
+      exNotes: Object.fromEntries(Object.entries(obj(p.exNotes)).filter(([id]) => EX[id]).map(([id, t]) => [id, str(t, 200).trim()]).filter(([, t]) => t)),
     },
     settings: {
       wakeTarget: time(s.wakeTarget, D.settings.wakeTarget),
       sleepGoalH: num(s.sleepGoalH, D.settings.sleepGoalH, 6, 11),
       bedtime: time(s.bedtime, D.settings.bedtime),
       workoutTime: time(s.workoutTime, D.settings.workoutTime),
-      theme: s.theme === 'dark' || s.theme === 'light' ? s.theme : 'auto',
+      weekendWorkoutTime: time(s.weekendWorkoutTime, ''),
+      theme: s.theme === 'dark' || s.theme === 'light' || s.theme === 'black' ? s.theme : 'auto',
       aiKey: str(s.aiKey, 300),
       aiModel: str(s.aiModel, 80) || D.settings.aiModel,
       geminiKey: str(s.geminiKey, 300),
@@ -199,4 +224,31 @@ export function importJson(text: string): AppData {
   }
   if (p.app !== 'fitness-tracker' || !p.data) throw new Error('That file isn’t a Fitness Tracker backup.');
   return normalize(p.data);
+}
+
+const csvCell = (v: string | number | undefined) => {
+  const t = v == null ? '' : String(v);
+  return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;
+};
+
+/** Workouts and nights as two CSV tables (one row per set, one per night), for a spreadsheet. Times are local. */
+export function exportCsv(d: Pick<AppData, 'sessions' | 'nights'> & { profile?: Pick<AppData['profile'], 'measures'> }): { workouts: string; sleep: string; body: string } {
+  const hhmm = (ms: number | null) => (ms == null ? '' : hhmmOf(ms));
+  const rows = [['date', 'workout', 'exercise', 'set', 'reps_or_secs', 'backpack_kg', 'effort_rpe', 'feel_1_5', 'note']];
+  for (const s of Object.values(d.sessions).sort((a, b) => a.start - b.start)) {
+    const n = new Map<string, number>();
+    for (const x of s.sets) {
+      n.set(x.exerciseId, (n.get(x.exerciseId) ?? 0) + 1);
+      rows.push([s.date, s.name, EX[x.exerciseId]?.name ?? x.exerciseId, String(n.get(x.exerciseId)), String(x.reps), String(x.loadKg), x.rpe != null ? String(x.rpe) : '', s.feel != null ? String(s.feel) : '', s.note ?? '']);
+    }
+  }
+  const nights = [['date_woke', 'bed', 'wake', 'minutes', 'quality_1_5', 'source', 'wind_down', 'note']];
+  for (const x of Object.values(d.nights).sort((a, b) => (a.date < b.date ? -1 : 1))) {
+    const m = durationMin(x);
+    nights.push([x.date, hhmm(x.bed), hhmm(x.wake), m != null ? String(Math.round(m)) : '', x.quality != null ? String(x.quality) : '', x.source, (x.done ?? []).join('; '), x.note ?? '']);
+  }
+  const body = [['date', 'arm_cm', 'chest_cm', 'waist_cm', 'thigh_cm']];
+  for (const m of d.profile?.measures ?? []) body.push([m.date, ...(['arm', 'chest', 'waist', 'thigh'] as const).map((k) => (m[k] != null ? String(m[k]) : ''))]);
+  const out = (t: string[][]) => t.map((r) => r.map(csvCell).join(',')).join('\n') + '\n';
+  return { workouts: out(rows), sleep: out(nights), body: out(body) };
 }

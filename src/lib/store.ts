@@ -7,7 +7,7 @@ import { persist } from 'zustand/middleware';
 import type { ActiveWorkout, AppData, Night, PlanDay, Profile, Program, ProgramChange, Session, SetLog, Settings } from './types';
 import { DEFAULT_DATA, normalize } from './backup';
 import { applyDoc, nightTomb, type SyncDoc } from './syncdoc';
-import { applySession, diffPrograms } from './progress';
+import { applySession, diffPrograms, moveSession, withLength } from './progress';
 import { dayById, slotsFor } from './program';
 import { mergeImported, nightKey } from './sleep';
 import { keyOf, todayKey } from './dates';
@@ -22,23 +22,33 @@ interface Actions {
   startWorkout: (day: PlanDay, easy?: boolean, date?: string) => void;
   logSet: (set: Omit<SetLog, 'id' | 'at'>) => void;
   undoSet: () => void;
+  /** Fix (or with null, remove) a set already logged in the workout in progress. */
+  editSet: (id: string, patch: Pick<SetLog, 'reps' | 'loadKg'> | null) => void;
   goTo: (idx: number) => void;
   setRest: (end: number | null) => void;
   cancelWorkout: () => void;
   /** Saves the session and runs progression. Returns the session and what progression changed. */
-  finishWorkout: (feel?: number, note?: string) => { session: Session; lines: string[] } | null;
+  finishWorkout: (feel?: number, note?: string, endAt?: number) => { session: Session; lines: string[] } | null;
   deleteSession: (id: string) => void;
+  /** Bring back a deleted session (under a new id, since the old one is in `tomb` and may have synced). */
+  restoreSession: (s: Session) => void;
+  /** Change a saved session's day, feel or note. */
+  editSession: (id: string, patch: { date?: string; feel?: number; note?: string; minutes?: number }) => void;
   /** "Going to sleep" now (or at `at`). */
   goingToSleep: (at?: number) => void;
   /** "I'm up" now (or at `at`). */
   wokeUp: (at?: number) => void;
   setNight: (date: string, patch: Partial<Night>) => void;
+  /** Tick or untick a wind-down step for tonight. */
+  toggleWindDown: (label: string, at?: number) => void;
   deleteNight: (date: string) => void;
   importNights: (nights: Night[]) => number;
   setProgram: (p: Program, by: ProgramChange['by'], why: string) => string[];
   undoProgram: () => boolean;
   setSettings: (patch: Partial<Settings>) => void;
   setProfile: (patch: Partial<Profile>) => void;
+  /** Set (or with empty text, clear) your note for an exercise. */
+  setExNote: (exerciseId: string, text: string) => void;
   markSeen: (badges: string[]) => void;
   applySynced: (doc: SyncDoc) => void;
   importData: (d: AppData) => void;
@@ -64,10 +74,11 @@ export const useStore = create<Store>()(
           set((s) => ({ active: { dayId: day.id, name: day.name, date, start: Date.now(), slots: slotsFor(s.program, day, date, easy), sets: [], idx: 0, restEnd: null } })),
         logSet: (x) => patchActive((a) => ({ sets: [...a.sets, { ...x, id: uid(), at: Date.now() }] })),
         undoSet: () => patchActive((a) => ({ sets: a.sets.slice(0, -1), restEnd: null })),
+        editSet: (id, patch) => patchActive((a) => ({ sets: patch ? a.sets.map((x) => (x.id === id ? { ...x, ...patch } : x)) : a.sets.filter((x) => x.id !== id) })),
         goTo: (idx) => patchActive((a) => ({ idx: Math.max(0, Math.min(a.slots.length - 1, idx)), restEnd: null })),
         setRest: (end) => patchActive(() => ({ restEnd: end })),
         cancelWorkout: () => set({ active: null }),
-        finishWorkout: (feel, note) => {
+        finishWorkout: (feel, note, endAt) => {
           const s = get();
           const a = s.active;
           if (!a) return null;
@@ -75,8 +86,9 @@ export const useStore = create<Store>()(
             set({ active: null });
             return null;
           }
-          const now = Date.now();
-          const session: Session = { id: uid(), date: a.date, dayId: a.dayId, name: a.name, start: a.start, end: now, sets: a.sets, feel, note: note?.trim() || undefined, upd: now };
+          const now = endAt ?? Date.now();
+          // A workout logged for an earlier day is moved there, keeping its clock times, so it sorts in its place.
+          const session: Session = moveSession({ id: uid(), date: keyOf(new Date(a.start)), dayId: a.dayId, name: a.name, start: a.start, end: now, sets: a.sets, feel, note: note?.trim() || undefined, upd: Date.now() }, a.date);
           const { program, lines } = dayById(s.program, a.dayId) ? applySession(s.program, session, s.sessions, s.profile) : { program: s.program, lines: [] };
           set({
             active: null,
@@ -85,6 +97,21 @@ export const useStore = create<Store>()(
           });
           return { session, lines };
         },
+        restoreSession: (old) =>
+          set((s) => {
+            const id = uid();
+            const now = Date.now();
+            return { sessions: { ...s.sessions, [id]: { ...old, id, upd: now, sets: old.sets.map((x) => ({ ...x, id: uid() })) } } };
+          }),
+        editSession: (id, { date, minutes, ...rest }) =>
+          set((s) => {
+            const cur = s.sessions[id];
+            if (!cur) return {};
+            const moved = date ? moveSession(cur, date) : cur;
+            const next = { ...(minutes != null ? withLength(moved, minutes) : moved), ...rest, upd: Date.now() };
+            if (next.note !== undefined) next.note = next.note.trim() || undefined;
+            return { sessions: { ...s.sessions, [id]: next } };
+          }),
         deleteSession: (id) =>
           set((s) => {
             const { [id]: _gone, ...rest } = s.sessions;
@@ -105,6 +132,13 @@ export const useStore = create<Store>()(
           }),
         setNight: (date, patch) =>
           set((s) => ({ nights: { ...s.nights, [date]: { ...(s.nights[date] ?? { bed: null, wake: null, source: 'manual' as const }), ...patch, date, m: Date.now() } } })),
+        toggleWindDown: (label, at = Date.now()) => {
+          const k = nightKey(at);
+          const night = get().nights[k];
+          const cur = night?.done ?? [];
+          // A night started by a tick counts as tapped, not typed in, so a Samsung import can still fill it.
+          get().setNight(k, { done: cur.includes(label) ? cur.filter((x) => x !== label) : [...cur, label], ...(night ? {} : { source: 'tap' as const }) });
+        },
         deleteNight: (date) =>
           set((s) => {
             const { [date]: _gone, ...rest } = s.nights;
@@ -135,6 +169,12 @@ export const useStore = create<Store>()(
           set((s) => ({ settings: { ...s.settings, ...patch }, ...(synced ? { mod: Date.now() } : {}) }));
         },
         setProfile: (patch) => set((s) => ({ profile: { ...s.profile, ...patch }, mod: Date.now() })),
+        setExNote: (id, text) =>
+          set((s) => {
+            const { [id]: _old, ...rest } = s.profile.exNotes;
+            const t = text.trim().slice(0, 200);
+            return { profile: { ...s.profile, exNotes: t ? { ...rest, [id]: t } : rest }, mod: Date.now() };
+          }),
         markSeen: (badges) => set({ seen: { badges } }),
         applySynced: (doc) => set((s) => applyDoc(dataOf(s), doc)),
         importData: (d) =>

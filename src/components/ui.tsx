@@ -20,6 +20,9 @@ const paths: Record<string, ReactNode> = {
   check: <path d="M5 12l5 5 9-10" />,
   left: <path d="M15 6l-6 6 6 6" />,
   right: <path d="M9 6l6 6-6 6" />,
+  up: <path d="M6 15l6-6 6 6" />,
+  search: <><circle cx="11" cy="11" r="6" /><path d="M16 16l4 4" /></>,
+  down: <path d="M6 9l6 6 6-6" />,
   close: <path d="M6 6l12 12M18 6L6 18" />,
   trash: <path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" />,
   refresh: <><path d="M20 11a8 8 0 00-14-4M4 4v4h4" /><path d="M4 13a8 8 0 0014 4M20 20v-4h-4" /></>,
@@ -131,26 +134,49 @@ export function Switch({ on, onChange, label }: { on: boolean; onChange: (v: boo
 
 // ----- Toast ---------------------------------------------------------------------
 
-export const useToast = create<{ msg: string | null; n: number; show: (msg: string) => void }>((set) => ({
-  msg: null,
+interface ToastAction {
+  label: string;
+  run: () => void;
+}
+
+interface ToastMsg {
+  msg: string;
+  action: ToastAction | null;
+  n: number;
+}
+
+/** Messages wait their turn, so a badge or a sync note never covers an Undo. */
+export const useToast = create<{ queue: ToastMsg[]; n: number; show: (msg: string, action?: ToastAction) => void; next: () => void }>((set) => ({
+  queue: [],
   n: 0,
-  show: (msg) => set((s) => ({ msg, n: s.n + 1 })),
+  // A plain message replaces other plain ones (the newest is what matters) but waits behind any with an action.
+  show: (msg, action) =>
+    set((s) => {
+      const t = { msg, action: action ?? null, n: s.n + 1 };
+      return { queue: [...s.queue.filter((x) => x.action), t].slice(-3), n: t.n };
+    }),
+  next: () => set((s) => ({ queue: s.queue.slice(1) })),
 }));
-export const toast = (msg: string) => useToast.getState().show(msg);
+/** A short message; with `action` (like Undo) it stays a little longer and shows a button. */
+export const toast = (msg: string, action?: ToastAction) => useToast.getState().show(msg, action);
 
 export function Toast() {
-  const { msg, n } = useToast();
-  const [shown, setShown] = useState(false);
+  const head = useToast((s) => s.queue[0]);
+  const next = useToast((s) => s.next);
   useEffect(() => {
-    if (!msg) return;
-    setShown(true);
-    const t = setTimeout(() => setShown(false), 2600);
+    if (!head) return;
+    const t = setTimeout(next, head.action ? 6000 : 2600);
     return () => clearTimeout(t);
-  }, [msg, n]);
-  if (!shown || !msg) return null;
+  }, [head?.n]);
+  if (!head) return null;
   return (
-    <div className="toast" role="status" aria-live="polite" key={n}>
-      {msg}
+    <div className="toast" role="status" aria-live="polite" key={head.n}>
+      {head.msg}
+      {head.action && (
+        <button onClick={() => (head.action!.run(), next())} style={{ background: 'none', border: 0, padding: 0, color: 'inherit', font: 'inherit', fontWeight: 800, textDecoration: 'underline' }}>
+          {head.action.label}
+        </button>
+      )}
     </div>
   );
 }
@@ -182,7 +208,8 @@ export function useGame() {
   const sessions = useStore((s) => s.sessions);
   const nights = useStore((s) => s.nights);
   const settings = useStore((s) => s.settings);
-  return useMemo(() => computeGame(dataOf({ ...useStore.getState(), sessions, nights, settings }), today), [sessions, nights, settings, today]);
+  const profile = useStore((s) => s.profile);
+  return useMemo(() => computeGame(dataOf({ ...useStore.getState(), sessions, nights, settings, profile }), today), [sessions, nights, settings, profile, today]);
 }
 
 /** Minimal hash router: #/today, #/train?tab=plan, ... */
@@ -223,3 +250,21 @@ export const ProfileLink = () => {
     </a>
   );
 };
+
+/** Opens the phone's share sheet, or copies to the clipboard where there isn't one. */
+export async function shareText(text: string) {
+  try {
+    if (navigator.share) return void (await navigator.share({ text }));
+  } catch (e) {
+    if (e instanceof DOMException && e.name === 'AbortError') return;
+  }
+  try {
+    await navigator.clipboard.writeText(text);
+    toast('Copied');
+  } catch {
+    toast('Couldn’t share from here');
+  }
+}
+
+/** Smooth scrolling unless the phone asks for reduced motion. */
+export const scrollMotion = (): ScrollBehavior => (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth');

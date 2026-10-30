@@ -1,11 +1,17 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore } from '../lib/store';
-import { EX, EXERCISES, PATTERN_LABEL, targetText, usable } from '../lib/exercises';
-import { historyOf, newRecords } from '../lib/progress';
+import { minutesLeft, packChange, warmupFor } from '../lib/program';
+import { EX, EXERCISES, PATTERN_LABEL, bestText, easier, harder, howToUrl, targetText, usable } from '../lib/exercises';
+import { historyOf, moveUpText, nearMisses, newRecords, records, sessionText, vsLast } from '../lib/progress';
 import { currentAi, postWorkout, suggestSwap } from '../lib/coach';
 import { friendlyError, hasAi } from '../lib/ai';
-import { Icon, Ring, Sheet, Stepper, go, toast, useNow } from '../components/ui';
-import type { Session, Slot } from '../lib/types';
+import { beep, buzz, holdWakeLock, primeAudio, usePlayer } from '../lib/player';
+import { fmtDate, keyOf, todayKey } from '../lib/dates';
+import { FUEL_URL } from '../lib/fuel';
+import { hm } from '../lib/sleep';
+import { useFuelData } from '../components/data';
+import { Icon, Ring, Sheet, Stepper, go, shareText, toast, useNow } from '../components/ui';
+import type { Session, SetLog, Slot } from '../lib/types';
 
 const FEEL = ['Rough', 'Meh', 'OK', 'Good', 'Great'];
 const EFFORT: [number, string][] = [
@@ -17,7 +23,7 @@ const EFFORT: [number, string][] = [
 
 export default function Workout() {
   const active = useStore((s) => s.active);
-  const [result, setResult] = useState<{ session: Session; lines: string[]; records: string[] } | null>(null);
+  const [result, setResult] = useState<{ session: Session; lines: string[]; records: string[]; slots: Slot[] } | null>(null);
   if (result) return <Summary {...result} />;
   if (!active) {
     return (
@@ -31,7 +37,7 @@ export default function Workout() {
   return <Player onDone={setResult} />;
 }
 
-function Player({ onDone }: { onDone: (r: { session: Session; lines: string[]; records: string[] }) => void }) {
+function Player({ onDone }: { onDone: (r: { session: Session; lines: string[]; records: string[]; slots: Slot[] }) => void }) {
   const a = useStore((s) => s.active)!;
   const sessions = useStore((s) => s.sessions);
   const { logSet, undoSet, goTo, setRest, cancelWorkout, finishWorkout } = useStore.getState();
@@ -40,50 +46,102 @@ function Player({ onDone }: { onDone: (r: { session: Session; lines: string[]; r
   const ex = EX[slot.exerciseId];
   const done = a.sets.filter((x) => x.exerciseId === slot.exerciseId);
   const last = historyOf(sessions, slot.exerciseId)[0];
+  const pb = useMemo(() => records(sessions)[slot.exerciseId], [sessions, slot.exerciseId]);
+  // Progression judges the plan's slot (a lighter day has fewer sets than it needs).
+  const program = useStore((s) => s.program);
+  const planSlot = program.days.find((d) => d.id === a.dayId)?.slots.find((x) => x.exerciseId === slot.exerciseId) ?? slot;
   const suggest = last?.[done.length]?.reps ?? last?.at(-1)?.reps ?? slot.low;
   const [reps, setReps] = useState(suggest);
   const [load, setLoad] = useState(slot.loadKg);
   const [rpe, setRpe] = useState<number | null>(null);
   const [swap, setSwap] = useState(false);
   const [finish, setFinish] = useState(false);
-  const allDone = done.length >= slot.sets;
+  const [fix, setFix] = useState<SetLog | null>(null);
+  const [list, setList] = useState(false);
+  const [noteOpen, setNoteOpen] = useState(false);
+  const note = useStore((s) => s.profile.exNotes[slot.exerciseId]);
+  const [extra, setExtra] = useState(false);
+  const [warmed, setWarmed] = useState(false);
+  const allDone = done.length >= slot.sets && !extra;
 
   // New exercise or new set: start from last time's numbers.
   useEffect(() => {
     setReps(suggest);
     setLoad(slot.loadKg);
     setRpe(null);
+    setExtra(false);
   }, [a.idx, slot.exerciseId, done.length]);
 
+  const prefs = usePlayer();
+  useEffect(() => holdWakeLock(prefs.awake), [prefs.awake]);
+
   const rest = a.restEnd ? Math.max(0, Math.ceil((a.restEnd - now) / 1000)) : 0;
+  // How much this rest was lengthened or shortened, so it can become the slot's rest.
+  const [adj, setAdj] = useState(0);
+  useEffect(() => setAdj(0), [a.sets.length, a.idx]);
+  const restFor = slot;
+  const keep = slot.restS + adj;
+  const saveRest = () => {
+    const st = useStore.getState();
+    const fix = (x: Slot): Slot => (x.exerciseId === restFor.exerciseId ? { ...x, restS: keep } : x);
+    useStore.setState({ active: st.active && { ...st.active, slots: st.active.slots.map(fix) } });
+    const p = st.program;
+    st.setProgram({ ...p, days: p.days.map((d) => (d.id === a.dayId ? { ...d, slots: d.slots.map(fix) } : d)) }, 'me', `Rest for ${EX[restFor.exerciseId]?.name}`);
+    setAdj(0);
+    toast(`Rest set to ${keep} s`);
+  };
   const buzzed = useRef(false);
   useEffect(() => {
     if (a.restEnd && rest === 0 && !buzzed.current) {
       buzzed.current = true;
-      navigator.vibrate?.([200, 100, 200]);
+      buzz([200, 100, 200]);
+      if (prefs.beep) beep();
       setRest(null);
+      if (prefs.auto && allDone && a.idx < a.slots.length - 1) goTo(a.idx + 1);
     }
     if (rest > 0) buzzed.current = false;
   }, [rest, a.restEnd]);
 
+  const past = a.date !== keyOf(new Date(a.start));
   const log = () => {
-    logSet({ exerciseId: slot.exerciseId, reps, loadKg: ex?.loadable ? load : 0, rpe: rpe ?? undefined });
+    if (prefs.beep) primeAudio();
+    const kg = ex?.loadable ? load : 0;
+    logSet({ exerciseId: slot.exerciseId, reps, loadKg: kg, rpe: rpe ?? undefined });
+    // Beat your best from earlier workouts (and earlier sets today)? Say so now, not just at the end.
+    const prev = records(sessions)[slot.exerciseId];
+    const today = done.reduce<{ reps: number; loadKg: number }>((b, x) => (x.loadKg > b.loadKg || (x.loadKg === b.loadKg && x.reps > b.reps) ? x : b), prev ?? { reps: 0, loadKg: 0 });
+    if (prev && (kg > today.loadKg || (kg === today.loadKg && reps > today.reps))) {
+      buzz([60, 40, 60]);
+      toast(`New best: ${reps}${ex?.unit === 'secs' ? ' s' : ' reps'}${kg ? ` @ ${kg} kg` : ''} on ${ex?.name}!`);
+    }
     const nowDone = done.length + 1;
-    if (nowDone < slot.sets || a.idx < a.slots.length - 1) setRest(Date.now() + slot.restS * 1000);
+    // No rest timer when filling in a past day (a late workout running past midnight keeps it).
+    if (!past && (nowDone < slot.sets || a.idx < a.slots.length - 1)) setRest(Date.now() + slot.restS * 1000);
   };
 
   const total = a.slots.reduce((t, s) => t + s.sets, 0);
   const elapsed = Math.floor((now - a.start) / 60_000);
+  const left = minutesLeft(a.slots, a.sets);
+  const lastAt = a.sets.reduce((m, x) => Math.max(m, x.at), a.start);
+  const idleMin = a.sets.length ? Math.floor((now - lastAt) / 60_000) : 0;
 
   return (
     <main style={{ padding: '18px 16px 32px' }} className="stack">
       <div className="between" style={{ alignItems: 'center' }}>
-        <button className="btn icon" aria-label="Stop workout" onClick={() => confirm('Stop this workout without saving?') && (cancelWorkout(), go('today'))}>
+        <button className="btn icon" aria-label="Stop workout" onClick={() => {
+            const was = useStore.getState().active;
+            cancelWorkout();
+            go('today');
+            toast(a.sets.length ? `Workout stopped, ${a.sets.length} set${a.sets.length === 1 ? '' : 's'} not saved` : 'Workout stopped', {
+              label: 'Undo',
+              run: () => (useStore.setState({ active: was && { ...was, restEnd: null } }), go('workout')),
+            });
+          }}>
           <Icon name="close" />
         </button>
-        <span className="label">
-          {a.name} · {a.idx + 1} of {a.slots.length} · {elapsed} min
-        </span>
+        <button className="label" style={{ background: 'none', border: 0, padding: '8px 4px', color: 'inherit', display: 'flex', alignItems: 'center', gap: 4 }} onClick={() => setList(true)} aria-label="All exercises in this workout">
+          {a.name} · {a.idx + 1} of {a.slots.length} · {elapsed} min <Icon name="right" size={14} />
+        </button>
         <button className="btn sm" onClick={() => setFinish(true)} disabled={!a.sets.length}>
           Finish
         </button>
@@ -95,6 +153,18 @@ function Player({ onDone }: { onDone: (r: { session: Session; lines: string[]; r
         })}
       </div>
 
+      {!a.sets.length && !past && !warmed && (
+        <section className="card soft stack" style={{ gap: 8 }} aria-label="Warm-up">
+          <span className="label">Warm up first, about 3 min</span>
+          <ul className="small" style={{ margin: 0, paddingLeft: 18 }}>
+            {warmupFor(a.slots).map((w) => <li key={w}>{w}</li>)}
+          </ul>
+          <button className="btn sm" style={{ alignSelf: 'flex-start' }} onClick={() => setWarmed(true)}>
+            <Icon name="check" size={16} stroke={3} /> Warmed up
+          </button>
+        </section>
+      )}
+      {past && <p className="small bold acc">Logging for {fmtDate(a.date, { weekday: 'long', day: 'numeric', month: 'long' })}</p>}
       <section className="stack" style={{ gap: 6, marginTop: 8 }}>
         <div className="between" style={{ alignItems: 'flex-start' }}>
           <h1 className="title" style={{ fontSize: 32 }}>{ex?.name ?? slot.exerciseId}</h1>
@@ -103,13 +173,25 @@ function Player({ onDone }: { onDone: (r: { session: Session; lines: string[]; r
           </button>
         </div>
         <p className="mut">
-          {slot.sets} sets × {targetText(ex, slot.low, slot.high)}
+          {slot.sets} set{slot.sets === 1 ? '' : 's'} × {targetText(ex, slot.low, slot.high)}
           {ex?.loadable && slot.loadKg ? ` · ${slot.loadKg} kg in the backpack` : ''}
           {last ? ` · last time ${last.map((x) => x.reps).join(', ')}` : ''}
+          {pb && ex ? ` · ${bestText(pb, ex)}` : ''}
         </p>
         <ul className="small mut" style={{ margin: 0, paddingLeft: 18 }}>
           {ex?.cues.map((c) => <li key={c}>{c}</li>)}
         </ul>
+        {ex && <a className="small bold acc" href={howToUrl(ex)} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="play" size={14} fill /> Watch how (YouTube)</a>}
+        {ex && !past && (
+          <p className="small acc">
+            {moveUpText(planSlot, ex)}
+            {done.length > 0 && <span className="bold"> {done.slice(0, planSlot.sets).filter((x) => x.reps >= planSlot.high).length} of {planSlot.sets} there today.</span>}
+          </p>
+        )}
+        <button className="small" onClick={() => setNoteOpen(true)} style={{ background: 'none', border: 0, padding: '4px 0', textAlign: 'left', color: note ? 'var(--ink)' : 'var(--acc)', display: 'flex', gap: 6, alignItems: 'flex-start' }}>
+          <Icon name="pencil" size={16} />
+          {note ? <span><span className="bold">Your note:</span> {note}</span> : <span className="bold">Add a note for this exercise</span>}
+        </button>
       </section>
 
       {rest > 0 ? (
@@ -117,25 +199,37 @@ function Player({ onDone }: { onDone: (r: { session: Session; lines: string[]; r
           <span className="label">Rest</span>
           <Ring size={176} width={10} frac={rest / slot.restS}>
             <span className="timer">{Math.floor(rest / 60)}:{String(rest % 60).padStart(2, '0')}</span>
-            <span className="small mut">{allDone ? 'next exercise' : `next: set ${done.length + 1}`}</span>
+            <span className="small mut" style={{ maxWidth: 120, textAlign: 'center', lineHeight: 1.25 }}>{allDone ? (a.idx < a.slots.length - 1 ? `next: ${EX[a.slots[a.idx + 1].exerciseId]?.name ?? 'next exercise'}` : 'last one done') : `next: set ${done.length + 1}`}</span>
           </Ring>
+          {allDone && packChange(slot, a.slots[a.idx + 1]) && <p className="small bold acc" style={{ textAlign: 'center' }}>{packChange(slot, a.slots[a.idx + 1])}</p>}
           <div className="row">
-            <button className="btn sm" onClick={() => setRest((a.restEnd ?? Date.now()) + 30_000)}>+30 s</button>
+            <button className="btn sm" disabled={rest <= 15} onClick={() => (setRest((a.restEnd ?? Date.now()) - 15_000), setAdj(adj - 15))}>−15 s</button>
+            <button className="btn sm" onClick={() => (setRest((a.restEnd ?? Date.now()) + 30_000), setAdj(adj + 30))}>+30 s</button>
             <button className="btn sm" onClick={() => setRest(null)}>Skip rest</button>
           </div>
+          {adj !== 0 && keep >= 15 && keep <= 300 && keep !== slot.restS && (
+            <button className="btn sm" style={{ background: 'transparent', color: 'var(--acc)' }} onClick={saveRest}>
+              Rest {keep} s for {EX[restFor.exerciseId]?.name ?? 'this'} from now on
+            </button>
+          )}
         </section>
       ) : null}
 
       <section className="stack" style={{ gap: 8 }} aria-label="Sets">
-        {Array.from({ length: Math.max(slot.sets, done.length) }, (_, i) => {
+        {Array.from({ length: Math.max(slot.sets, done.length + (extra ? 1 : 0)) }, (_, i) => {
           const x = done[i];
           return (
-            <div key={i} className={`setrow ${x ? 'done' : i === done.length ? 'next' : ''}`}>
+            <div
+              key={i}
+              className={`setrow ${x ? 'done' : i === done.length ? 'next' : ''}`}
+              {...(x ? { role: 'button', tabIndex: 0, 'aria-label': `Edit set ${i + 1}`, onClick: () => setFix(x), onKeyDown: (e: { key: string }) => e.key === 'Enter' && setFix(x), style: { cursor: 'pointer' } } : {})}
+            >
               <span className={`dot ${x ? 'on' : ''}`}>{x && <Icon name="check" size={14} stroke={3} />}</span>
               <span className="grow bold">Set {i + 1}</span>
               <span className={x ? 'bold' : 'mut'}>
-                {x ? `${x.reps}${ex?.unit === 'secs' ? ' s' : ' reps'}${x.loadKg ? ` · ${x.loadKg} kg` : ''}` : targetText(ex, slot.low, slot.high)}
+                {x ? `${x.reps}${ex?.unit === 'secs' ? ' s' : ' reps'}${x.loadKg ? ` · ${x.loadKg} kg` : ''}` : `${last?.[i] ? `last ${last[i].reps}${last[i].loadKg ? ` @ ${last[i].loadKg} kg` : ''} · ` : ''}${targetText(ex, slot.low, slot.high)}`}
               </span>
+              {x && <Icon name="pencil" size={16} />}
             </div>
           );
         })}
@@ -143,7 +237,8 @@ function Player({ onDone }: { onDone: (r: { session: Session; lines: string[]; r
 
       {!allDone ? (
         <section className="card stack" style={{ gap: 12 }}>
-          <div className={ex?.loadable ? 'grid2' : 'stack'}>
+          {ex?.unit === 'secs' && <HoldTimer low={slot.low} high={slot.high} onStop={setReps} />}
+          <div className={ex?.loadable ? 'grid2 pair' : 'stack'}>
             <label className="field">
               <span>{ex?.unit === 'secs' ? 'Seconds' : 'Reps'}{ex?.perSide ? ' (each side)' : ''}</span>
               <Stepper value={reps} onChange={setReps} label={ex?.unit === 'secs' ? 'seconds' : 'reps'} step={ex?.unit === 'secs' ? 5 : 1} min={0} max={300} />
@@ -166,51 +261,197 @@ function Player({ onDone }: { onDone: (r: { session: Session; lines: string[]; r
             </div>
           </div>
           <div className="row">
-            {done.length > 0 && (
+            {extra ? (
+              <button className="btn icon" aria-label="Don't add a set" onClick={() => setExtra(false)}>
+                <Icon name="close" size={20} />
+              </button>
+            ) : done.length > 0 && (
               <button className="btn icon" aria-label="Undo last set" onClick={undoSet}>
                 <Icon name="undo" size={20} />
               </button>
             )}
             <button className="btn primary block" style={{ flex: 1 }} onClick={log}>
-              Log set {done.length + 1}
+              Log {extra ? 'extra ' : ''}set {done.length + 1}
             </button>
           </div>
         </section>
-      ) : a.idx < a.slots.length - 1 ? (
-        <button className="btn primary block" onClick={() => goTo(a.idx + 1)}>
-          Next: {EX[a.slots[a.idx + 1].exerciseId]?.name} <Icon name="right" size={20} />
-        </button>
       ) : (
-        <button className="btn primary block" onClick={() => setFinish(true)}>
-          <Icon name="check" size={20} stroke={3} /> Finish workout
-        </button>
+        <div className="row">
+          <button className="btn" onClick={() => setExtra(true)} aria-label="Add a set">
+            <Icon name="plus" size={18} /> Set
+          </button>
+          {a.idx < a.slots.length - 1 ? (
+            <button className="btn primary block" style={{ flex: 1 }} onClick={() => goTo(a.idx + 1)}>
+              Next: {EX[a.slots[a.idx + 1].exerciseId]?.name} <Icon name="right" size={20} />
+            </button>
+          ) : (
+            <button className="btn primary block" style={{ flex: 1 }} onClick={() => setFinish(true)}>
+              <Icon name="check" size={20} stroke={3} /> Finish workout
+            </button>
+          )}
+        </div>
       )}
 
       <div className="row" style={{ justifyContent: 'space-between' }}>
         <button className="btn sm" disabled={a.idx === 0} onClick={() => goTo(a.idx - 1)}>
           <Icon name="left" size={18} /> Back
         </button>
-        <span className="small mut">{a.sets.length} of {total} sets</span>
+        <span className="small mut" style={{ textAlign: 'center' }}>
+          {a.sets.length} of {total} sets
+          {left > 0 && <><br />about {left} min left</>}
+        </span>
         <button className="btn sm" disabled={a.idx === a.slots.length - 1} onClick={() => goTo(a.idx + 1)}>
           Skip <Icon name="right" size={18} />
         </button>
       </div>
 
+      {noteOpen && <NoteSheet exerciseId={slot.exerciseId} onClose={() => setNoteOpen(false)} />}
+      {list && (
+        <Sheet onClose={() => setList(false)} label="Exercises">
+          <h2 className="h2">{a.name}</h2>
+          <div className="stack" style={{ gap: 6 }}>
+            {a.slots.map((s, i) => {
+              const e = EX[s.exerciseId];
+              const n = a.sets.filter((x) => x.exerciseId === s.exerciseId).length;
+              return (
+                <button key={i} className={`setrow ${n >= s.sets ? 'done' : i === a.idx ? 'next' : ''}`} style={{ border: 0, color: 'var(--ink)', textAlign: 'left', width: '100%' }} onClick={() => (goTo(i), setList(false))}>
+                  <span className={`dot ${n >= s.sets ? 'on' : ''}`}>{n >= s.sets && <Icon name="check" size={14} stroke={3} />}</span>
+                  <span className="grow bold">{e?.name ?? s.exerciseId}</span>
+                  <span className="small mut">{n} of {s.sets}</span>
+                </button>
+              );
+            })}
+          </div>
+          <p className="small mut">Tap one to jump to it, in any order.</p>
+        </Sheet>
+      )}
+      {fix && <FixSetSheet set={fix} loadable={!!ex?.loadable} secs={ex?.unit === 'secs'} onClose={() => setFix(null)} />}
       {swap && <SwapSheet slot={slot} onClose={() => setSwap(false)} />}
       {finish && (
         <FinishSheet
+          left={a.slots.map((x) => ({ name: EX[x.exerciseId]?.name ?? x.exerciseId, n: Math.max(0, x.sets - a.sets.filter((y) => y.exerciseId === x.exerciseId).length) })).filter((x) => x.n)}
+          idleMin={idleMin}
           onClose={() => setFinish(false)}
           onSave={(feel, note) => {
             const before = useStore.getState().sessions;
-            const r = finishWorkout(feel, note);
+            // The plan's targets before progression changes them: what "all sets at the top" is judged against.
+            const planSlots = useStore.getState().program.days.find((d) => d.id === a.dayId)?.slots ?? a.slots;
+            // Left open long after the last set: end it there, not now.
+            const r = finishWorkout(feel, note, idleMin > 30 ? lastAt + 60_000 : undefined);
             setFinish(false);
             if (!r) return go('today');
             const recs = newRecords(r.session, before).map((x) => `${EX[x.exerciseId]?.name}: ${x.reps}${EX[x.exerciseId]?.unit === 'secs' ? ' s' : ''}${x.loadKg ? ` @ ${x.loadKg} kg` : ''}`);
-            onDone({ ...r, records: recs });
+            onDone({ ...r, records: recs, slots: planSlots });
           }}
         />
       )}
     </main>
+  );
+}
+
+const COUNT_IN_MS = 3000;
+
+/** Times a hold: a 3 s count-in to get into position, buzzes at the bottom and top of the range, Stop fills in the seconds.
+ * ponytail: lives in component state, so leaving the page mid-hold loses it; holds are under two minutes. */
+function HoldTimer({ low, high, onStop }: { low: number; high: number; onStop: (secs: number) => void }) {
+  const [start, setStart] = useState<number | null>(null);
+  const now = useNow(200);
+  const buzzed = useRef(0);
+  const secs = start == null ? 0 : Math.floor((now - start) / 1000);
+  const ready = start != null && now < start;
+  useEffect(() => {
+    if (start == null || ready) return;
+    for (const [mark, n] of [[0, 1], [low, 2], [high, 3]] as const) {
+      if (secs >= mark && buzzed.current < n) {
+        buzzed.current = n;
+        buzz(n === 3 ? [200, 100, 200] : 150);
+      }
+    }
+  }, [secs, ready, start]);
+  if (start == null) {
+    return (
+      <button className="btn block" onClick={() => ((buzzed.current = 0), setStart(Date.now() + COUNT_IN_MS))}>
+        <Icon name="clock" size={18} /> Time this hold
+      </button>
+    );
+  }
+  return (
+    <div className="stack" style={{ alignItems: 'center', gap: 10 }} aria-live="polite">
+      <Ring size={150} width={10} frac={ready ? 0 : Math.min(1, secs / high)} color={secs >= low ? 'var(--acc)' : 'var(--line2)'}>
+        <span className="timer">{ready ? Math.ceil((start - now) / 1000) : secs}</span>
+        <span className="small mut">{ready ? 'get in position' : secs >= high ? 'top of the range' : secs >= low ? `in range, ${high - secs} s to the top` : `${low - secs} s to go`}</span>
+      </Ring>
+      <div className="row">
+        <button className="btn sm" onClick={() => setStart(null)}>Cancel</button>
+        <button className="btn sm primary" disabled={ready} onClick={() => (onStop(secs), setStart(null))}>
+          Stop at {secs} s
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export function NoteSheet({ exerciseId, onClose }: { exerciseId: string; onClose: () => void }) {
+  const cur = useStore((s) => s.profile.exNotes[exerciseId] ?? '');
+  const setExNote = useStore((s) => s.setExNote);
+  const [text, setText] = useState(cur);
+  return (
+    <Sheet onClose={onClose} label="Exercise note">
+      <h2 className="h2">Note for {EX[exerciseId]?.name}</h2>
+      <label className="field">
+        <span>Shown every time you do this exercise</span>
+        <textarea className="input" maxLength={200} value={text} onChange={(e) => setText(e.target.value)} placeholder="Blue strap, feet on the second step, left wrist tape…" autoFocus />
+      </label>
+      <div className="grid2">
+        <button className="btn" onClick={() => (setExNote(exerciseId, ''), onClose())} disabled={!cur}>Clear</button>
+        <button className="btn primary" onClick={() => (setExNote(exerciseId, text), onClose())}>Save</button>
+      </div>
+    </Sheet>
+  );
+}
+
+function FixSetSheet({ set, loadable, secs, onClose }: { set: SetLog; loadable: boolean; secs: boolean; onClose: () => void }) {
+  const editSet = useStore((s) => s.editSet);
+  const [reps, setReps] = useState(set.reps);
+  const [load, setLoad] = useState(set.loadKg);
+  return (
+    <Sheet onClose={onClose} label="Edit set">
+      <h2 className="h2">Fix this set</h2>
+      <div className={loadable ? 'grid2 pair' : 'stack'}>
+        <label className="field">
+          <span>{secs ? 'Seconds' : 'Reps'}</span>
+          <Stepper value={reps} onChange={setReps} label={secs ? 'seconds' : 'reps'} step={secs ? 5 : 1} min={0} max={300} />
+        </label>
+        {loadable && (
+          <label className="field">
+            <span>Backpack kg</span>
+            <Stepper value={load} onChange={setLoad} label="backpack kilograms" step={0.5} min={0} max={40} />
+          </label>
+        )}
+      </div>
+      <div className="grid2">
+        <button
+          className="btn danger"
+          onClick={() => {
+            const at = useStore.getState().active?.sets.findIndex((x) => x.id === set.id) ?? -1;
+            editSet(set.id, null);
+            onClose();
+            toast('Set removed', {
+              label: 'Undo',
+              run: () => {
+                const a = useStore.getState().active;
+                if (a && at >= 0) useStore.setState({ active: { ...a, sets: [...a.sets.slice(0, at), set, ...a.sets.slice(at)] } });
+              },
+            });
+          }}
+        >
+          <Icon name="trash" size={18} /> Remove
+        </button>
+        <button className="btn primary" onClick={() => (editSet(set.id, { reps, loadKg: loadable ? load : 0 }), onClose())}>
+          Save
+        </button>
+      </div>
+    </Sheet>
   );
 }
 
@@ -221,10 +462,17 @@ function SwapSheet({ slot, onClose }: { slot: Slot; onClose: () => void }) {
   const [busy, setBusy] = useState(false);
   const [why, setWhy] = useState('');
   const [pick, setPick] = useState<string | null>(null);
-  const options = EXERCISES.filter((e) => e.pattern === ex?.pattern && e.id !== slot.exerciseId && usable(e, hasGrip));
+  // Not one already in this workout: sets are counted per exercise, so two slots of the same move would mix up.
+  const inWorkout = new Set(useStore.getState().active?.slots.map((x) => x.exerciseId));
+  const best = records(useStore.getState().sessions);
+  const down = easier(slot.exerciseId);
+  const up = harder(slot.exerciseId);
+  // Ladder neighbours first, so the easier or harder version is one tap away.
+  const options = EXERCISES.filter((e) => e.pattern === ex?.pattern && !inWorkout.has(e.id) && usable(e, hasGrip)).sort((a, b) => Number(b.id === down?.id || b.id === up?.id) - Number(a.id === down?.id || a.id === up?.id));
 
   const apply = (forPlan: boolean) => {
     if (!pick) return;
+    if (inWorkout.has(pick)) return toast(`${EX[pick]?.name} is already in this workout. Pick another.`);
     const st = useStore.getState();
     const a = st.active!;
     const to = EX[pick];
@@ -266,9 +514,13 @@ function SwapSheet({ slot, onClose }: { slot: Slot; onClose: () => void }) {
       <span className="label">{ex ? PATTERN_LABEL[ex.pattern] : ''} exercises</span>
       <div className="stack" style={{ gap: 6 }}>
         {options.map((e) => (
-          <button key={e.id} className="chip" aria-pressed={pick === e.id} onClick={() => setPick(e.id)} style={{ justifyContent: 'space-between', display: 'flex', alignItems: 'center', minHeight: 48, textAlign: 'left' }}>
-            <span>{e.name}</span>
-            <span className="small" style={{ opacity: 0.7 }}>{e.muscles}</span>
+          <button key={e.id} className="chip" aria-pressed={pick === e.id} onClick={() => setPick(e.id)} style={{ justifyContent: 'space-between', display: 'flex', alignItems: 'center', gap: 8, minHeight: 48, textAlign: 'left', whiteSpace: 'normal', padding: '6px 14px' }}>
+            <span>
+              {e.name}
+              {e.id === down?.id && <span className="pill" style={{ marginLeft: 6, fontSize: 11 }}>Easier</span>}
+              {e.id === up?.id && <span className="pill" style={{ marginLeft: 6, fontSize: 11 }}>Harder</span>}
+            </span>
+            <span className="small" style={{ opacity: 0.7, textAlign: 'right', minWidth: 0, maxWidth: '45%' }}>{bestText(best[e.id], e) ?? e.muscles}</span>
           </button>
         ))}
       </div>
@@ -280,11 +532,20 @@ function SwapSheet({ slot, onClose }: { slot: Slot; onClose: () => void }) {
   );
 }
 
-function FinishSheet({ onClose, onSave }: { onClose: () => void; onSave: (feel: number | undefined, note: string) => void }) {
+function FinishSheet({ left, idleMin, onClose, onSave }: { left: { name: string; n: number }[]; idleMin: number; onClose: () => void; onSave: (feel: number | undefined, note: string) => void }) {
   const [feel, setFeel] = useState<number | undefined>();
   const [note, setNote] = useState('');
+  const sets = left.reduce((t, x) => t + x.n, 0);
   return (
     <Sheet onClose={onClose} label="Finish workout">
+      {idleMin > 30 && <p className="small mut">Your last set was {hm(idleMin)} ago, so this saves the workout as ending then.</p>}
+      {sets > 0 && (
+        <div className="card soft stack" style={{ gap: 6 }}>
+          <span className="bold">{sets} planned set{sets === 1 ? '' : 's'} not done yet</span>
+          <span className="small mut">{left.map((x) => `${x.name} (${x.n})`).join(', ')}. Finishing now saves what you did; progression only moves up on moves where you hit every set.</span>
+          <button className="btn sm" style={{ alignSelf: 'flex-start' }} onClick={onClose}>Keep going</button>
+        </div>
+      )}
       <h2 className="h2">How did it feel?</h2>
       <div className="row" style={{ flexWrap: 'wrap' }} role="group" aria-label="Feel">
         {FEEL.map((l, i) => (
@@ -304,7 +565,22 @@ function FinishSheet({ onClose, onSave }: { onClose: () => void; onSave: (feel: 
   );
 }
 
-function Summary({ session, lines, records }: { session: Session; lines: string[]; records: string[] }) {
+/** After a workout: protein still to go today from Fuel Log, with a way to log a snack there. */
+function RefuelCard({ date }: { date: string }) {
+  const fuel = useFuelData();
+  const t = fuel?.targets;
+  if (!fuel || !t || date !== todayKey()) return null;
+  const left = Math.max(0, Math.round(t.protein - (fuel.days[date]?.protein ?? 0)));
+  return (
+    <section className="card tight stack" style={{ gap: 8, boxShadow: 'inset 4px 0 0 var(--fuel)' }} aria-label="Refuel">
+      <span className="bold">{left > 0 ? `${left} g protein to go today` : 'Protein done for today'}</span>
+      <span className="small mut">{left > 0 ? `A snack with about ${Math.min(30, left)} g in the next hour helps you recover.` : 'Still eat a proper meal tonight.'}</span>
+      <a className="btn sm fuel" href={FUEL_URL} style={{ alignSelf: 'flex-start' }}>Log it in Fuel Log</a>
+    </section>
+  );
+}
+
+function Summary({ session, lines, records, slots }: { session: Session; lines: string[]; records: string[]; slots: Slot[] }) {
   const [text, setText] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const ai = hasAi(currentAi());
@@ -317,6 +593,7 @@ function Summary({ session, lines, records }: { session: Session; lines: string[
       .finally(() => setBusy(false));
   }, []);
   const mins = Math.max(1, Math.round((session.end - session.start) / 60_000));
+  const cmp = vsLast(session, useStore.getState().sessions);
   return (
     <main className="page celebrate" style={{ paddingTop: 40, gap: 16 }}>
       <div style={{ width: 64, height: 64, borderRadius: 22, background: 'var(--acc)', color: 'var(--on-acc)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -337,6 +614,16 @@ function Summary({ session, lines, records }: { session: Session; lines: string[
           <span className="small mut">new bests</span>
         </div>
       </div>
+      {cmp && (
+        <p className="small" style={{ textAlign: 'center' }}>
+          vs your last {session.name} on {fmtDate(cmp.date, { weekday: 'short', day: 'numeric', month: 'short' })}:{' '}
+          <span className="bold" style={{ color: cmp.reps > 0 ? 'var(--acc)' : undefined }}>
+            {cmp.reps > 0 ? '+' : ''}{cmp.reps} reps
+          </span>
+          {cmp.sets ? `, ${cmp.sets > 0 ? '+' : ''}${cmp.sets} set${Math.abs(cmp.sets) === 1 ? '' : 's'}` : ''}
+          {cmp.reps < 0 ? '. Lighter days happen; sleep and food count too.' : ''}
+        </p>
+      )}
       {records.length > 0 && (
         <section className="card stack">
           <h2 className="h2">New bests</h2>
@@ -356,6 +643,20 @@ function Summary({ session, lines, records }: { session: Session; lines: string[
           ))}
         </section>
       )}
+      {(() => {
+        const near = nearMisses(session, slots);
+        return near.length ? (
+          <section className="card stack" style={{ gap: 6 }}>
+            <h2 className="h2">Nearly there</h2>
+            {near.map((n) => (
+              <p key={n.exerciseId} className="small">
+                <span className="bold">{EX[n.exerciseId]?.name}</span>: {n.hit} of {n.sets} sets at {n.high}{EX[n.exerciseId]?.unit === 'secs' ? ' s' : ' reps'}. All {n.sets} next time steps it up.
+              </p>
+            ))}
+          </section>
+        ) : null;
+      })()}
+      <RefuelCard date={session.date} />
       {ai && (
         <section className="card stack">
           <span className="row label">
@@ -364,7 +665,12 @@ function Summary({ session, lines, records }: { session: Session; lines: string[
           <p>{busy ? 'Looking at your sets…' : text}</p>
         </section>
       )}
-      <a href="#/today" className="btn primary block">Done</a>
+      <div className="row">
+        <button className="btn" onClick={() => shareText(sessionText(session, fmtDate(session.date, { weekday: 'short', day: 'numeric', month: 'short' })))}>
+          <Icon name="out" size={18} /> Share
+        </button>
+        <a href="#/today" className="btn primary block" style={{ flex: 1 }}>Done</a>
+      </div>
     </main>
   );
 }
