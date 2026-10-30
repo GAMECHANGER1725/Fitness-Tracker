@@ -19,6 +19,8 @@ import type { PlanDay } from '../lib/types';
 const REST_DAY = ['An easy 10 to 15 min walk outside', '30 s each: hip flexor stretch, hamstring stretch, chest stretch on a doorway', '10 slow cat-cows and 10 deep breaths lying down'];
 
 const SKIP_KEY = 'fitness-skip';
+const FEEL_KEY = 'fitness-feel';
+const FEELS = [['fresh', 'Fresh'], ['ok', 'OK'], ['sore', 'Sore'], ['tired', 'Tired']] as const;
 
 export default function Today() {
   const today = useToday();
@@ -33,7 +35,25 @@ export default function Today() {
   const [why, setWhy] = useState(false);
   // Readiness picks the lighter version on an Easy day; you can flip it either way (until you leave Today).
   const [choice, setChoice] = useState<boolean | null>(null);
-  const easy = choice ?? ready.band === 'easy';
+  // How you feel today (per device, for today only): sore or tired picks the lighter version.
+  const [feel, setFeelState] = useState<string | null>(() => {
+    try {
+      const f = JSON.parse(localStorage.getItem(FEEL_KEY) ?? 'null');
+      return f?.date === today ? f.v : null;
+    } catch {
+      return null;
+    }
+  });
+  const setFeel = (v: string | null) => {
+    try {
+      localStorage.setItem(FEEL_KEY, JSON.stringify({ date: today, v }));
+    } catch {
+      /* just for now, then */
+    }
+    setFeelState(v);
+  };
+  const low = feel === 'sore' || feel === 'tired';
+  const easy = choice ?? (low || ready.band === 'easy');
   const hidden = useLayout((l) => l.hidden);
   const exNotes = useStore((s) => s.profile.exNotes);
   const lastNight = useStore((s) => s.nights[today]);
@@ -85,7 +105,7 @@ export default function Today() {
               <span className="small bold" style={{ opacity: 0.75 }}>Readiness · {why ? 'hide' : 'why?'}</span>
               <p className="num" style={{ fontSize: 48, lineHeight: 1 }}>{ready.score}</p>
             </button>
-            <span className="pill">{BAND_LABEL[ready.band]}</span>
+            <span className="pill">{low && ready.band !== 'easy' ? 'Easy today' : BAND_LABEL[ready.band]}</span>
           </div>
           {why && (
             <div className="stack" style={{ gap: 8 }}>
@@ -179,6 +199,21 @@ export default function Today() {
             </div>
           ) : day ? (
             <>
+              <div className="row" style={{ gap: 6, flexWrap: 'wrap' }} role="group" aria-label="How do you feel?">
+                <span className="small" style={{ opacity: 0.85 }}>Feeling</span>
+                {FEELS.map(([k, label]) => (
+                  <button
+                    key={k}
+                    className="chip"
+                    aria-pressed={feel === k}
+                    onClick={() => (setFeel(feel === k ? null : k), setChoice(null))}
+                    style={{ minHeight: 32, fontSize: 13, padding: '0 10px', background: feel === k ? 'var(--on-acc)' : 'rgba(255,255,255,0.18)', color: feel === k ? 'var(--acc)' : 'inherit' }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {low && choice == null && <p className="small" style={{ opacity: 0.9 }}>Lighter today, since you’re {feel}. Moving still helps; skip anything that hurts.</p>}
               <button className="btn block" onClick={() => start(day)}>
                 <Icon name="play" size={18} fill /> Start workout · {minutes(slots)} min{easy ? ', lighter' : ''}
               </button>
