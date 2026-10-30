@@ -34,6 +34,7 @@ export default function Today() {
   const easy = choice ?? ready.band === 'easy';
   const hidden = useLayout((l) => l.hidden);
   const exNotes = useStore((s) => s.profile.exNotes);
+  const lastNight = useStore((s) => s.nights[today]);
 
   const start = (day: PlanDay) => {
     startWorkout(day, easy);
@@ -74,6 +75,9 @@ export default function Today() {
             </div>
           )}
           <Briefing fallback={ready.notes.slice(0, 2).join('. ') + (ready.notes.length ? '.' : '')} />
+          {!lastNight?.wake && new Date().getHours() >= 14 && (
+            <a href={`#/sleep?night=${today}`} className="small bold" style={{ color: 'inherit', opacity: 0.9 }}>Log last night’s sleep</a>
+          )}
           {active && keyOf(new Date(active.start)) < today ? (
             // Started on an earlier day and never finished: save what was logged, or let it go.
             <div className="stack" style={{ gap: 8 }}>
