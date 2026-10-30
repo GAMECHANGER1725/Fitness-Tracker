@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore } from '../lib/store';
 import { minutesLeft, packChange, warmupFor } from '../lib/program';
-import { EX, EXERCISES, PATTERN_LABEL, bestText, easier, harder, targetText, usable } from '../lib/exercises';
+import { EX, EXERCISES, PATTERN_LABEL, bestText, easier, harder, howToUrl, targetText, usable } from '../lib/exercises';
 import { historyOf, moveUpText, nearMisses, newRecords, records, sessionText, vsLast } from '../lib/progress';
 import { currentAi, postWorkout, suggestSwap } from '../lib/coach';
 import { friendlyError, hasAi } from '../lib/ai';
@@ -181,6 +181,7 @@ function Player({ onDone }: { onDone: (r: { session: Session; lines: string[]; r
         <ul className="small mut" style={{ margin: 0, paddingLeft: 18 }}>
           {ex?.cues.map((c) => <li key={c}>{c}</li>)}
         </ul>
+        {ex && <a className="small bold acc" href={howToUrl(ex)} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="play" size={14} fill /> Watch how (YouTube)</a>}
         {ex && !past && (
           <p className="small acc">
             {moveUpText(planSlot, ex)}

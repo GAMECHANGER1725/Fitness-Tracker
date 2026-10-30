@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_DATA, exportCsv, exportJson, importJson, normalize } from '../src/lib/backup';
 import { DEFAULT_PROGRAM, addSlot, copyDay, deleteDay, nextPlanned, minutes, minutesLeft, packChange, dayWhen, workoutTimeOn, moveSlot, plannedDay, slotsFor, warmupFor, weekdayOf } from '../src/lib/program';
-import { EX, EXERCISES, bestText, easier, harder } from '../src/lib/exercises';
+import { EX, EXERCISES, bestText, easier, harder, howToUrl } from '../src/lib/exercises';
 import { applySession, deloadDue, diffPrograms, guardProgram, matchSession, newRecords, progressSlot, records, trendOf, moveSession, sessionText, vsLast, withLength, moveUpText, nearMisses, weeklySets, daysOff, monthVs } from '../src/lib/progress';
 import { readiness, vsUsual } from '../src/lib/readiness';
 import { lastWeekReport, weekNotes, weekReportText, yesterdayLine } from '../src/lib/notes';
@@ -639,5 +639,12 @@ describe('monthVs', () => {
   it('compares whole months once one is over', () => {
     expect(monthVs(ss, '2026-10-01', '2026-11-04')).toEqual({ diff: 0, partial: false });
     expect(monthVs(ss, '2026-09-01', '2026-11-04')).toEqual({ diff: 3, partial: false });
+  });
+});
+
+describe('howToUrl', () => {
+  it('searches YouTube for the form, with backpack moves as weighted ones', () => {
+    expect(howToUrl({ name: 'Pike push-up' })).toBe('https://www.youtube.com/results?search_query=Pike%20push-up%20proper%20form');
+    expect(howToUrl({ name: 'Backpack row' })).toContain('search_query=weighted%20row');
   });
 });

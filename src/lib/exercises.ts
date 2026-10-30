@@ -99,3 +99,7 @@ export function bestText(b: { reps: number; loadKg: number } | undefined, e: { u
   if (!b) return undefined;
   return `best ${b.reps}${e.unit === 'secs' ? ' s' : b.loadKg ? '' : ' reps'}${b.loadKg ? ` @ ${b.loadKg} kg` : ''}`;
 }
+
+/** A YouTube search for the move's form ("Backpack" moves search as weighted ones). */
+export const howToUrl = (ex: Pick<Exercise, 'name'>) =>
+  `https://www.youtube.com/results?search_query=${encodeURIComponent(`${ex.name.replace(/^Backpack /i, 'weighted ')} proper form`)}`;

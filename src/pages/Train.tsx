@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useStore } from '../lib/store';
-import { EX, EXERCISES, PATTERN_LABEL, bestText, easier, harder, targetText, usable } from '../lib/exercises';
+import { EX, EXERCISES, PATTERN_LABEL, bestText, easier, harder, howToUrl, targetText, usable } from '../lib/exercises';
 import { WEEKDAYS, addSlot, copyDay, dayWhen, deleteDay, inDeload, minutes, moveSlot } from '../lib/program';
 import { PATTERN_CAP, matchSession, monthVs, moveUpText, newRecords, records, sessionText, trendOf, weeklySets } from '../lib/progress';
 import { addDays, addMonths, daysBetween, fmtDate, monthGrid } from '../lib/dates';
@@ -716,6 +716,7 @@ function Moves() {
                       <ul className="small mut" style={{ margin: 0, paddingLeft: 18 }}>
                         {e.cues.map((c) => <li key={c}>{c}</li>)}
                       </ul>
+                      <a className="small bold acc" href={howToUrl(e)} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name="play" size={14} fill /> Watch how (YouTube)</a>
                     </>
                   )}
                 </div>
