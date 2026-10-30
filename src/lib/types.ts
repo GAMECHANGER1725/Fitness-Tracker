@@ -144,7 +144,8 @@ export interface Settings {
   workoutTime: string;
   /** Saturday and Sunday workout reminder, "HH:mm"; empty = same as `workoutTime`. */
   weekendWorkoutTime: string;
-  theme: 'auto' | 'dark' | 'light';
+  /** 'black' is dark with a true-black background (OLED). */
+  theme: 'auto' | 'dark' | 'light' | 'black';
   /** Own AI keys; empty = use Fuel Log's. */
   aiKey: string;
   aiModel: string;

@@ -378,6 +378,13 @@ describe('wind-down', () => {
   });
 });
 
+describe('theme', () => {
+  it('keeps black and drops unknown themes', () => {
+    expect(normalize({ settings: { theme: 'black' } }).settings.theme).toBe('black');
+    expect(normalize({ settings: { theme: 'purple' } }).settings.theme).toBe('auto');
+  });
+});
+
 describe('backup', () => {
   it('round-trips without the AI keys', () => {
     const d = { ...DEFAULT_DATA, settings: { ...DEFAULT_DATA.settings, aiKey: 'secret', geminiKey: 'g' } };

@@ -449,9 +449,9 @@ function Look() {
     <section className="card stack" style={{ gap: 10 }}>
       <h2 className="h2">Look</h2>
       <div className="seg" role="group" aria-label="Theme">
-        {(['auto', 'dark', 'light'] as const).map((t) => (
+        {(['auto', 'dark', 'black', 'light'] as const).map((t) => (
           <button key={t} aria-pressed={theme === t} onClick={() => set({ theme: t })}>
-            {t === 'auto' ? 'Auto' : t === 'dark' ? 'Dark' : 'Light'}
+            {t === 'auto' ? 'Auto' : t === 'dark' ? 'Dark' : t === 'black' ? 'Black' : 'Light'}
           </button>
         ))}
       </div>

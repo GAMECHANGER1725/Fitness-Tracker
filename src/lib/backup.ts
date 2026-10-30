@@ -175,7 +175,7 @@ export function normalize(v: unknown): AppData {
       bedtime: time(s.bedtime, D.settings.bedtime),
       workoutTime: time(s.workoutTime, D.settings.workoutTime),
       weekendWorkoutTime: time(s.weekendWorkoutTime, ''),
-      theme: s.theme === 'dark' || s.theme === 'light' ? s.theme : 'auto',
+      theme: s.theme === 'dark' || s.theme === 'light' || s.theme === 'black' ? s.theme : 'auto',
       aiKey: str(s.aiKey, 300),
       aiModel: str(s.aiModel, 80) || D.settings.aiModel,
       geminiKey: str(s.geminiKey, 300),

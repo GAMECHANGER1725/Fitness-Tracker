@@ -25,7 +25,9 @@ export default function App() {
   useEffect(() => {
     const root = document.documentElement;
     if (theme === 'auto') root.removeAttribute('data-theme');
-    else root.setAttribute('data-theme', theme);
+    // Black is the dark theme (every dark rule still applies) with a black background on top.
+    else root.setAttribute('data-theme', theme === 'black' ? 'dark' : theme);
+    root.toggleAttribute('data-black', theme === 'black');
     const bg = getComputedStyle(root).getPropertyValue('--bg').trim();
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', bg || '#0C1013');
   }, [theme]);

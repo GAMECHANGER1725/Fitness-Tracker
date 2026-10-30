@@ -181,6 +181,8 @@ select.input { appearance: none; background-image: linear-gradient(45deg, transp
 .seg button { padding: 0 4px; }
 /* .btn.sm's side padding beat .btn.icon's padding: 0 and squeezed small icon buttons' icons to ~10px (same fix as Fuel Log's). */
 .btn.sm.icon { padding: 0; }
+/* Black theme: dark, with a true-black background and darker surfaces (OLED). */
+:root[data-black] { --bg: #000000; --s1: #0b0f12; --s2: #151b20; --s3: #1f282f; --track: #161d22; --line: #161d22; --line2: #26313a; --nav: rgba(11, 15, 18, 0.94); }
 /* Two steppers side by side, stacked when they'd be too narrow (Large text on a small phone). */
 .grid2.pair { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
 .grid2.pair .row { gap: 2px; }
