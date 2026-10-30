@@ -362,7 +362,14 @@ function History() {
   const list = Object.values(sessions)
     .filter((x) => (!only || x.name === only) && matchSession(x, query))
     .sort((a, b) => b.start - a.start);
+  // #/train?tab=history&past=1 (from Today's quick log) opens the sheet; the param is then dropped so Back doesn't reopen it.
+  const wantPast = useRoute().params.get('past') === '1';
   const [past, setPast] = useState(false);
+  useEffect(() => {
+    if (!wantPast) return;
+    setPast(true);
+    history.replaceState(null, '', '#/train?tab=history');
+  }, [wantPast]);
   const add = (
     <button className="btn block" onClick={() => setPast(true)}>
       <Icon name="plus" size={18} /> Log a workout I already did

@@ -201,6 +201,15 @@ export default function Today() {
         {!hidden.includes('recap') && <LastWeek />}
         {!hidden.includes('fuel') && <FuelStrip />}
         {!hidden.includes('week') && <WeekStrip />}
+        <div className="row" style={{ flexWrap: 'wrap', gap: 6, justifyContent: 'center' }} role="group" aria-label="Quick log">
+          <span className="small mut" style={{ width: '100%', textAlign: 'center' }}>Quick log</span>
+          <a className="chip" href={`#/sleep?night=${today}`} style={{ textDecoration: 'none', color: 'var(--ink)' }}>
+            <Icon name="moon" size={14} /> Last night
+          </a>
+          <a className="chip" href="#/train?tab=history&past=1" style={{ textDecoration: 'none', color: 'var(--ink)' }}>
+            <Icon name="plus" size={14} /> A workout I already did
+          </a>
+        </div>
         {hidden.length > 0 && (
           <a href="#/profile?open=look" className="small mut" style={{ textAlign: 'center' }}>
             {hidden.length} card{hidden.length === 1 ? '' : 's'} hidden · change in Profile
