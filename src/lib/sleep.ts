@@ -3,7 +3,7 @@
 // Teens need 8–10 hours (the default goal is 8.5); the wake target is 6:00 every day.
 
 import type { Night } from './types';
-import { addDays, atOn, keyOf } from './dates';
+import { addDays, atOn, dateOf, keyOf } from './dates';
 
 const MIN = 60_000;
 const HOUR = 60 * MIN;
@@ -325,4 +325,24 @@ export function pastAt(hhmmStr: string, now: number): number {
   const today = keyOf(new Date(now));
   const t = atOn(today, hhmmStr);
   return t <= now ? t : atOn(addDays(today, -1), hhmmStr);
+}
+
+const NIGHT_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+/** The evening of the week you sleep least, over the last 6 weeks: named by the evening you went to bed.
+ * Null until 4 evenings have 2+ nights each, or when the shortest is under 30 min below the average. */
+export function shortestEvening(nights: Record<string, Night>, today: string): { name: string; avg: number; under: number } | null {
+  const by: number[][] = Array.from({ length: 7 }, () => []);
+  for (const n of Object.values(nights)) {
+    const m = n.date > addDays(today, -42) && n.date <= today ? durationMin(n) : null;
+    if (m != null) by[dateOf(addDays(n.date, -1)).getDay()].push(m);
+  }
+  const avgs = by.map((xs) => (xs.length >= 2 ? xs.reduce((a, b) => a + b, 0) / xs.length : null));
+  const known = avgs.filter((x): x is number => x != null);
+  if (known.length < 4) return null;
+  const all = by.flat();
+  const mean = all.reduce((a, b) => a + b, 0) / all.length;
+  const i = avgs.reduce<number>((lo, x, j) => (x != null && (avgs[lo] == null || x < avgs[lo]!) ? j : lo), 0);
+  const under = Math.round(mean - avgs[i]!);
+  return under >= 30 ? { name: NIGHT_NAMES[i], avg: Math.round(avgs[i]!), under } : null;
 }

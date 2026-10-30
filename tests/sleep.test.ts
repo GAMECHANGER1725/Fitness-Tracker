@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clock12, hm, durationMin, guardBedtime, idealBedtime, mergeImported, nightKey, onTime, readCsv, samsungNights, samsungTime, sleepStats, wakeStreak, nightPos, toBedtime, windDownEffect, pastAt, bedtimeEffect, sleepIfNow, lateMeal, noteEffect } from '../src/lib/sleep';
+import { clock12, hm, durationMin, guardBedtime, idealBedtime, mergeImported, nightKey, onTime, readCsv, samsungNights, samsungTime, sleepStats, wakeStreak, nightPos, toBedtime, windDownEffect, pastAt, bedtimeEffect, sleepIfNow, lateMeal, noteEffect, shortestEvening } from '../src/lib/sleep';
 import { addDays, atOn } from '../src/lib/dates';
 import type { Night } from '../src/lib/types';
 
@@ -193,6 +193,24 @@ describe('bedtimeEffect', () => {
     all['2026-10-25'] = N('2026-10-25', '23:00', '06:00', { quality: 3 });
     all['2026-10-26'] = N('2026-10-26', '23:00', '06:00');
     expect(bedtimeEffect(all, '21:15', '2026-10-29')).toEqual({ onTime: 4, late: 2.3 });
+  });
+});
+
+describe('shortestEvening', () => {
+  const four = (shortBed: string) => {
+    const all: Record<string, Night> = {};
+    for (let i = 0; i < 28; i++) {
+      const d = addDays('2026-10-05', i); // Mondays: 5, 12, 19, 26 Oct (Sunday evenings)
+      all[d] = N(d, (i % 7 === 0 ? shortBed : '21:30'), '06:00');
+    }
+    return all;
+  };
+  it('names the evening with the least sleep, by the day you went to bed', () => {
+    expect(shortestEvening(four('23:00'), '2026-11-01')).toEqual({ name: 'Sunday', avg: 420, under: 77 });
+  });
+  it('stays quiet under a 30 min gap or with too few nights', () => {
+    expect(shortestEvening(four('22:00'), '2026-11-01')).toBeNull();
+    expect(shortestEvening({ '2026-10-26': N('2026-10-26', '23:00', '06:00') }, '2026-11-01')).toBeNull();
   });
 });
 
