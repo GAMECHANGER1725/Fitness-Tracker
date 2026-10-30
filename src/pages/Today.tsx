@@ -357,7 +357,7 @@ function BedCard() {
           <span className="small" style={{ display: 'block', color: ifNow < goalH * 60 - 10 ? 'var(--warn)' : 'var(--sleep)' }}>
             Sleep now for {hm(ifNow)}
           </span>
-          {g.wake >= 2 && <span className="small mut" style={{ display: 'block' }}>Up on time tomorrow keeps your {g.wake}-day wake streak</span>}
+          {g.wake >= 2 && <span className="small mut" style={{ display: 'block' }}>Up on time in the morning keeps your {g.wake}-day wake streak</span>}
         </span>
         <Icon name="right" />
       </button>
