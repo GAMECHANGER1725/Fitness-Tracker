@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useStore } from '../lib/store';
 import { EX, EXERCISES, PATTERN_LABEL, easier, harder, targetText, usable } from '../lib/exercises';
 import { WEEKDAYS, copyDay, deleteDay, inDeload, minutes, moveSlot } from '../lib/program';
-import { records, sessionText, trendOf, weeklySets } from '../lib/progress';
+import { PATTERN_CAP, records, sessionText, trendOf, weeklySets } from '../lib/progress';
 import { addDays, addMonths, daysBetween, fmtDate, monthGrid } from '../lib/dates';
 import { Bar, Head, Icon, ProfileLink, Sheet, Stepper, go, shareText, toast, useGame, useRoute, useToday } from '../components/ui';
 import { useReadiness } from '../components/data';
@@ -77,8 +77,21 @@ function Plan() {
           </div>
         )}
         <p className="small mut">
-          Weekly hard sets: {(Object.keys(wk) as Pattern[]).filter((k) => wk[k]).map((k) => `${PATTERN_LABEL[k].split(' ')[0]} ${wk[k]}`).join(' · ')}
+          Weekly hard sets:{' '}
+          {(Object.keys(wk) as Pattern[])
+            .filter((k) => wk[k])
+            .map((k, i) => (
+              <span key={k} style={wk[k] > PATTERN_CAP ? { color: 'var(--warn)', fontWeight: 700 } : undefined}>
+                {i ? ' · ' : ''}
+                {PATTERN_LABEL[k].split(' ')[0]} {wk[k]}
+              </span>
+            ))}
         </p>
+        {(Object.keys(wk) as Pattern[]).some((k) => wk[k] > PATTERN_CAP) && (
+          <p className="small" style={{ color: 'var(--warn)' }}>
+            Over {PATTERN_CAP} hard sets a week for one kind of movement is more than your coach would ever plan, and it gets harder to recover. Trim a set or two, or take a workout off a weekday.
+          </p>
+        )}
       </section>
 
       {last && (
