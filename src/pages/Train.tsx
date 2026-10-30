@@ -190,7 +190,7 @@ function Plan() {
                 </button>
               );
             })}
-            <div className="between" style={{ margin: '6px 0 10px' }}>
+            <div className="between" style={{ margin: '6px 0 10px', flexWrap: 'wrap', rowGap: 6 }}>
               {order === d.id ? (
                 <span className="small mut">Saved as you go. Undo is above.</span>
               ) : (

@@ -56,7 +56,7 @@ export default function Coach() {
           <section className="card stack" style={{ gap: 10 }}>
             <h2 className="h2">Add your AI key</h2>
             <p className="small">The coach uses the same key as Fuel Log. Add a TokenHarbor (DeepSeek) or Gemini key in Fuel Log on this phone and it’s picked up here by itself, or paste one in Profile → AI.</p>
-            <div className="row">
+            <div className="row" style={{ flexWrap: 'wrap' }}>
               <a className="btn fuel" href="../fuel-log/#/profile">Open Fuel Log</a>
               <a className="btn" href="#/profile?open=coach">Profile → AI</a>
             </div>
