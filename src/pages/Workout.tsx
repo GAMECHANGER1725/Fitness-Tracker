@@ -371,7 +371,7 @@ function HoldTimer({ low, high, onStop }: { low: number; high: number; onStop: (
   );
 }
 
-function NoteSheet({ exerciseId, onClose }: { exerciseId: string; onClose: () => void }) {
+export function NoteSheet({ exerciseId, onClose }: { exerciseId: string; onClose: () => void }) {
   const cur = useStore((s) => s.profile.exNotes[exerciseId] ?? '');
   const setExNote = useStore((s) => s.setExNote);
   const [text, setText] = useState(cur);

@@ -7,6 +7,7 @@ import { addDays, addMonths, daysBetween, fmtDate, monthGrid } from '../lib/date
 import { hm } from '../lib/sleep';
 import { Bar, Head, Icon, ProfileLink, Sheet, Stepper, go, scrollMotion, shareText, toast, useGame, useRoute, useToday } from '../components/ui';
 import { useReadiness } from '../components/data';
+import { NoteSheet } from './Workout';
 import type { Exercise, Pattern, PlanDay, Program, Session, Slot } from '../lib/types';
 
 const TABS = [
@@ -618,6 +619,7 @@ function Moves() {
   const [open, setOpen] = useState<string | null>(params.get('open'));
   const [query, setQuery] = useState('');
   const [only, setOnly] = useState<'all' | 'plan' | 'done'>('all');
+  const [noteFor, setNoteFor] = useState<string | null>(null);
   const program = useStore((s) => s.program);
   const inPlan = new Set(program.days.flatMap((d) => d.slots.map((x) => x.exerciseId)));
   // Opened from a link (Today's list or a ladder chip): bring it into view.
@@ -669,7 +671,10 @@ function Moves() {
                   {open === e.id && (
                     <>
                       <Trend ex={e} sessions={sessions} />
-                      {notes[e.id] && <p className="small"><span className="bold">Your note:</span> {notes[e.id]}</p>}
+                      <button className="small" onClick={() => setNoteFor(e.id)} style={{ background: 'none', border: 0, padding: 0, textAlign: 'left', color: notes[e.id] ? 'var(--ink)' : 'var(--acc)', display: 'flex', gap: 6, alignItems: 'flex-start' }}>
+                        <Icon name="pencil" size={14} />
+                        {notes[e.id] ? <span><span className="bold">Your note:</span> {notes[e.id]}</span> : <span className="bold">Add a note</span>}
+                      </button>
                       <Ladder id={e.id} onPick={setOpen} />
                       <ul className="small mut" style={{ margin: 0, paddingLeft: 18 }}>
                         {e.cues.map((c) => <li key={c}>{c}</li>)}
@@ -681,6 +686,7 @@ function Moves() {
             })}
         </section>
       ))}
+      {noteFor && <NoteSheet exerciseId={noteFor} onClose={() => setNoteFor(null)} />}
     </>
   );
 }
