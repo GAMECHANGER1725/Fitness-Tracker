@@ -814,6 +814,7 @@ function Body() {
   const [open, setOpen] = useState(false);
   const today = useToday();
   const last = list.at(-1);
+  const [all, setAll] = useState(false);
   return (
     <section className="card stack" style={{ gap: 8 }} aria-label="Body measurements">
       <div className="between">
@@ -840,6 +841,29 @@ function Body() {
             })}
           </div>
           <p className="small mut">{list.length} entr{list.length === 1 ? 'y' : 'ies'}, last on {fmtDate(last!.date, { weekday: 'short', day: 'numeric', month: 'short' })}. Measure at the same time of day, relaxed.</p>
+          <button className="small acc bold" onClick={() => setAll(!all)} aria-expanded={all} style={{ background: 'none', border: 0, padding: 0, textAlign: 'left' }}>
+            {all ? 'Hide entries' : 'Show all entries'}
+          </button>
+          {all &&
+            [...list].reverse().map((m) => (
+              <div key={m.date} className="row" style={{ justifyContent: 'space-between', borderTop: '1px solid var(--line)', paddingTop: 6 }}>
+                <span className="small">
+                  <span className="bold">{fmtDate(m.date, { day: 'numeric', month: 'short', year: 'numeric' })}</span>{' '}
+                  <span className="mut">{MEASURES.filter(([k]) => m[k] != null).map(([k, name]) => `${name} ${m[k]}`).join(' · ')}</span>
+                </span>
+                <button
+                  className="btn sm icon"
+                  aria-label={`Delete measurements from ${fmtDate(m.date)}`}
+                  onClick={() => {
+                    const before = list;
+                    setProfile({ measures: list.filter((x) => x.date !== m.date) });
+                    toast('Entry deleted', { label: 'Undo', run: () => useStore.getState().setProfile({ measures: before }) });
+                  }}
+                >
+                  <Icon name="trash" size={16} />
+                </button>
+              </div>
+            ))}
         </>
       )}
       {open && <MeasureSheet onClose={() => setOpen(false)} onSave={(m) => setProfile({ measures: addMeasure(list, m) })} />}
