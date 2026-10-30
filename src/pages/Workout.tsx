@@ -100,7 +100,15 @@ function Player({ onDone }: { onDone: (r: { session: Session; lines: string[]; r
   const past = a.date !== keyOf(new Date(a.start));
   const log = () => {
     if (prefs.beep) primeAudio();
-    logSet({ exerciseId: slot.exerciseId, reps, loadKg: ex?.loadable ? load : 0, rpe: rpe ?? undefined });
+    const kg = ex?.loadable ? load : 0;
+    logSet({ exerciseId: slot.exerciseId, reps, loadKg: kg, rpe: rpe ?? undefined });
+    // Beat your best from earlier workouts (and earlier sets today)? Say so now, not just at the end.
+    const prev = records(sessions)[slot.exerciseId];
+    const today = done.reduce<{ reps: number; loadKg: number }>((b, x) => (x.loadKg > b.loadKg || (x.loadKg === b.loadKg && x.reps > b.reps) ? x : b), prev ?? { reps: 0, loadKg: 0 });
+    if (prev && (kg > today.loadKg || (kg === today.loadKg && reps > today.reps))) {
+      navigator.vibrate?.([60, 40, 60]);
+      toast(`New best: ${reps}${ex?.unit === 'secs' ? ' s' : ' reps'}${kg ? ` @ ${kg} kg` : ''} on ${ex?.name}!`);
+    }
     const nowDone = done.length + 1;
     // No rest timer when filling in a past day (a late workout running past midnight keeps it).
     if (!past && (nowDone < slot.sets || a.idx < a.slots.length - 1)) setRest(Date.now() + slot.restS * 1000);
