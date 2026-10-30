@@ -1,5 +1,5 @@
 // Workout player options, per device (localStorage `fitness-player`, not synced): a beep when rest ends,
-// keeping the screen on during a workout, and moving on to the next exercise by itself.
+// vibration, keeping the screen on during a workout, and moving on to the next exercise by itself.
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
@@ -9,12 +9,19 @@ interface PlayerPrefs {
   awake: boolean;
   /** Move to the next exercise when the rest after its last set ends. */
   auto: boolean;
-  set: (p: Partial<Pick<PlayerPrefs, 'beep' | 'awake' | 'auto'>>) => void;
+  /** Vibrate at rest end, hold marks and new bests. */
+  buzz: boolean;
+  set: (p: Partial<Pick<PlayerPrefs, 'beep' | 'awake' | 'auto' | 'buzz'>>) => void;
 }
 
 export const usePlayer = create<PlayerPrefs>()(
-  persist((set) => ({ beep: true, awake: true, auto: false, set: (p) => set(p) }), { name: 'fitness-player', partialize: ({ beep, awake, auto }) => ({ beep, awake, auto }) }),
+  persist((set) => ({ beep: true, awake: true, auto: false, buzz: true, set: (p) => set(p) }), { name: 'fitness-player', partialize: ({ beep, awake, auto, buzz }) => ({ beep, awake, auto, buzz }) }),
 );
+
+/** Vibrate, unless turned off in Profile (or the phone can't). */
+export function buzz(pattern: number | number[]) {
+  if (usePlayer.getState().buzz) navigator.vibrate?.(pattern);
+}
 
 let ctx: AudioContext | null = null;
 

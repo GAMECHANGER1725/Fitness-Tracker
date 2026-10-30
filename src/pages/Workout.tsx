@@ -5,7 +5,7 @@ import { EX, EXERCISES, PATTERN_LABEL, bestText, targetText, usable } from '../l
 import { historyOf, newRecords, records, sessionText, vsLast } from '../lib/progress';
 import { currentAi, postWorkout, suggestSwap } from '../lib/coach';
 import { friendlyError, hasAi } from '../lib/ai';
-import { beep, holdWakeLock, primeAudio, usePlayer } from '../lib/player';
+import { beep, buzz, holdWakeLock, primeAudio, usePlayer } from '../lib/player';
 import { fmtDate, keyOf, todayKey } from '../lib/dates';
 import { FUEL_URL } from '../lib/fuel';
 import { useFuelData } from '../components/data';
@@ -89,7 +89,7 @@ function Player({ onDone }: { onDone: (r: { session: Session; lines: string[]; r
   useEffect(() => {
     if (a.restEnd && rest === 0 && !buzzed.current) {
       buzzed.current = true;
-      navigator.vibrate?.([200, 100, 200]);
+      buzz([200, 100, 200]);
       if (prefs.beep) beep();
       setRest(null);
       if (prefs.auto && allDone && a.idx < a.slots.length - 1) goTo(a.idx + 1);
@@ -106,7 +106,7 @@ function Player({ onDone }: { onDone: (r: { session: Session; lines: string[]; r
     const prev = records(sessions)[slot.exerciseId];
     const today = done.reduce<{ reps: number; loadKg: number }>((b, x) => (x.loadKg > b.loadKg || (x.loadKg === b.loadKg && x.reps > b.reps) ? x : b), prev ?? { reps: 0, loadKg: 0 });
     if (prev && (kg > today.loadKg || (kg === today.loadKg && reps > today.reps))) {
-      navigator.vibrate?.([60, 40, 60]);
+      buzz([60, 40, 60]);
       toast(`New best: ${reps}${ex?.unit === 'secs' ? ' s' : ' reps'}${kg ? ` @ ${kg} kg` : ''} on ${ex?.name}!`);
     }
     const nowDone = done.length + 1;
@@ -343,7 +343,7 @@ function HoldTimer({ low, high, onStop }: { low: number; high: number; onStop: (
     for (const [mark, n] of [[0, 1], [low, 2], [high, 3]] as const) {
       if (secs >= mark && buzzed.current < n) {
         buzzed.current = n;
-        navigator.vibrate?.(n === 3 ? [200, 100, 200] : 150);
+        buzz(n === 3 ? [200, 100, 200] : 150);
       }
     }
   }, [secs, ready, start]);

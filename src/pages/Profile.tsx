@@ -310,16 +310,23 @@ function WindDownEdit() {
 }
 
 function PlayerPrefs() {
-  const { beep, awake, auto, set } = usePlayer();
+  const { beep, awake, auto, buzz, set } = usePlayer();
   return (
     <section className="card stack" style={{ gap: 10 }}>
       <h2 className="h2">During a workout</h2>
       <div className="row" style={{ justifyContent: 'space-between' }}>
         <span className="grow">
           <span className="bold" style={{ display: 'block' }}>Beep when rest ends</span>
-          <span className="small mut">As well as the buzz</span>
+          <span className="small mut">A short two-tone sound</span>
         </span>
         <Switch on={beep} label="Beep when rest ends" onChange={(v) => set({ beep: v })} />
+      </div>
+      <div className="row" style={{ justifyContent: 'space-between' }}>
+        <span className="grow">
+          <span className="bold" style={{ display: 'block' }}>Vibrate</span>
+          <span className="small mut">When rest ends, at hold marks and for a new best</span>
+        </span>
+        <Switch on={buzz} label="Vibrate" onChange={(v) => set({ buzz: v })} />
       </div>
       <div className="row" style={{ justifyContent: 'space-between' }}>
         <span className="grow">
