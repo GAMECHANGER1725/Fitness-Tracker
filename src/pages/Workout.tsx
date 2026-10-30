@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../lib/store';
 import { minutesLeft, warmupFor } from '../lib/program';
-import { EX, EXERCISES, PATTERN_LABEL, bestText, targetText, usable } from '../lib/exercises';
+import { EX, EXERCISES, PATTERN_LABEL, bestText, easier, harder, targetText, usable } from '../lib/exercises';
 import { historyOf, newRecords, records, sessionText, vsLast } from '../lib/progress';
 import { currentAi, postWorkout, suggestSwap } from '../lib/coach';
 import { friendlyError, hasAi } from '../lib/ai';
@@ -445,7 +445,10 @@ function SwapSheet({ slot, onClose }: { slot: Slot; onClose: () => void }) {
   // Not one already in this workout: sets are counted per exercise, so two slots of the same move would mix up.
   const inWorkout = new Set(useStore.getState().active?.slots.map((x) => x.exerciseId));
   const best = records(useStore.getState().sessions);
-  const options = EXERCISES.filter((e) => e.pattern === ex?.pattern && !inWorkout.has(e.id) && usable(e, hasGrip));
+  const down = easier(slot.exerciseId);
+  const up = harder(slot.exerciseId);
+  // Ladder neighbours first, so the easier or harder version is one tap away.
+  const options = EXERCISES.filter((e) => e.pattern === ex?.pattern && !inWorkout.has(e.id) && usable(e, hasGrip)).sort((a, b) => Number(b.id === down?.id || b.id === up?.id) - Number(a.id === down?.id || a.id === up?.id));
 
   const apply = (forPlan: boolean) => {
     if (!pick) return;
@@ -491,9 +494,13 @@ function SwapSheet({ slot, onClose }: { slot: Slot; onClose: () => void }) {
       <span className="label">{ex ? PATTERN_LABEL[ex.pattern] : ''} exercises</span>
       <div className="stack" style={{ gap: 6 }}>
         {options.map((e) => (
-          <button key={e.id} className="chip" aria-pressed={pick === e.id} onClick={() => setPick(e.id)} style={{ justifyContent: 'space-between', display: 'flex', alignItems: 'center', minHeight: 48, textAlign: 'left' }}>
-            <span>{e.name}</span>
-            <span className="small" style={{ opacity: 0.7, textAlign: 'right' }}>{bestText(best[e.id], e) ?? e.muscles}</span>
+          <button key={e.id} className="chip" aria-pressed={pick === e.id} onClick={() => setPick(e.id)} style={{ justifyContent: 'space-between', display: 'flex', alignItems: 'center', gap: 8, minHeight: 48, textAlign: 'left' }}>
+            <span style={{ flex: 'none' }}>
+              {e.name}
+              {e.id === down?.id && <span className="pill" style={{ marginLeft: 6, fontSize: 11 }}>Easier</span>}
+              {e.id === up?.id && <span className="pill" style={{ marginLeft: 6, fontSize: 11 }}>Harder</span>}
+            </span>
+            <span className="small" style={{ opacity: 0.7, textAlign: 'right', minWidth: 0, whiteSpace: 'normal' }}>{bestText(best[e.id], e) ?? e.muscles}</span>
           </button>
         ))}
       </div>
