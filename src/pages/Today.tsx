@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useStore } from '../lib/store';
 import { EX, targetText } from '../lib/exercises';
-import { WEEKDAYS, inDeload, minutes, plannedDay, slotsFor } from '../lib/program';
+import { WEEKDAYS, inDeload, minutes, nextPlanned, plannedDay, slotsFor } from '../lib/program';
 import { addDays, dateOf, fmtDate, weekStart } from '../lib/dates';
 import { QUALITY, clock12, clockOf, durationMin, hm, nightKey, onTime, pastAt, toBedtime, wakeOffset } from '../lib/sleep';
 import { BAND_LABEL } from '../lib/readiness';
@@ -37,6 +37,7 @@ export default function Today() {
   };
 
   const day = planned;
+  const next = nextPlanned(program, today);
   const slots = day ? slotsFor(program, day, today, easy) : [];
 
   return (
@@ -86,6 +87,11 @@ export default function Today() {
             <button className="btn block" onClick={() => setPick(!pick)}>
               Rest day. Train anyway?
             </button>
+          )}
+          {(doneToday.length > 0 || !day) && !active && next && (
+            <p className="small" style={{ opacity: 0.85 }}>
+              Next: {next.day.name}, {next.date === addDays(today, 1) ? 'tomorrow' : fmtDate(next.date, { weekday: 'long' })}
+            </p>
           )}
           {pick && !day && (
             <div className="row" style={{ flexWrap: 'wrap' }}>

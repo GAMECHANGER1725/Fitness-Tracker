@@ -3,7 +3,7 @@
 // reps, then backpack weight, then a harder variation (progress.ts). The coach can change it within limits.
 
 import type { PlanDay, Program, Slot } from './types';
-import { dateOf } from './dates';
+import { addDays, dateOf } from './dates';
 import { EX } from './exercises';
 
 const S = (exerciseId: string, sets: number, low: number, high: number, restS = 90, loadKg = 0): Slot => ({ exerciseId, sets, low, high, restS, loadKg });
@@ -113,4 +113,14 @@ export function copyDay(p: Program, dayId: string, id: string): Program {
 export function deleteDay(p: Program, dayId: string): Program {
   if (p.days.length <= 1 || !p.days.some((d) => d.id === dayId)) return p;
   return { ...p, days: p.days.filter((d) => d.id !== dayId), week: p.week.map((x) => (x === dayId ? null : x)) };
+}
+
+/** The next planned workout after `date` (up to a week ahead), with its date. */
+export function nextPlanned(p: Program, date: string): { day: PlanDay; date: string } | null {
+  for (let i = 1; i <= 7; i++) {
+    const k = addDays(date, i);
+    const day = plannedDay(p, k);
+    if (day) return { day, date: k };
+  }
+  return null;
 }

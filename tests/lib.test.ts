@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_DATA, exportCsv, exportJson, importJson, normalize } from '../src/lib/backup';
-import { DEFAULT_PROGRAM, copyDay, deleteDay, minutes, moveSlot, plannedDay, slotsFor, warmupFor, weekdayOf } from '../src/lib/program';
+import { DEFAULT_PROGRAM, copyDay, deleteDay, nextPlanned, minutes, moveSlot, plannedDay, slotsFor, warmupFor, weekdayOf } from '../src/lib/program';
 import { EX, EXERCISES, easier, harder } from '../src/lib/exercises';
 import { applySession, deloadDue, diffPrograms, guardProgram, newRecords, progressSlot, records, trendOf, moveSession, sessionText, weeklySets } from '../src/lib/progress';
 import { readiness } from '../src/lib/readiness';
@@ -363,5 +363,14 @@ describe('monthGrid', () => {
     expect(monthGrid('2026-02-01').flat().filter(Boolean)).toHaveLength(28);
     expect(addMonths('2026-12-01', 1)).toBe('2027-01-01');
     expect(addMonths('2026-01-31', -1)).toBe('2025-12-01');
+  });
+});
+
+describe('nextPlanned', () => {
+  it('finds the next scheduled workout within a week, or none', () => {
+    const p = { ...DEFAULT_PROGRAM, week: [null, null, 'upper-a', null, null, null, null] };
+    expect(nextPlanned(p, '2026-10-26')).toMatchObject({ date: '2026-10-28', day: { id: 'upper-a' } });
+    expect(nextPlanned(p, '2026-10-28')!.date).toBe('2026-11-04');
+    expect(nextPlanned({ ...p, week: Array(7).fill(null) }, '2026-10-26')).toBeNull();
   });
 });
