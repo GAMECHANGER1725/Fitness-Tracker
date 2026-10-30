@@ -52,7 +52,14 @@ function Plan() {
   return (
     <>
       <section className="card stack" style={{ gap: 10 }} aria-label="Weekly schedule">
-        <h2 className="h2">Week</h2>
+        <div className="between">
+          <h2 className="h2">Week</h2>
+          {(() => {
+            const days = program.week.map((id) => program.days.find((d) => d.id === id)).filter((d): d is PlanDay => !!d);
+            const mins = days.reduce((t, d) => t + minutes(d.slots), 0);
+            return <span className="small mut">{days.length} workout{days.length === 1 ? '' : 's'}{mins ? `, about ${hm(mins)}` : ''}</span>;
+          })()}
+        </div>
         {WEEKDAYS.map((w, i) => (
           <label key={w} className="row" style={{ justifyContent: 'space-between' }}>
             <span className="bold" style={{ width: 48 }}>{w}</span>
