@@ -5,7 +5,7 @@ import { AI_MODELS, GEMINI_MODELS, PROVIDER_NAME, friendlyError, hasAi, testKey,
 import { fuelAi, FUEL_STORE } from '../lib/fuel';
 import { currentAi } from '../lib/coach';
 import { exportCsv, exportJson, importJson } from '../lib/backup';
-import { reminderKinds, remindersOn, remindersSupported, setKind, setLead, setReminders } from '../lib/reminders';
+import { isPaused, reminderKinds, remindersOn, remindersSupported, setKind, setLead, setPaused, setReminders } from '../lib/reminders';
 import { usePlayer } from '../lib/player';
 import { ACCENTS, TODAY_CARDS, useLayout } from '../lib/layout';
 import { showWhatsNew } from '../components/WhatsNew';
@@ -423,6 +423,17 @@ function Reminders() {
               ))}
             </div>
           )}
+          {(() => {
+            const paused = isPaused(kinds.paused, todayKey());
+            return (
+              <div className="row" style={{ justifyContent: 'space-between', marginTop: 4 }}>
+                <span className="small mut">{paused ? 'Paused for today. They start again tomorrow.' : 'Sick, away or a day off?'}</span>
+                <button className="btn sm" onClick={() => (setPaused(paused ? '' : todayKey()), setKinds(reminderKinds()), toast(paused ? 'Reminders back on' : 'No reminders for the rest of today'))}>
+                  {paused ? 'Resume' : 'Pause for today'}
+                </button>
+              </div>
+            );
+          })()}
         </div>
       )}
       <p className="small mut">They work while the app is open or in the background.</p>

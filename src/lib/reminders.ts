@@ -26,8 +26,10 @@ interface Saved {
   bedDate: string;
   workoutDate: string;
   wakeDate: string;
+  /** A day with no reminders at all ("Pause for today"), or ''. */
+  paused: string;
 }
-const EMPTY: Saved = { on: false, off: [], lead: WIND_DOWN_MIN, bedDate: '', workoutDate: '', wakeDate: '' };
+const EMPTY: Saved = { on: false, off: [], lead: WIND_DOWN_MIN, bedDate: '', workoutDate: '', wakeDate: '', paused: '' };
 const read = (): Saved => {
   try {
     return { ...EMPTY, ...JSON.parse(localStorage.getItem(LS_KEY) ?? '{}') };
@@ -49,6 +51,10 @@ export const setKind = (k: ReminderKind, on: boolean) => {
   patch({ off: on ? off : [...off, k] });
 };
 export const setLead = (lead: number) => patch({ lead });
+/** Pause every reminder for the rest of `day` (or resume with ''). */
+export const setPaused = (day: string) => patch({ paused: day });
+/** Paused only on the day it was set for; it lifts by itself at midnight. */
+export const isPaused = (paused: string, today: string) => paused === today;
 
 export const remindersSupported = () => typeof Notification !== 'undefined' && 'serviceWorker' in navigator;
 export const remindersOn = () => remindersSupported() && read().on && Notification.permission === 'granted';
@@ -87,6 +93,7 @@ function tick() {
   const r = read();
   const s = useStore.getState();
   const today = todayKey();
+  if (isPaused(r.paused, today)) return;
   const bed = minsOf(s.settings.bedtime);
   const want = (k: ReminderKind) => !r.off.includes(k);
   if (want('bed') && dueAt(now, bed - r.lead, r.bedDate, 45)) {
