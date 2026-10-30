@@ -33,6 +33,7 @@ export default function Today() {
   const [choice, setChoice] = useState<boolean | null>(null);
   const easy = choice ?? ready.band === 'easy';
   const hidden = useLayout((l) => l.hidden);
+  const exNotes = useStore((s) => s.profile.exNotes);
 
   const start = (day: PlanDay) => {
     startWorkout(day, easy);
@@ -182,6 +183,9 @@ export default function Today() {
                       const last = historyOf(sessions, s.exerciseId)[0];
                       return last ? <span className="small mut">Last time {last.map((x) => x.reps).join(', ')}{e?.unit === 'secs' ? ' s' : ''}{last[0].loadKg ? ` @ ${last[0].loadKg} kg` : ''}</span> : null;
                     })()}
+                    {exNotes[s.exerciseId] && (
+                      <span className="small" style={{ display: 'block', fontStyle: 'italic', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>“{exNotes[s.exerciseId]}”</span>
+                    )}
                   </span>
                   <span className="small mut" style={{ textAlign: 'right' }}>
                     {s.sets} × {targetText(e, s.low, s.high)}
