@@ -4,7 +4,7 @@ import { addDays, addMonths, atOn, fmtDate, hhmmOf, isKey, monthGrid } from '../
 import { QUALITY, clock12, clockOf, nightPos, durationMin, hm, idealBedtime, minsOf, windDownEffect, bedtimeEffect, noteEffect, NOTE_TAGS, nightKey, onTime, samsungNights, sleepStats, wakeOffset } from '../lib/sleep';
 import { currentAi, tonightPlan, useCoach } from '../lib/coach';
 import { friendlyError, hasAi } from '../lib/ai';
-import { Head, Icon, ProfileLink, Sheet, toast, useGame, useRoute, useToday } from '../components/ui';
+import { Head, Icon, ProfileLink, Sheet, Stepper, toast, useGame, useRoute, useToday } from '../components/ui';
 import { useFuelData } from '../components/data';
 import { reminderKinds } from '../lib/reminders';
 import type { Night } from '../lib/types';
@@ -507,6 +507,7 @@ function NightSheet({ date, onClose }: { date: string; onClose: () => void }) {
   const [bed, setBed] = useState(n?.bed ? hhmmOf(n.bed) : settings.bedtime);
   const [wake, setWake] = useState(n?.wake ? hhmmOf(n.wake) : settings.wakeTarget);
   const [q, setQ] = useState<number | undefined>(n?.quality);
+  const [awake, setAwake] = useState(n?.awake ?? 0);
   const [note, setNote] = useState(n?.note ?? '');
   // A bedtime after noon belongs to the evening before.
   const bedAt = atOn(bed >= '12:00' ? addDays(d, -1) : d, bed);
@@ -517,7 +518,7 @@ function NightSheet({ date, onClose }: { date: string; onClose: () => void }) {
     if (wakeAt <= bedAt) return toast('Wake time has to be after bedtime.');
     if (d !== date && n) deleteNight(date);
     // Moving a night to another morning takes its wind-down ticks along.
-    setNight(d, { bed: bedAt, wake: wakeAt, quality: q, note: note.trim() || undefined, ...(d !== date && n?.done ? { done: n.done } : {}), source: n?.source === 'samsung' && d === date ? 'samsung' : 'manual' });
+    setNight(d, { bed: bedAt, wake: wakeAt, quality: q, awake: awake || undefined, note: note.trim() || undefined, ...(d !== date && n?.done ? { done: n.done } : {}), source: n?.source === 'samsung' && d === date ? 'samsung' : 'manual' });
     toast('Night saved');
     onClose();
   };
@@ -540,7 +541,7 @@ function NightSheet({ date, onClose }: { date: string; onClose: () => void }) {
       </div>
       <div className="between small">
         <span className={mins > 0 ? 'bold' : ''} style={{ color: mins > 0 ? 'var(--sleep)' : 'var(--danger)' }}>
-          {mins > 0 ? `${hm(mins)} in bed` : 'Wake time has to be after bedtime'}
+          {mins > 0 ? `${hm(mins)} in bed${awake ? `, ${hm(Math.max(0, mins - awake))} asleep` : ''}` : 'Wake time has to be after bedtime'}
         </span>
         {prev?.bed && prev.wake && (
           <button className="chip" style={{ fontSize: 13, minHeight: 34 }} onClick={() => (setBed(hhmmOf(prev.bed!)), setWake(hhmmOf(prev.wake!)))}>
@@ -548,6 +549,10 @@ function NightSheet({ date, onClose }: { date: string; onClose: () => void }) {
           </button>
         )}
       </div>
+      <label className="field">
+        <span>Awake in the night</span>
+        <Stepper value={awake} onChange={setAwake} label="minutes awake in the night" step={5} min={0} max={240} unit="min" />
+      </label>
       <div className="stack" style={{ gap: 6 }}>
         <span className="label">How did you sleep?</span>
         <div className="grid4" style={{ gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 6 }}>
