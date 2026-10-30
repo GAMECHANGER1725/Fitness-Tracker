@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_DATA, exportCsv, exportJson, importJson, normalize } from '../src/lib/backup';
-import { DEFAULT_PROGRAM, addSlot, copyDay, deleteDay, nextPlanned, minutes, minutesLeft, workoutTimeOn, moveSlot, plannedDay, slotsFor, warmupFor, weekdayOf } from '../src/lib/program';
+import { DEFAULT_PROGRAM, addSlot, copyDay, deleteDay, nextPlanned, minutes, minutesLeft, packChange, workoutTimeOn, moveSlot, plannedDay, slotsFor, warmupFor, weekdayOf } from '../src/lib/program';
 import { EX, EXERCISES, bestText, easier, harder } from '../src/lib/exercises';
 import { applySession, deloadDue, diffPrograms, guardProgram, matchSession, newRecords, progressSlot, records, trendOf, moveSession, sessionText, vsLast, withLength, moveUpText, nearMisses, weeklySets } from '../src/lib/progress';
 import { readiness } from '../src/lib/readiness';
@@ -143,6 +143,20 @@ describe('workoutTimeOn', () => {
     expect(normalize({ settings: { weekendWorkoutTime: '9:05' } }).settings.weekendWorkoutTime).toBe('09:05');
     expect(normalize({ settings: { weekendWorkoutTime: 'soon' } }).settings.weekendWorkoutTime).toBe('');
     expect(normalize({}).settings.weekendWorkoutTime).toBe('');
+  });
+});
+
+describe('packChange', () => {
+  const sl = (exerciseId: string, loadKg: number): Slot => ({ exerciseId, sets: 3, low: 8, high: 12, restS: 60, loadKg });
+  it('asks to pack when the next move is loaded and the bag differs', () => {
+    expect(packChange(sl('superman', 0), sl('pack-row', 10))).toBe('Pack 10 kg for Backpack row');
+    expect(packChange(sl('pack-row', 8), sl('pack-row', 10))).toBe('Pack 10 kg for Backpack row');
+  });
+  it('stays quiet for the same load, an unloaded next move or the last move', () => {
+    expect(packChange(sl('pack-row', 10), sl('pack-row', 10))).toBeNull();
+    expect(packChange(sl('pack-row', 10), sl('superman', 0))).toBeNull();
+    expect(packChange(sl('pack-row', 10), sl('pack-row', 0))).toBeNull();
+    expect(packChange(sl('pack-row', 10), undefined)).toBeNull();
   });
 });
 

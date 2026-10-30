@@ -154,3 +154,11 @@ export function workoutTimeOn(s: Pick<Settings, 'workoutTime' | 'weekendWorkoutT
   const wd = dateOf(date).getDay();
   return (wd === 0 || wd === 6) && s.weekendWorkoutTime ? s.weekendWorkoutTime : s.workoutTime;
 }
+
+/** During the rest before `next`, a heads-up when the backpack needs a different load (or packing at all). */
+export function packChange(cur: Slot, next: Slot | undefined): string | null {
+  const n = next && EX[next.exerciseId];
+  if (!next || !n?.loadable || !next.loadKg) return null;
+  const now = EX[cur.exerciseId]?.loadable ? cur.loadKg : 0;
+  return now === next.loadKg ? null : `Pack ${next.loadKg} kg for ${n.name}`;
+}

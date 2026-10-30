@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore } from '../lib/store';
-import { minutesLeft, warmupFor } from '../lib/program';
+import { minutesLeft, packChange, warmupFor } from '../lib/program';
 import { EX, EXERCISES, PATTERN_LABEL, bestText, easier, harder, targetText, usable } from '../lib/exercises';
 import { historyOf, moveUpText, nearMisses, newRecords, records, sessionText, vsLast } from '../lib/progress';
 import { currentAi, postWorkout, suggestSwap } from '../lib/coach';
@@ -200,6 +200,7 @@ function Player({ onDone }: { onDone: (r: { session: Session; lines: string[]; r
             <span className="timer">{Math.floor(rest / 60)}:{String(rest % 60).padStart(2, '0')}</span>
             <span className="small mut" style={{ maxWidth: 120, textAlign: 'center', lineHeight: 1.25 }}>{allDone ? (a.idx < a.slots.length - 1 ? `next: ${EX[a.slots[a.idx + 1].exerciseId]?.name ?? 'next exercise'}` : 'last one done') : `next: set ${done.length + 1}`}</span>
           </Ring>
+          {allDone && packChange(slot, a.slots[a.idx + 1]) && <p className="small bold acc" style={{ textAlign: 'center' }}>{packChange(slot, a.slots[a.idx + 1])}</p>}
           <div className="row">
             <button className="btn sm" disabled={rest <= 15} onClick={() => (setRest((a.restEnd ?? Date.now()) - 15_000), setAdj(adj - 15))}>−15 s</button>
             <button className="btn sm" onClick={() => (setRest((a.restEnd ?? Date.now()) + 30_000), setAdj(adj + 30))}>+30 s</button>
