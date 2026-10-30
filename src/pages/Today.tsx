@@ -3,7 +3,7 @@ import { useStore } from '../lib/store';
 import { EX, targetText } from '../lib/exercises';
 import { WEEKDAYS, inDeload, minutes, nextPlanned, plannedDay, slotsFor } from '../lib/program';
 import { addDays, dateOf, fmtDate, keyOf, weekStart } from '../lib/dates';
-import { QUALITY, clock12, clockOf, durationMin, hm, nightKey, onTime, pastAt, toBedtime, wakeOffset } from '../lib/sleep';
+import { QUALITY, clock12, clockOf, durationMin, hm, nightKey, onTime, pastAt, sleepIfNow, toBedtime, wakeOffset } from '../lib/sleep';
 import { BAND_LABEL, readiness } from '../lib/readiness';
 import { weekSummary } from '../lib/game';
 import { newRecords } from '../lib/progress';
@@ -310,7 +310,9 @@ function BedCard() {
   const wakeTarget = useStore((s) => s.settings.wakeTarget);
   const key = nightKey(now);
   const night = useStore((s) => s.nights[key]);
+  const goalH = useStore((s) => s.settings.sleepGoalH);
   const left = toBedtime(now, bedtime);
+  const ifNow = sleepIfNow(now, wakeTarget);
   // From 2 h before lights out until 6 h after it.
   if (left > 120 || left <= -360) return null;
   const { goingToSleep, deleteNight } = useStore.getState();
@@ -343,7 +345,10 @@ function BedCard() {
         <span className="grow">
           <span className="h2" style={{ display: 'block' }}>Going to sleep</span>
           <span className="small mut">
-            Lights out {clock12(bedtime)} · {left > 0 ? `in ${left < 60 ? `${left} min` : hm(left)}` : left === 0 ? 'now' : `${-left} min past`}
+            Lights out {clock12(bedtime)} · {left > 0 ? `in ${hm(left)}` : left === 0 ? 'now' : `${hm(-left)} past`}
+          </span>
+          <span className="small" style={{ display: 'block', color: ifNow < goalH * 60 - 10 ? 'var(--warn)' : 'var(--sleep)' }}>
+            Sleep now for {hm(ifNow)}
           </span>
         </span>
         <Icon name="right" />

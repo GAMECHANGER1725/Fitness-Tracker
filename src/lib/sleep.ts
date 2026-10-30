@@ -24,6 +24,9 @@ export function durationMin(n: Pick<Night, 'bed' | 'wake' | 'awake'>): number | 
   return m > 0 && m < 20 * 60 ? m : null;
 }
 
+/** Minutes of sleep you'd get going to sleep at `now`, up to the wake target the next morning (or this morning, after midnight). */
+export const sleepIfNow = (now: number, wakeTarget: string) => Math.max(0, Math.round((atOn(nightKey(now), wakeTarget) - now) / MIN));
+
 /** "8 h 05 m", or "40 min" under an hour. */
 export const hm = (min: number) => {
   const r = Math.round(min);

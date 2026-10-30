@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clock12, hm, durationMin, guardBedtime, idealBedtime, mergeImported, nightKey, onTime, readCsv, samsungNights, samsungTime, sleepStats, wakeStreak, nightPos, toBedtime, windDownEffect, pastAt, bedtimeEffect } from '../src/lib/sleep';
+import { clock12, hm, durationMin, guardBedtime, idealBedtime, mergeImported, nightKey, onTime, readCsv, samsungNights, samsungTime, sleepStats, wakeStreak, nightPos, toBedtime, windDownEffect, pastAt, bedtimeEffect, sleepIfNow } from '../src/lib/sleep';
 import { addDays, atOn } from '../src/lib/dates';
 import type { Night } from '../src/lib/types';
 
@@ -126,6 +126,13 @@ describe('toBedtime', () => {
     expect(toBedtime(at(22, 20), '22:00')).toBe(-20);
     expect(toBedtime(at(0, 30), '22:00')).toBe(-150);
     expect(toBedtime(at(23, 0), '00:30')).toBe(90);
+  });
+});
+
+describe('sleepIfNow', () => {
+  it('counts to the next wake target, also after midnight', () => {
+    expect(sleepIfNow(new Date(2026, 9, 29, 21, 30).getTime(), '06:00')).toBe(510);
+    expect(sleepIfNow(new Date(2026, 9, 30, 0, 15).getTime(), '06:00')).toBe(345);
   });
 });
 
