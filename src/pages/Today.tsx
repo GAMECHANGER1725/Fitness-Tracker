@@ -112,9 +112,31 @@ export default function Today() {
               </div>
             </div>
           ) : active ? (
-            <button className="btn block" onClick={() => go('workout')}>
-              <Icon name="play" size={18} fill /> Resume {active.name}
-            </button>
+            <>
+              <button className="btn block" onClick={() => go('workout')}>
+                <Icon name="play" size={18} fill /> Resume {active.name}
+              </button>
+              {(() => {
+                // Left open well after the last set: offer to save it as it was.
+                const last = active.sets.length ? Math.max(...active.sets.map((x) => x.at)) : 0;
+                const idle = last ? Math.floor((Date.now() - last) / 60_000) : 0;
+                return idle > 60 ? (
+                  <p className="small" style={{ textAlign: 'center', opacity: 0.9 }}>
+                    Last set {hm(idle)} ago ·{' '}
+                    <button
+                      className="small bold"
+                      style={{ background: 'none', border: 0, padding: 0, color: 'inherit', textDecoration: 'underline' }}
+                      onClick={() => {
+                        const r = useStore.getState().finishWorkout(undefined, undefined, last + 60_000);
+                        if (r) toast(`${r.session.name} saved, ending at the last set`);
+                      }}
+                    >
+                      Save it as done
+                    </button>
+                  </p>
+                ) : null;
+              })()}
+            </>
           ) : doneToday.length ? (
             <div className="stack" style={{ gap: 4 }}>
               {doneToday.map((x) => {
