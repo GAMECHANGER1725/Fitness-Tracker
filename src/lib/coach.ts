@@ -69,6 +69,8 @@ export interface Snapshot {
   schedule: { wakeTarget: string; bedtime: string; sleepGoalHours: number; workoutTime: string; weekendWorkoutTime?: string };
   program: { week: string[]; days: { id: string; name: string; slots: (Slot & { name: string; unit: string })[] }[]; deloadUntil: string | null; weeklySetsByPattern: Record<Pattern, number> };
   todayPlan: string;
+  /** What you tapped on Today (fresh, ok, sore, tired), if anything. */
+  feelingToday?: string;
   sessions: ReturnType<typeof sessionLine>[];
   sessionsPerWeek: { week: string; count: number }[];
   recentProgramChanges: string[];
@@ -96,6 +98,16 @@ export interface Snapshot {
 }
 
 const avgOf = (xs: number[]) => (xs.length ? Math.round(xs.reduce((a, b) => a + b, 0) / xs.length) : null);
+
+/** Today's "Feeling" chip from Today (per device, `fitness-feel`), or null. */
+function feelingOn(today: string): string | null {
+  try {
+    const f = JSON.parse(localStorage.getItem('fitness-feel') ?? 'null');
+    return f?.date === today && typeof f.v === 'string' ? f.v : null;
+  } catch {
+    return null;
+  }
+}
 
 export function snapshot(d: AppData, fuel: FuelData | null, now = new Date()): Snapshot {
   const today = todayKey();
@@ -150,6 +162,7 @@ export function snapshot(d: AppData, fuel: FuelData | null, now = new Date()): S
       weeklySetsByPattern: wkSets,
     },
     todayPlan: plan ? `${plan.name}${inDeload(d.program, today) ? ' (lighter week)' : ''}` : 'Rest day',
+    ...(feelingOn(today) ? { feelingToday: feelingOn(today)! } : {}),
     sessions: sessions.map(sessionLine),
     sessionsPerWeek: weeks,
     recentProgramChanges: d.programLog.slice(-6).flatMap((c) => c.lines.map((l) => `${fmtDate(keyOf(new Date(c.at)))}: ${l}`)),
