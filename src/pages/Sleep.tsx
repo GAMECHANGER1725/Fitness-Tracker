@@ -442,7 +442,10 @@ function Recent({ onPick }: { onPick: (d: string) => void }) {
   const nights = useStore((s) => s.nights);
   const steps = useStore((s) => s.profile.windDown);
   const wake = useStore((s) => s.settings.wakeTarget);
-  const list = Object.values(nights).sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 14);
+  const goal = useStore((s) => s.settings.sleepGoalH);
+  const [count, setCount] = useState(14);
+  const all = Object.values(nights).sort((a, b) => (a.date < b.date ? 1 : -1));
+  const list = all.slice(0, count);
   if (!list.length) return null;
   return (
     <section className="card" style={{ padding: '14px 18px 6px' }} aria-label="Recent nights">
@@ -462,12 +465,17 @@ function Recent({ onPick }: { onPick: (d: string) => void }) {
               </span>
             </span>
             <span className="stack" style={{ gap: 2, alignItems: 'flex-end' }}>
-              <span className="bold">{m != null ? hm(m) : '–'}</span>
+              <span className="bold" style={m != null && m < goal * 60 - 30 ? { color: 'var(--warn)' } : undefined}>{m != null ? hm(m) : '–'}</span>
               {off != null && <span className="small" style={{ color: off <= 15 ? 'var(--acc)' : 'var(--warn)' }}>{off <= 15 ? 'on time' : `+${off} min`}</span>}
             </span>
           </button>
         );
       })}
+      {all.length > count && (
+        <button className="btn sm ghost" style={{ width: '100%', margin: '6px 0 8px' }} onClick={() => setCount(count + 30)}>
+          Show older nights ({all.length - count})
+        </button>
+      )}
     </section>
   );
 }
