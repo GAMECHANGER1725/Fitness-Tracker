@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore } from '../lib/store';
 import { minutesLeft, warmupFor } from '../lib/program';
 import { EX, EXERCISES, PATTERN_LABEL, bestText, easier, harder, targetText, usable } from '../lib/exercises';
@@ -46,6 +46,7 @@ function Player({ onDone }: { onDone: (r: { session: Session; lines: string[]; r
   const ex = EX[slot.exerciseId];
   const done = a.sets.filter((x) => x.exerciseId === slot.exerciseId);
   const last = historyOf(sessions, slot.exerciseId)[0];
+  const pb = useMemo(() => records(sessions)[slot.exerciseId], [sessions, slot.exerciseId]);
   const suggest = last?.[done.length]?.reps ?? last?.at(-1)?.reps ?? slot.low;
   const [reps, setReps] = useState(suggest);
   const [load, setLoad] = useState(slot.loadKg);
@@ -172,6 +173,7 @@ function Player({ onDone }: { onDone: (r: { session: Session; lines: string[]; r
           {slot.sets} set{slot.sets === 1 ? '' : 's'} × {targetText(ex, slot.low, slot.high)}
           {ex?.loadable && slot.loadKg ? ` · ${slot.loadKg} kg in the backpack` : ''}
           {last ? ` · last time ${last.map((x) => x.reps).join(', ')}` : ''}
+          {pb && ex ? ` · ${bestText(pb, ex)}` : ''}
         </p>
         <ul className="small mut" style={{ margin: 0, paddingLeft: 18 }}>
           {ex?.cues.map((c) => <li key={c}>{c}</li>)}
