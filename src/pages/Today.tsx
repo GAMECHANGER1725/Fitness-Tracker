@@ -573,6 +573,7 @@ function WeekStrip() {
   const program = useStore((s) => s.program);
   const sessions = useStore((s) => s.sessions);
   const [pick, setPick] = useState<string | null>(null);
+  const nights = useStore((s) => s.nights);
   const ws = weekStart(today);
   const done = new Set(Object.values(sessions).map((s) => s.date));
   const sum = weekSummary({ sessions, program }, ws);
@@ -580,9 +581,11 @@ function WeekStrip() {
   const detail = (k: string) => {
     const xs = Object.values(sessions).filter((s) => s.date === k);
     const day = fmtDate(k, { weekday: 'long' });
-    if (xs.length) return `${day}: ${xs.map((s) => `${s.name}, ${Math.max(1, Math.round((s.end - s.start) / 60_000))} min, ${s.sets.length} sets`).join(' · ')}`;
+    const m = nights[k] ? durationMin(nights[k]) : null;
+    const slept = m != null ? `. Slept ${hm(m)} the night before` : '';
+    if (xs.length) return `${day}: ${xs.map((s) => `${s.name}, ${Math.max(1, Math.round((s.end - s.start) / 60_000))} min, ${s.sets.length} set${s.sets.length === 1 ? '' : 's'}`).join(' · ')}${slept}.`;
     const plan = plannedDay(program, k);
-    return `${day}: ${plan ? `${plan.name}${k < today ? ', missed' : ' planned'}` : 'rest day'}`;
+    return `${day}: ${plan ? `${plan.name}${k < today ? ', missed' : ' planned'}` : 'rest day'}${slept}${slept ? '.' : ''}`;
   };
   return (
     <section className="card stack" style={{ gap: 12 }} aria-label="This week">
