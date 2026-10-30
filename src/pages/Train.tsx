@@ -669,19 +669,23 @@ function Trend({ ex, sessions }: { ex: Exercise; sessions: Record<string, Sessio
   const max = Math.max(...pts.map((p) => p.total));
   const ago = daysBetween(pts.at(-1)!.date, today);
   const u = ex.unit === 'secs' ? ' s' : '';
+  const loaded = pts.some((p) => p.top.loadKg);
   return (
     <div className="stack" style={{ gap: 6 }}>
-      <div className="trend" role="img" aria-label={`Last ${pts.length} sessions, total ${ex.unit === 'secs' ? 'seconds' : 'reps'}: ${pts.map((p) => p.total).join(', ')}`}>
+      <div className="trend" style={loaded ? { height: 126 } : undefined} role="img" aria-label={`Last ${pts.length} sessions, total ${ex.unit === 'secs' ? 'seconds' : 'reps'}: ${pts.map((p) => p.total).join(', ')}`}>
         {pts.map((p, i) => (
           <div key={p.date + i} className="trend-col">
             <span className="small mut" style={{ fontSize: 11 }}>{p.total}</span>
-            <i style={{ height: `${Math.max(8, (p.total / max) * 70)}%` }} className={i === pts.length - 1 ? 'now' : ''} />
+            <span className="trend-bar">
+              <i style={{ height: `${Math.max(8, (p.total / max) * 100)}%` }} className={i === pts.length - 1 ? 'now' : ''} />
+            </span>
             <span className="small" style={{ fontSize: 11 }}>{fmtDate(p.date, { day: 'numeric', month: 'numeric' })}</span>
+            {loaded && <span className="small acc bold" style={{ fontSize: 11 }}>{p.top.loadKg ? `${p.top.loadKg} kg` : '–'}</span>}
           </div>
         ))}
       </div>
       <p className="small mut">
-        Total {ex.unit === 'secs' ? 'seconds' : 'reps'} per session · last best set {pts.at(-1)!.top.reps}{u}{pts.at(-1)!.top.loadKg ? ` @ ${pts.at(-1)!.top.loadKg} kg` : ''} · {ago === 0 ? 'done today' : ago === 1 ? 'yesterday' : `${ago} days ago`}
+        Total {ex.unit === 'secs' ? 'seconds' : 'reps'} per session{loaded ? ', backpack load below' : ''} · last best set {pts.at(-1)!.top.reps}{u}{pts.at(-1)!.top.loadKg ? ` @ ${pts.at(-1)!.top.loadKg} kg` : ''} · {ago === 0 ? 'done today' : ago === 1 ? 'yesterday' : `${ago} days ago`}
       </p>
     </div>
   );

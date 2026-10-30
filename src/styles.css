@@ -223,6 +223,7 @@ select.input { appearance: none; background-image: linear-gradient(45deg, transp
 .setrow.done { background: var(--acc-soft); }
 .trend { display: flex; align-items: stretch; gap: 6px; height: 110px; }
 .trend-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 3px; min-width: 0; }
+.trend-bar { flex: 1; min-height: 0; width: 100%; display: flex; align-items: flex-end; justify-content: center; }
 .trend-col i { display: block; width: 100%; max-width: 28px; border-radius: 8px 8px 4px 4px; background: var(--acc-soft); }
 .trend-col i.now { background: var(--acc); }
 .setrow.next { box-shadow: inset 0 0 0 1.5px var(--line2); }
