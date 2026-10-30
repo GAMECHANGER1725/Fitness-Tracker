@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useStore } from '../lib/store';
 import { EX, targetText } from '../lib/exercises';
-import { WEEKDAYS, inDeload, minutes, nextPlanned, plannedDay, slotsFor } from '../lib/program';
+import { WEEKDAYS, inDeload, minutes, nextPlanned, plannedDay, slotsFor, workoutTimeOn } from '../lib/program';
 import { addDays, dateOf, fmtDate, keyOf, weekStart } from '../lib/dates';
-import { QUALITY, clock12, clockOf, durationMin, hm, nightKey, onTime, pastAt, sleepIfNow, toBedtime, wakeOffset } from '../lib/sleep';
+import { QUALITY, clock12, clockOf, durationMin, hm, minsOf, nightKey, onTime, pastAt, sleepIfNow, toBedtime, wakeOffset } from '../lib/sleep';
 import { BAND_LABEL, readiness } from '../lib/readiness';
 import { nextBadge, weekSummary } from '../lib/game';
 import { historyOf, newRecords } from '../lib/progress';
@@ -42,6 +42,7 @@ export default function Today() {
   const day = planned;
   const next = nextPlanned(program, today);
   const slots = day ? slotsFor(program, day, today, easy) : [];
+  const planAt = workoutTimeOn(useStore((s) => s.settings), today);
 
   return (
     <main>
@@ -127,6 +128,9 @@ export default function Today() {
               <button className="btn block" onClick={() => start(day)}>
                 <Icon name="play" size={18} fill /> Start workout · {minutes(slots)} min{easy ? ', lighter' : ''}
               </button>
+              {new Date().getHours() * 60 + new Date().getMinutes() < minsOf(planAt) && (
+                <p className="small" style={{ opacity: 0.85, textAlign: 'center' }}>Planned for {clock12(planAt)} · <a href="#/profile?open=times" style={{ color: 'inherit' }}>change</a></p>
+              )}
               <button className="small bold" onClick={() => setChoice(!easy)} style={{ background: 'none', border: 0, padding: 0, color: 'inherit', opacity: 0.85, textDecoration: 'underline', alignSelf: 'center' }}>
                 {easy ? 'Do the full workout instead' : 'Do a lighter version (about a quarter fewer sets)'}
               </button>
