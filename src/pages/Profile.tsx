@@ -5,7 +5,7 @@ import { AI_MODELS, GEMINI_MODELS, PROVIDER_NAME, friendlyError, hasAi, testKey,
 import { fuelAi, FUEL_STORE } from '../lib/fuel';
 import { currentAi } from '../lib/coach';
 import { exportCsv, exportJson, importJson } from '../lib/backup';
-import { remindersOn, remindersSupported, setReminders } from '../lib/reminders';
+import { reminderKinds, remindersOn, remindersSupported, setKind, setLead, setReminders } from '../lib/reminders';
 import { usePlayer } from '../lib/player';
 import { ACCENTS, TODAY_CARDS, useLayout } from '../lib/layout';
 import { install, useInstall } from '../lib/install';
@@ -342,6 +342,7 @@ function PlayerPrefs() {
 
 function Reminders() {
   const [on, setOn] = useState(remindersOn());
+  const [kinds, setKinds] = useState(reminderKinds);
   if (!remindersSupported()) return null;
   return (
     <section className="card stack" style={{ gap: 8 }}>
@@ -357,7 +358,30 @@ function Reminders() {
           }}
         />
       </div>
-      <p className="small mut">Wind down before lights out, your workout on planned days, and a nudge if “I’m up” isn’t logged by 15 min after your wake time. They work while the app is open or in the background.</p>
+      {on && (
+        <div className="stack" style={{ gap: 8 }}>
+          {([['bed', 'Wind down', 'Screens off before lights out'], ['workout', 'Workout', 'At your workout time on planned days'], ['wake', 'Up yet?', '15 min after your wake time if I’m up isn’t logged']] as const).map(([k, name, how]) => (
+            <div key={k} className="row" style={{ justifyContent: 'space-between' }}>
+              <span className="grow">
+                <span className="bold" style={{ display: 'block' }}>{name}</span>
+                <span className="small mut">{how}</span>
+              </span>
+              <Switch on={!kinds.off.includes(k)} label={`${name} reminder`} onChange={(v) => (setKind(k, v), setKinds(reminderKinds()))} />
+            </div>
+          ))}
+          {!kinds.off.includes('bed') && <span className="small mut">Wind-down nudge, before lights out:</span>}
+          {!kinds.off.includes('bed') && (
+            <div className="seg" role="group" aria-label="Wind-down reminder, minutes before lights out">
+              {[20, 40, 60].map((m) => (
+                <button key={m} aria-pressed={kinds.lead === m} onClick={() => (setLead(m), setKinds(reminderKinds()))}>
+                  {m} min
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+      <p className="small mut">They work while the app is open or in the background.</p>
     </section>
   );
 }

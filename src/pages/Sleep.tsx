@@ -6,6 +6,7 @@ import { currentAi, tonightPlan, useCoach } from '../lib/coach';
 import { friendlyError, hasAi } from '../lib/ai';
 import { Head, Icon, ProfileLink, Sheet, toast, useGame, useToday } from '../components/ui';
 import { useFuelData } from '../components/data';
+import { reminderKinds } from '../lib/reminders';
 import type { Night } from '../lib/types';
 
 
@@ -150,7 +151,7 @@ function Tonight() {
     return (
       <section className="card stack" style={{ gap: 6 }}>
         <span className="row label"><Icon name="spark" size={16} /> Tonight</span>
-        <p>Screens off by {clock12(minsToHhmm(minsOf(bedtime) - 40))}, lights out at {clock12(bedtime)}.</p>
+        <p>Screens off by {clock12(minsToHhmm(minsOf(bedtime) - reminderKinds().lead))}, lights out at {clock12(bedtime)}.</p>
         <p className="small mut">Add an AI key in Fuel Log for a plan that looks at your food and training.</p>
       </section>
     );

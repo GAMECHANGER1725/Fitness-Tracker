@@ -1,27 +1,33 @@
 // Reminders, shown as system notifications through the service worker (same approach as Fuel Log):
-//   wind-down: screens off about 40 min before your bedtime target
+//   wind-down: screens off 20, 40 (default) or 60 min before your bedtime target
 //   workout:   at your workout time on a planned day with no workout yet
 //   wake-up:   15 min after the wake target if "I'm up" isn't logged (keeps the streak honest)
 // ponytail: no server, so these only fire while the app is open or alive in the background.
 // Reminders with the app fully closed would need Web Push from a server.
-// The on/off flag and "already sent" dates are per device in localStorage, not synced.
+// The on/off flags, wind-down lead and "already sent" dates are per device in localStorage, not synced.
 
 import { useStore } from './store';
 import { keyOf, todayKey } from './dates';
-import { plannedDay } from './program';
+import { minutes, plannedDay, slotsFor } from './program';
 import { clock12, minsOf } from './sleep';
 import { useCoach } from './coach';
 
 const LS_KEY = 'fitness-reminders';
 export const WIND_DOWN_MIN = 40;
 
+export type ReminderKind = 'bed' | 'workout' | 'wake';
+
 interface Saved {
   on: boolean;
+  /** Kinds turned off on their own (all on by default). */
+  off: ReminderKind[];
+  /** Minutes before lights out for the wind-down nudge. */
+  lead: number;
   bedDate: string;
   workoutDate: string;
   wakeDate: string;
 }
-const EMPTY: Saved = { on: false, bedDate: '', workoutDate: '', wakeDate: '' };
+const EMPTY: Saved = { on: false, off: [], lead: WIND_DOWN_MIN, bedDate: '', workoutDate: '', wakeDate: '' };
 const read = (): Saved => {
   try {
     return { ...EMPTY, ...JSON.parse(localStorage.getItem(LS_KEY) ?? '{}') };
@@ -36,6 +42,13 @@ const patch = (p: Partial<Saved>) => {
     /* storage blocked: reminders just repeat after a restart */
   }
 };
+
+export const reminderKinds = () => read();
+export const setKind = (k: ReminderKind, on: boolean) => {
+  const off = read().off.filter((x) => x !== k);
+  patch({ off: on ? off : [...off, k] });
+};
+export const setLead = (lead: number) => patch({ lead });
 
 export const remindersSupported = () => typeof Notification !== 'undefined' && 'serviceWorker' in navigator;
 export const remindersOn = () => remindersSupported() && read().on && Notification.permission === 'granted';
@@ -75,18 +88,19 @@ function tick() {
   const s = useStore.getState();
   const today = todayKey();
   const bed = minsOf(s.settings.bedtime);
-  if (dueAt(now, bed - WIND_DOWN_MIN, r.bedDate, 45)) {
+  const want = (k: ReminderKind) => !r.off.includes(k);
+  if (want('bed') && dueAt(now, bed - r.lead, r.bedDate, 45)) {
     patch({ bedDate: today });
     const t = useCoach.getState().tonight;
     notify('Time to wind down', t?.date === today && t.lastFood ? `Screens off now, lights out at ${clock12(s.settings.bedtime)}. ${t.lastFood}` : `Screens off now, lights out at ${clock12(s.settings.bedtime)} for a ${clock12(s.settings.wakeTarget)} start.`, 'bed', 'sleep');
   }
   const day = plannedDay(s.program, today);
   const trained = Object.values(s.sessions).some((x) => x.date === today);
-  if (day && !trained && !s.active && dueAt(now, minsOf(s.settings.workoutTime), r.workoutDate, 120)) {
+  if (want('workout') && day && !trained && !s.active && dueAt(now, minsOf(s.settings.workoutTime), r.workoutDate, 120)) {
     patch({ workoutDate: today });
-    notify(`${day.name} today`, `${day.slots.length} exercises, about 40 minutes. Tap to start.`, 'workout', 'today');
+    notify(`${day.name} today`, `${day.slots.length} exercises, about ${minutes(slotsFor(s.program, day, today))} minutes. Tap to start.`, 'workout', 'today');
   }
-  if (s.nights[today]?.wake == null && dueAt(now, minsOf(s.settings.wakeTarget) + 15, r.wakeDate, 60)) {
+  if (want('wake') && s.nights[today]?.wake == null && dueAt(now, minsOf(s.settings.wakeTarget) + 15, r.wakeDate, 60)) {
     patch({ wakeDate: today });
     notify('Up yet?', 'Tap “I’m up” to keep your wake-up streak going.', 'wake', 'today');
   }
