@@ -495,6 +495,8 @@ function Recent({ onPick }: { onPick: (d: string) => void }) {
   );
 }
 
+const NOTE_TAGS = ['Woke in the night', 'Late homework', 'Phone in bed', 'Noisy', 'Sore', 'Sick'];
+
 function NightSheet({ date, onClose }: { date: string; onClose: () => void }) {
   const n = useStore((s) => s.nights[date]);
   const { setNight, deleteNight } = useStore.getState();
@@ -560,6 +562,16 @@ function NightSheet({ date, onClose }: { date: string; onClose: () => void }) {
         <span>Note (optional)</span>
         <input className="input" value={note} maxLength={200} placeholder="Woke at 2 am, late study…" onChange={(e) => setNote(e.target.value)} />
       </label>
+      <div className="row" style={{ flexWrap: 'wrap', gap: 6 }} role="group" aria-label="Quick notes">
+        {NOTE_TAGS.map((t) => {
+          const on = note.split(', ').includes(t);
+          return (
+            <button key={t} className="chip" style={{ fontSize: 13, minHeight: 34 }} aria-pressed={on} onClick={() => setNote(on ? note.split(', ').filter((x) => x !== t).join(', ') : [note.trim(), t].filter(Boolean).join(', ').slice(0, 200))}>
+              {t}
+            </button>
+          );
+        })}
+      </div>
       <div className="row">
         {n && (
           <button
