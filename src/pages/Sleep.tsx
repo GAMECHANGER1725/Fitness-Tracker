@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useStore } from '../lib/store';
 import { addDays, addMonths, atOn, fmtDate, hhmmOf, isKey, monthGrid } from '../lib/dates';
-import { QUALITY, clock12, clockOf, nightPos, durationMin, hm, idealBedtime, minsOf, windDownEffect, bedtimeEffect, noteEffect, shortestEvening, nightKey, onTime, samsungNights, sleepStats, wakeOffset } from '../lib/sleep';
+import { QUALITY, clock12, clockOf, nightPos, durationMin, hm, idealBedtime, minsOf, windDownEffect, bedtimeEffect, noteEffect, shortestEvening, monthSleep, nightKey, onTime, samsungNights, sleepStats, wakeOffset } from '../lib/sleep';
 import { currentAi, tonightPlan, useCoach } from '../lib/coach';
 import { friendlyError, hasAi } from '../lib/ai';
 import { Head, Icon, ProfileLink, Sheet, Stepper, toast, useGame, useRoute, useToday } from '../components/ui';
@@ -327,6 +327,13 @@ function SleepMonth({ onPick }: { onPick: (d: string) => void }) {
         <span className="stack" style={{ alignItems: 'center', gap: 0 }}>
           <span className="bold">{fmtDate(month, { month: 'long', year: 'numeric' })}</span>
           <span className="small mut">{logged ? `${met} of ${logged} nights on goal` : 'no nights logged'}</span>
+          {(() => {
+            const v = monthSleep(nights, month, today);
+            if (v.avg == null) return null;
+            const prev = fmtDate(addMonths(month, -1), { month: 'short' });
+            const vs = v.diff == null ? '' : Math.abs(v.diff) < 5 ? ` · same as ${v.partial ? `this point in ${prev}` : prev}` : ` · ${hm(Math.abs(v.diff))} ${v.diff > 0 ? 'more' : 'less'} than ${v.partial ? `this point in ${prev}` : prev}`;
+            return <span className="small mut" style={{ textAlign: 'center' }}>Average {hm(v.avg)}{vs}</span>;
+          })()}
         </span>
         <button className="btn sm icon" aria-label="Next month" disabled={month >= today.slice(0, 8) + '01'} onClick={() => setMonth(addMonths(month, 1))}>
           <Icon name="right" size={18} />

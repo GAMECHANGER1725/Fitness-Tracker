@@ -3,7 +3,7 @@
 // Teens need 8–10 hours (the default goal is 8.5); the wake target is 6:00 every day.
 
 import type { Night } from './types';
-import { addDays, atOn, dateOf, keyOf } from './dates';
+import { addDays, addMonths, atOn, dateOf, keyOf } from './dates';
 
 const MIN = 60_000;
 const HOUR = 60 * MIN;
@@ -345,4 +345,17 @@ export function shortestEvening(nights: Record<string, Night>, today: string): {
   const i = avgs.reduce<number>((lo, x, j) => (x != null && (avgs[lo] == null || x < avgs[lo]!) ? j : lo), 0);
   const under = Math.round(mean - avgs[i]!);
   return under >= 30 ? { name: NIGHT_NAMES[i], avg: Math.round(avgs[i]!), under } : null;
+}
+
+/** Average sleep in `month` (yyyy-MM-01) and the change from the month before; this month only up to today's date in both. */
+export function monthSleep(nights: Record<string, Night>, month: string, today: string): { avg: number | null; diff: number | null; partial: boolean } {
+  const partial = today.slice(0, 7) === month.slice(0, 7);
+  const upTo = partial ? today.slice(8) : '31';
+  const avgOf = (m: string) => {
+    const xs = Object.values(nights).filter((n) => n.date.slice(0, 7) === m.slice(0, 7) && n.date.slice(8) <= upTo).map(durationMin).filter((x): x is number => x != null);
+    return xs.length ? Math.round(xs.reduce((a, b) => a + b, 0) / xs.length) : null;
+  };
+  const avg = avgOf(month);
+  const prev = avgOf(addMonths(month, -1));
+  return { avg, diff: avg != null && prev != null ? avg - prev : null, partial };
 }

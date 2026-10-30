@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clock12, hm, durationMin, guardBedtime, idealBedtime, mergeImported, nightKey, onTime, readCsv, samsungNights, samsungTime, sleepStats, wakeStreak, nightPos, toBedtime, windDownEffect, pastAt, bedtimeEffect, sleepIfNow, lateMeal, noteEffect, shortestEvening } from '../src/lib/sleep';
+import { clock12, hm, durationMin, guardBedtime, idealBedtime, mergeImported, nightKey, onTime, readCsv, samsungNights, samsungTime, sleepStats, wakeStreak, nightPos, toBedtime, windDownEffect, pastAt, bedtimeEffect, sleepIfNow, lateMeal, noteEffect, shortestEvening, monthSleep } from '../src/lib/sleep';
 import { addDays, atOn } from '../src/lib/dates';
 import type { Night } from '../src/lib/types';
 
@@ -212,6 +212,21 @@ describe('shortestEvening', () => {
   it('stays quiet under a 30 min gap or with too few nights', () => {
     expect(shortestEvening(four('22:00'), '2026-10-29')).toBeNull();
     expect(shortestEvening({ '2026-10-26': N('2026-10-26', '23:00', '06:00') }, '2026-11-01')).toBeNull();
+  });
+});
+
+describe('monthSleep', () => {
+  const all: Record<string, Night> = {
+    '2026-09-03': N('2026-09-03', '22:00', '06:00'),
+    '2026-09-20': N('2026-09-20', '21:00', '06:00'),
+    '2026-10-04': N('2026-10-04', '21:30', '06:00'),
+  };
+  it('averages the month and compares with the same point last month', () => {
+    expect(monthSleep(all, '2026-10-01', '2026-10-10')).toEqual({ avg: 510, diff: 30, partial: true });
+  });
+  it('compares whole months once over, and has no change without last month', () => {
+    expect(monthSleep(all, '2026-09-01', '2026-10-10')).toEqual({ avg: 510, diff: null, partial: false });
+    expect(monthSleep(all, '2026-11-01', '2026-11-02')).toEqual({ avg: null, diff: null, partial: true });
   });
 });
 
