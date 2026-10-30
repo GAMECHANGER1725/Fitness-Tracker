@@ -6,6 +6,7 @@ import { addDays, dateOf, fmtDate, weekStart } from '../lib/dates';
 import { QUALITY, clock12, clockOf, durationMin, hm, nightKey, onTime, pastAt, toBedtime, wakeOffset } from '../lib/sleep';
 import { BAND_LABEL } from '../lib/readiness';
 import { weekSummary } from '../lib/game';
+import { newRecords } from '../lib/progress';
 import { backupDue, useLayout } from '../lib/layout';
 import { useSync } from '../lib/sync';
 import { currentAi, morningBriefing, useCoach } from '../lib/coach';
@@ -74,7 +75,18 @@ export default function Today() {
               <Icon name="play" size={18} fill /> Resume {active.name}
             </button>
           ) : doneToday.length ? (
-            <p className="bold">{doneToday.map((s) => s.name).join(' and ')} done. Eat well and get to bed on time.</p>
+            <div className="stack" style={{ gap: 4 }}>
+              {doneToday.map((x) => {
+                const b = new Set(newRecords(x, sessions).map((r) => r.exerciseId)).size;
+                return (
+                  <p key={x.id} className="bold">
+                    {x.name} done: {Math.max(1, Math.round((x.end - x.start) / 60_000))} min, {x.sets.length} set{x.sets.length === 1 ? '' : 's'}
+                    {b ? `, ${b} new best${b === 1 ? '' : 's'}` : ''}.
+                  </p>
+                );
+              })}
+              <p className="small" style={{ opacity: 0.85 }}>Eat well and get to bed on time.</p>
+            </div>
           ) : day ? (
             <>
               <button className="btn block" onClick={() => start(day)}>
