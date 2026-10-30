@@ -612,7 +612,7 @@ function WeekStrip() {
         })}
       </div>
       <p className="small mut">
-        {pick ? detail(pick) : `${sum.done} of ${sum.planned} workouts${sum.sets ? ` · ${sum.sets} sets · ${sum.minutes < 60 ? `${sum.minutes} min` : hm(sum.minutes)}` : ''}. Tap a day for more.`}
+        {pick ? detail(pick) : `${sum.done} of ${sum.planned} workouts${sum.sets ? ` · ${sum.sets} set${sum.sets === 1 ? '' : 's'} · ${hm(sum.minutes)}` : ''}. Tap a day for more.`}
       </p>
       {nb && (
         <a href="#/train?tab=badges" className="stack" style={{ gap: 4, textDecoration: 'none', color: 'var(--ink)' }} aria-label={`Next badge: ${nb.name}, ${nb.have} of ${nb.need}`}>
