@@ -113,6 +113,8 @@ export interface Night {
   score?: number;
   /** Wind-down steps ticked that evening (labels from Profile.windDown). */
   done?: string[];
+  /** Your own note on the night ("woke at 2 am"). */
+  note?: string;
   /** Last change, for syncing. */
   m: number;
 }

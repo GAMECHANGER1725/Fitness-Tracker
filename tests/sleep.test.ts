@@ -102,7 +102,7 @@ describe('Samsung Health import', () => {
   it('keeps hand-entered nights, your quality rating and wind-down ticks', () => {
     const cur: Record<string, Night> = {
       a: { date: 'a', bed: 1, wake: 2, source: 'manual', m: 1 },
-      b: { date: 'b', bed: 1, wake: 2, quality: 4, done: ['Read'], source: 'tap', m: 1 },
+      b: { date: 'b', bed: 1, wake: 2, quality: 4, done: ['Read'], note: 'Storm', source: 'tap', m: 1 },
     };
     const { nights, count } = mergeImported(cur, [
       { date: 'a', bed: 5, wake: 9, source: 'samsung', m: 2 },
@@ -110,7 +110,7 @@ describe('Samsung Health import', () => {
     ]);
     expect(count).toBe(1);
     expect(nights.a.bed).toBe(1);
-    expect(nights.b).toMatchObject({ bed: 5, quality: 4, done: ['Read'], source: 'samsung' });
+    expect(nights.b).toMatchObject({ bed: 5, quality: 4, done: ['Read'], note: 'Storm', source: 'samsung' });
   });
 });
 

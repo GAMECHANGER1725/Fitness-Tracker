@@ -248,7 +248,7 @@ export function mergeImported(cur: Record<string, Night>, add: Night[]): { night
   for (const n of add) {
     const old = out[n.date];
     if (old?.source === 'manual') continue;
-    out[n.date] = { ...n, ...(old?.quality != null ? { quality: old.quality } : {}), ...(old?.done ? { done: old.done } : {}) };
+    out[n.date] = { ...n, ...(old?.quality != null ? { quality: old.quality } : {}), ...(old?.done ? { done: old.done } : {}), ...(old?.note ? { note: old.note } : {}) };
     count++;
   }
   return { nights: out, count };

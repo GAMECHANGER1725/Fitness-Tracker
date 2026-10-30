@@ -109,6 +109,8 @@ function night(k: string, v: unknown): Night | null {
   }
   const done = arr(n.done).map((x) => str(x, 40)).filter(Boolean).slice(0, 10);
   if (done.length) out.done = done;
+  const note = str(n.note, 200).trim();
+  if (note) out.note = note;
   return out;
 }
 
@@ -222,10 +224,10 @@ export function exportCsv(d: Pick<AppData, 'sessions' | 'nights'>): { workouts: 
       rows.push([s.date, s.name, EX[x.exerciseId]?.name ?? x.exerciseId, String(n.get(x.exerciseId)), String(x.reps), String(x.loadKg), x.rpe != null ? String(x.rpe) : '', s.feel != null ? String(s.feel) : '', s.note ?? '']);
     }
   }
-  const nights = [['date_woke', 'bed', 'wake', 'minutes', 'quality_1_5', 'source', 'wind_down']];
+  const nights = [['date_woke', 'bed', 'wake', 'minutes', 'quality_1_5', 'source', 'wind_down', 'note']];
   for (const x of Object.values(d.nights).sort((a, b) => (a.date < b.date ? -1 : 1))) {
     const m = durationMin(x);
-    nights.push([x.date, hhmm(x.bed), hhmm(x.wake), m != null ? String(Math.round(m)) : '', x.quality != null ? String(x.quality) : '', x.source, (x.done ?? []).join('; ')]);
+    nights.push([x.date, hhmm(x.bed), hhmm(x.wake), m != null ? String(Math.round(m)) : '', x.quality != null ? String(x.quality) : '', x.source, (x.done ?? []).join('; '), x.note ?? '']);
   }
   const out = (t: string[][]) => t.map((r) => r.map(csvCell).join(',')).join('\n') + '\n';
   return { workouts: out(rows), sleep: out(nights) };

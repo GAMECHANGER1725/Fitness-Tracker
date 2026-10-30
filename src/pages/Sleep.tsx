@@ -463,6 +463,7 @@ function Recent({ onPick }: { onPick: (d: string) => void }) {
                 {n.source === 'samsung' ? ' · watch' : ''}
                 {n.done?.length && steps.length ? ` · wind-down ${steps.filter((x) => n.done!.includes(x)).length}/${steps.length}` : ''}
               </span>
+              {n.note && <span className="small mut" style={{ display: 'block', fontStyle: 'italic' }}>“{n.note}”</span>}
             </span>
             <span className="stack" style={{ gap: 2, alignItems: 'flex-end' }}>
               <span className="bold" style={m != null && m < goal * 60 - 30 ? { color: 'var(--warn)' } : undefined}>{m != null ? hm(m) : '–'}</span>
@@ -490,6 +491,7 @@ function NightSheet({ date, onClose }: { date: string; onClose: () => void }) {
   const [bed, setBed] = useState(n?.bed ? hhmmOf(n.bed) : settings.bedtime);
   const [wake, setWake] = useState(n?.wake ? hhmmOf(n.wake) : settings.wakeTarget);
   const [q, setQ] = useState<number | undefined>(n?.quality);
+  const [note, setNote] = useState(n?.note ?? '');
   // A bedtime after noon belongs to the evening before.
   const bedAt = atOn(bed >= '12:00' ? addDays(d, -1) : d, bed);
   const wakeAt = atOn(d, wake);
@@ -498,7 +500,8 @@ function NightSheet({ date, onClose }: { date: string; onClose: () => void }) {
   const save = () => {
     if (wakeAt <= bedAt) return toast('Wake time has to be after bedtime.');
     if (d !== date && n) deleteNight(date);
-    setNight(d, { bed: bedAt, wake: wakeAt, quality: q, source: n?.source === 'samsung' && d === date ? 'samsung' : 'manual' });
+    // Moving a night to another morning takes its wind-down ticks along.
+    setNight(d, { bed: bedAt, wake: wakeAt, quality: q, note: note.trim() || undefined, ...(d !== date && n?.done ? { done: n.done } : {}), source: n?.source === 'samsung' && d === date ? 'samsung' : 'manual' });
     toast('Night saved');
     onClose();
   };
@@ -539,6 +542,10 @@ function NightSheet({ date, onClose }: { date: string; onClose: () => void }) {
           ))}
         </div>
       </div>
+      <label className="field">
+        <span>Note (optional)</span>
+        <input className="input" value={note} maxLength={200} placeholder="Woke at 2 am, late study…" onChange={(e) => setNote(e.target.value)} />
+      </label>
       <div className="row">
         {n && (
           <button

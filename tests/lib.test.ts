@@ -112,12 +112,12 @@ describe('exportCsv', () => {
   it('writes one row per set and per night, numbering sets per exercise and quoting notes', () => {
     const a = sess('2026-10-26', 'upper-a', [['pushup', 10], ['pushup', 9], ['pack-row', 12, 6]], { note: 'Wrist, a bit sore', feel: 4 });
     const bed = atOn('2026-10-25', '21:30');
-    const { workouts, sleep } = exportCsv({ sessions: { [a.id]: a }, nights: { '2026-10-26': { date: '2026-10-26', bed, wake: bed + 510 * 60_000, quality: 4, done: ['Screens off', 'Teeth'], source: 'tap', m: 1 } } });
+    const { workouts, sleep } = exportCsv({ sessions: { [a.id]: a }, nights: { '2026-10-26': { date: '2026-10-26', bed, wake: bed + 510 * 60_000, quality: 4, done: ['Screens off', 'Teeth'], note: 'Late, study', source: 'tap', m: 1 } } });
     const rows = workouts.trim().split('\n');
     expect(rows).toHaveLength(4);
     expect(rows[2]).toBe('2026-10-26,upper-a,Push-up,2,9,0,,4,"Wrist, a bit sore"');
     expect(rows[3]).toMatch(/^2026-10-26,upper-a,Backpack row,1,12,6,/);
-    expect(sleep.trim().split('\n')[1]).toBe('2026-10-26,21:30,06:00,510,4,tap,Screens off; Teeth');
+    expect(sleep.trim().split('\n')[1]).toBe('2026-10-26,21:30,06:00,510,4,tap,Screens off; Teeth,"Late, study"');
   });
 });
 
@@ -325,6 +325,11 @@ describe('wind-down', () => {
     expect(normalize({ profile: { windDown: [] } }).profile.windDown).toEqual([]);
     const d = normalize({ nights: { '2026-10-29': { bed: null, wake: null, done: ['Read', 7, ''], m: 1 } } });
     expect(d.nights['2026-10-29'].done).toEqual(['Read']);
+  });
+  it('keeps a trimmed night note and drops an empty one', () => {
+    const d = normalize({ nights: { a: 1, '2026-10-29': { bed: null, wake: null, note: '  Woke at 2 am ', m: 1 }, '2026-10-28': { bed: null, wake: null, note: '  ', m: 1 } } });
+    expect(d.nights['2026-10-29'].note).toBe('Woke at 2 am');
+    expect('note' in d.nights['2026-10-28']).toBe(false);
   });
 });
 
