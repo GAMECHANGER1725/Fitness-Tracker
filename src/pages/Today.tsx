@@ -317,6 +317,7 @@ function BedCard() {
   const key = nightKey(now);
   const night = useStore((s) => s.nights[key]);
   const goalH = useStore((s) => s.settings.sleepGoalH);
+  const g = useGame();
   const left = toBedtime(now, bedtime);
   const ifNow = sleepIfNow(now, wakeTarget);
   // From 2 h before lights out until 6 h after it.
@@ -356,6 +357,7 @@ function BedCard() {
           <span className="small" style={{ display: 'block', color: ifNow < goalH * 60 - 10 ? 'var(--warn)' : 'var(--sleep)' }}>
             Sleep now for {hm(ifNow)}
           </span>
+          {g.wake >= 2 && <span className="small mut" style={{ display: 'block' }}>Up on time tomorrow keeps your {g.wake}-day wake streak</span>}
         </span>
         <Icon name="right" />
       </button>
