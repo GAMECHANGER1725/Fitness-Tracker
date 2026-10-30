@@ -303,6 +303,11 @@ export function matchSession(s: Session, query: string): boolean {
   return words.every((w) => text.includes(w));
 }
 
+/** What progressSlot needs to step this slot up: every planned set at the top of the range, not mostly all-out. */
+export function moveUpText(slot: Slot, ex: Pick<Exercise, 'unit'>): string {
+  return `To move up: ${slot.high}${ex.unit === 'secs' ? ' s' : ' reps'} on all ${slot.sets} set${slot.sets === 1 ? '' : 's'}, effort mostly Solid or easier.`;
+}
+
 /** A workout with its length set to `minutes` (1 to 300), keeping its start. */
 export function withLength(s: Session, minutes: number): Session {
   return { ...s, end: s.start + Math.round(Math.min(300, Math.max(1, minutes))) * 60_000 };

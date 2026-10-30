@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_DATA, exportCsv, exportJson, importJson, normalize } from '../src/lib/backup';
 import { DEFAULT_PROGRAM, addSlot, copyDay, deleteDay, nextPlanned, minutes, minutesLeft, workoutTimeOn, moveSlot, plannedDay, slotsFor, warmupFor, weekdayOf } from '../src/lib/program';
 import { EX, EXERCISES, bestText, easier, harder } from '../src/lib/exercises';
-import { applySession, deloadDue, diffPrograms, guardProgram, matchSession, newRecords, progressSlot, records, trendOf, moveSession, sessionText, vsLast, withLength, weeklySets } from '../src/lib/progress';
+import { applySession, deloadDue, diffPrograms, guardProgram, matchSession, newRecords, progressSlot, records, trendOf, moveSession, sessionText, vsLast, withLength, moveUpText, weeklySets } from '../src/lib/progress';
 import { readiness } from '../src/lib/readiness';
 import { lastWeekReport, weekNotes, weekReportText, yesterdayLine } from '../src/lib/notes';
 import { backupDue, lookDefaults, startHash } from '../src/lib/layout';
@@ -152,6 +152,13 @@ describe('minutesLeft', () => {
     expect(minutesLeft([s], [])).toBe(6);
     expect(minutesLeft([s], [{ exerciseId: 'pushup' }])).toBe(4);
     expect(minutesLeft([s], [1, 2, 3, 4].map(() => ({ exerciseId: 'pushup' })))).toBe(0);
+  });
+});
+
+describe('moveUpText', () => {
+  it('says what progression needs', () => {
+    expect(moveUpText(slot('pushup'), { unit: 'reps' })).toMatch(/^To move up: \d+ reps on all \d+ sets, effort mostly Solid or easier\.$/);
+    expect(moveUpText({ ...slot('pushup'), sets: 1, high: 40 }, { unit: 'secs' })).toBe('To move up: 40 s on all 1 set, effort mostly Solid or easier.');
   });
 });
 

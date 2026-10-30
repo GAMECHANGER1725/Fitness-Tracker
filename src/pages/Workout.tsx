@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore } from '../lib/store';
 import { minutesLeft, warmupFor } from '../lib/program';
 import { EX, EXERCISES, PATTERN_LABEL, bestText, easier, harder, targetText, usable } from '../lib/exercises';
-import { historyOf, newRecords, records, sessionText, vsLast } from '../lib/progress';
+import { historyOf, moveUpText, newRecords, records, sessionText, vsLast } from '../lib/progress';
 import { currentAi, postWorkout, suggestSwap } from '../lib/coach';
 import { friendlyError, hasAi } from '../lib/ai';
 import { beep, buzz, holdWakeLock, primeAudio, usePlayer } from '../lib/player';
@@ -178,6 +178,7 @@ function Player({ onDone }: { onDone: (r: { session: Session; lines: string[]; r
         <ul className="small mut" style={{ margin: 0, paddingLeft: 18 }}>
           {ex?.cues.map((c) => <li key={c}>{c}</li>)}
         </ul>
+        {ex && !past && <p className="small acc">{moveUpText(slot, ex)}</p>}
         <button className="small" onClick={() => setNoteOpen(true)} style={{ background: 'none', border: 0, padding: '4px 0', textAlign: 'left', color: note ? 'var(--ink)' : 'var(--acc)', display: 'flex', gap: 6, alignItems: 'flex-start' }}>
           <Icon name="pencil" size={16} />
           {note ? <span><span className="bold">Your note:</span> {note}</span> : <span className="bold">Add a note for this exercise</span>}
