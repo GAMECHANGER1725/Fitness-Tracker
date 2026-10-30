@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_DATA, exportCsv, exportJson, importJson, normalize } from '../src/lib/backup';
 import { DEFAULT_PROGRAM, addSlot, copyDay, deleteDay, nextPlanned, minutes, minutesLeft, packChange, dayWhen, workoutTimeOn, moveSlot, plannedDay, slotsFor, warmupFor, weekdayOf } from '../src/lib/program';
 import { EX, EXERCISES, bestText, easier, harder } from '../src/lib/exercises';
-import { applySession, deloadDue, diffPrograms, guardProgram, matchSession, newRecords, progressSlot, records, trendOf, moveSession, sessionText, vsLast, withLength, moveUpText, nearMisses, weeklySets } from '../src/lib/progress';
+import { applySession, deloadDue, diffPrograms, guardProgram, matchSession, newRecords, progressSlot, records, trendOf, moveSession, sessionText, vsLast, withLength, moveUpText, nearMisses, weeklySets, daysOff } from '../src/lib/progress';
 import { readiness, vsUsual } from '../src/lib/readiness';
 import { lastWeekReport, weekNotes, weekReportText, yesterdayLine } from '../src/lib/notes';
 import { backupDue, lookDefaults, startHash } from '../src/lib/layout';
@@ -621,5 +621,12 @@ describe('vsUsual', () => {
     expect(vsUsual(80, [70, 72, 74])).toBe('8 above your usual');
     expect(vsUsual(60, [70, 72, 74])).toBe('12 below your usual');
     expect(vsUsual(70, [70, 72, 74])).toBe('About your usual');
+  });
+});
+
+describe('daysOff', () => {
+  it('counts days since the last workout before today', () => {
+    expect(daysOff([], '2026-10-30')).toBeNull();
+    expect(daysOff([{ date: '2026-10-20' }, { date: '2026-10-22' }, { date: '2026-10-30' }], '2026-10-30')).toBe(8);
   });
 });

@@ -344,3 +344,12 @@ export function vsLast(s: Session, all: Record<string, Session>): { date: string
   const total = (x: Session) => x.sets.reduce((t, y) => t + y.reps, 0);
   return { date: prev.date, reps: total(s) - total(prev), sets: s.sets.length - prev.sets.length };
 }
+
+/** A break long enough to ease back in after (sick, holidays): this many days with no workout. */
+export const COMEBACK_DAYS = 7;
+
+/** Days since the last workout before today, or null with none logged. */
+export function daysOff(sessions: Pick<Session, 'date'>[], today: string): number | null {
+  const last = sessions.reduce<string | null>((m, s) => (s.date < today && (!m || s.date > m) ? s.date : m), null);
+  return last ? daysBetween(last, today) : null;
+}

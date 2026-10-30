@@ -6,7 +6,7 @@ import { addDays, dateOf, daysBetween, fmtDate, keyOf, weekStart } from '../lib/
 import { QUALITY, clock12, clockOf, durationMin, hm, minsOf, nightKey, onTime, pastAt, sleepIfNow, toBedtime, wakeOffset } from '../lib/sleep';
 import { BAND_LABEL, readiness, vsUsual } from '../lib/readiness';
 import { nextBadge, weekSummary } from '../lib/game';
-import { historyOf, newRecords } from '../lib/progress';
+import { COMEBACK_DAYS, daysOff, historyOf, newRecords } from '../lib/progress';
 import { lastWeekReport, weekReportText, yesterdayLine } from '../lib/notes';
 import { backupDue, useLayout } from '../lib/layout';
 import { useSync } from '../lib/sync';
@@ -53,7 +53,10 @@ export default function Today() {
     setFeelState(v);
   };
   const low = feel === 'sore' || feel === 'tired';
-  const easy = choice ?? (low || ready.band === 'easy');
+  // Back after a week or more off (sick, holidays): start lighter.
+  const off = daysOff(Object.values(sessions), today);
+  const comeback = off != null && off >= COMEBACK_DAYS;
+  const easy = choice ?? (low || comeback || ready.band === 'easy');
   const hidden = useLayout((l) => l.hidden);
   const exNotes = useStore((s) => s.profile.exNotes);
   const lastNight = useStore((s) => s.nights[today]);
@@ -215,6 +218,7 @@ export default function Today() {
                 ))}
               </div>
               {low && choice == null && <p className="small" style={{ opacity: 0.9 }}>Lighter today, since you’re {feel}. Moving still helps; skip anything that hurts.</p>}
+              {!low && comeback && choice == null && !doneToday.length && <p className="small" style={{ opacity: 0.9 }}>First workout in {off} days, so lighter today to ease back in. Full sets again next time.</p>}
               <button className="btn block" onClick={() => start(day)}>
                 <Icon name="play" size={18} fill /> Start workout · {minutes(slots)} min{easy ? ', lighter' : ''}
               </button>
