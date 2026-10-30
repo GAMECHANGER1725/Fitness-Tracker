@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useStore } from '../lib/store';
-import { addDays, atOn, fmtDate, hhmmOf } from '../lib/dates';
+import { addDays, addMonths, atOn, fmtDate, hhmmOf, monthGrid } from '../lib/dates';
 import { QUALITY, clock12, clockOf, nightPos, durationMin, hm, idealBedtime, minsOf, windDownEffect, nightKey, onTime, samsungNights, sleepStats, wakeOffset } from '../lib/sleep';
 import { currentAi, tonightPlan, useCoach } from '../lib/coach';
 import { friendlyError, hasAi } from '../lib/ai';
@@ -100,6 +100,7 @@ export default function Sleep() {
 
         <Tonight />
         <Week onPick={setEdit} />
+        <SleepMonth onPick={setEdit} />
         <Insights />
         <SamsungImport />
         <Recent onPick={setEdit} />
@@ -289,6 +290,53 @@ function Week({ onPick }: { onPick: (d: string) => void }) {
     </section>
   );
 }
+
+/** A month of nights: filled when you slept your goal (within 30 min), pale when short; tap any day to add or edit it. */
+function SleepMonth({ onPick }: { onPick: (d: string) => void }) {
+  const today = useToday();
+  const nights = useStore((s) => s.nights);
+  const goal = useStore((s) => s.settings.sleepGoalH);
+  const [month, setMonth] = useState(today.slice(0, 8) + '01');
+  const grid = monthGrid(month);
+  const days = grid.flat().filter((k): k is string => !!k && k <= today);
+  const mins = (k: string) => (nights[k] ? durationMin(nights[k]) : null);
+  const met = days.filter((k) => (mins(k) ?? 0) >= goal * 60 - 30).length;
+  const logged = days.filter((k) => mins(k) != null).length;
+  return (
+    <section className="card stack" style={{ gap: 10 }} aria-label="Sleep month">
+      <div className="between" style={{ alignItems: 'center' }}>
+        <button className="btn sm icon" aria-label="Previous month" onClick={() => setMonth(addMonths(month, -1))}>
+          <Icon name="left" size={18} />
+        </button>
+        <span className="stack" style={{ alignItems: 'center', gap: 0 }}>
+          <span className="bold">{fmtDate(month, { month: 'long', year: 'numeric' })}</span>
+          <span className="small mut">{logged ? `${met} of ${logged} nights on goal` : 'no nights logged'}</span>
+        </span>
+        <button className="btn sm icon" aria-label="Next month" disabled={month >= today.slice(0, 8) + '01'} onClick={() => setMonth(addMonths(month, 1))}>
+          <Icon name="right" size={18} />
+        </button>
+      </div>
+      <div className="week" style={{ gap: 4 }}>
+        {WEEK_LETTERS.map((w, i) => <div key={i}>{w}</div>)}
+        {grid.flat().map((k, i) => {
+          if (!k) return <div key={`x${i}`} />;
+          const m = mins(k);
+          const ok = m != null && m >= goal * 60 - 30;
+          return (
+            <button key={k} disabled={k > today} onClick={() => onPick(k)} aria-label={`${fmtDate(k)}: ${m != null ? hm(m) : 'no night logged'}`} style={{ background: 'none', border: 0, padding: 0 }}>
+              <i className={k === today ? 'today' : ''} style={{ fontSize: 12, borderRadius: 10, background: ok ? 'var(--sleep)' : m != null ? 'var(--sleep-soft)' : undefined, color: ok ? 'var(--on-sleep)' : undefined }}>
+                {Number(k.slice(8))}
+              </i>
+            </button>
+          );
+        })}
+      </div>
+      <p className="small mut">Filled: slept your {goal} h goal (or within 30 min). Pale: shorter. Tap a day to add or edit it.</p>
+    </section>
+  );
+}
+
+const WEEK_LETTERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
 function Insights() {
   const today = useToday();
