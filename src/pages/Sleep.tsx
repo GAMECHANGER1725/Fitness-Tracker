@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useStore } from '../lib/store';
-import { addDays, addMonths, atOn, fmtDate, hhmmOf, monthGrid } from '../lib/dates';
+import { addDays, addMonths, atOn, fmtDate, hhmmOf, isKey, monthGrid } from '../lib/dates';
 import { QUALITY, clock12, clockOf, nightPos, durationMin, hm, idealBedtime, minsOf, windDownEffect, nightKey, onTime, samsungNights, sleepStats, wakeOffset } from '../lib/sleep';
 import { currentAi, tonightPlan, useCoach } from '../lib/coach';
 import { friendlyError, hasAi } from '../lib/ai';
-import { Head, Icon, ProfileLink, Sheet, toast, useGame, useToday } from '../components/ui';
+import { Head, Icon, ProfileLink, Sheet, toast, useGame, useRoute, useToday } from '../components/ui';
 import { useFuelData } from '../components/data';
 import { reminderKinds } from '../lib/reminders';
 import type { Night } from '../lib/types';
@@ -16,6 +16,13 @@ export default function Sleep() {
   const settings = useStore((s) => s.settings);
   const { goingToSleep, wokeUp, setNight } = useStore.getState();
   const [edit, setEdit] = useState<string | null>(null);
+  // #/sleep?night=<date> (from Today) opens that night's sheet; the link is then dropped so Back doesn't reopen it.
+  const night = useRoute().params.get('night');
+  useEffect(() => {
+    if (!night || !isKey(night)) return;
+    setEdit(night);
+    history.replaceState(null, '', '#/sleep');
+  }, [night]);
   const last = nights[today];
   const dur = last ? durationMin(last) : null;
   const hour = new Date().getHours();

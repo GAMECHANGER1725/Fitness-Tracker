@@ -272,6 +272,13 @@ function WakeCard() {
           </span>
         </span>
       </a>
+      {night.note ? (
+        <a href={`#/sleep?night=${today}`} className="small mut" style={{ fontStyle: 'italic', textDecoration: 'none' }}>“{night.note}”</a>
+      ) : (
+        <a href={`#/sleep?night=${today}`} className="small acc bold" style={{ textDecoration: 'none' }}>
+          {dur == null ? 'Add when you went to bed' : 'Add a note on last night'}
+        </a>
+      )}
       {rate && (
         <div className="stack" style={{ gap: 6 }}>
           <span className="small mut">How did you sleep?</span>
