@@ -8,6 +8,7 @@ import { exportCsv, exportJson, importJson } from '../lib/backup';
 import { reminderKinds, remindersOn, remindersSupported, setKind, setLead, setReminders } from '../lib/reminders';
 import { usePlayer } from '../lib/player';
 import { ACCENTS, TODAY_CARDS, useLayout } from '../lib/layout';
+import { showWhatsNew } from '../components/WhatsNew';
 import { install, useInstall } from '../lib/install';
 import { TOKEN_URL, connect, disconnect, fuelLogToken, syncNow, useSync } from '../lib/sync';
 import { NOTE_TAGS, clock12, idealBedtime } from '../lib/sleep';
@@ -66,7 +67,12 @@ export default function ProfilePage() {
         <button className="btn block ghost" onClick={() => useAuth.getState().lock()}>
           Log out
         </button>
-        <p className="small dim" style={{ textAlign: 'center' }}>Fitness Tracker · pairs with Fuel Log</p>
+        <p className="small dim" style={{ textAlign: 'center' }}>
+          Fitness Tracker · pairs with Fuel Log ·{' '}
+          <button className="small bold" style={{ background: 'none', border: 0, padding: 0, color: 'var(--acc)' }} onClick={showWhatsNew}>
+            What’s new
+          </button>
+        </p>
       </div>
     </main>
   );

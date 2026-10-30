@@ -1,9 +1,13 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Sheet } from './ui';
 
 /** Bump when there is something new to show; the sheet opens once per device for each id. */
 export const NEWS_ID = '2026-10-30g';
 const KEY = 'fitness-news';
+const EVENT = 'fitness-show-news';
+
+/** Open the What's new sheet again. */
+export const showWhatsNew = () => window.dispatchEvent(new Event(EVENT));
 
 const NEWS: [title: string, body: string, href?: string][] = [
   ['Fixed: your plan saves', 'Changing which workout is on a weekday, or only an exercise’s rest time, now saves. Before, those changes were quietly lost. A workout left unfinished from an earlier day can now be saved or discarded instead of blocking today’s.', '#/train'],
@@ -27,6 +31,12 @@ const seen = () => {
 /** Shows the sheet once per NEWS_ID on this device. */
 export function WhatsNewOnce() {
   const [open, setOpen] = useState(() => !seen());
+  // Profile's "What's new" link reopens it.
+  useEffect(() => {
+    const show = () => setOpen(true);
+    window.addEventListener(EVENT, show);
+    return () => window.removeEventListener(EVENT, show);
+  }, []);
   if (!open) return null;
   const close = () => {
     try {
