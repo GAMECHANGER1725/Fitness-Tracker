@@ -18,8 +18,9 @@ function FromLog() {
   const nights = useStore((s) => s.nights);
   const program = useStore((s) => s.program);
   const settings = useStore((s) => s.settings);
+  const profile = useStore((s) => s.profile);
   const noteTags = useLayout((l) => l.noteTags);
-  const notes = useMemo(() => weekNotes({ sessions, nights, program, settings }, today, noteTags), [sessions, nights, program, settings, today, noteTags]);
+  const notes = useMemo(() => weekNotes({ sessions, nights, program, settings, profile }, today, noteTags), [sessions, nights, program, settings, profile, today, noteTags]);
   return (
     <section className="card stack" style={{ gap: 8 }} aria-label="From your log">
       <h2 className="h2">From your log</h2>

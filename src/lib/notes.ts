@@ -7,6 +7,7 @@ import { EX } from './exercises';
 import { deloadDue, newRecords, trendOf } from './progress';
 import { hm, noteEffect, sleepStats } from './sleep';
 import { weekSummary } from './game';
+import { MEASURES, measureChange } from './body';
 
 /** Moves done in the last 7 days whose best set went up over their last 3 sessions, and ones stuck on the same best set. */
 export function movesTrend(sessions: AppData['sessions'], today: string): { up: string[]; stuck: string[] } {
@@ -24,7 +25,7 @@ export function movesTrend(sessions: AppData['sessions'], today: string): { up: 
   return { up, stuck };
 }
 
-export function weekNotes(d: Pick<AppData, 'sessions' | 'nights' | 'program' | 'settings'>, today: string, noteTags?: string[]): string[] {
+export function weekNotes(d: Pick<AppData, 'sessions' | 'nights' | 'program' | 'settings'> & { profile?: Pick<AppData['profile'], 'measures'> }, today: string, noteTags?: string[]): string[] {
   const out: string[] = [];
   const last7 = Object.values(d.sessions).filter((s) => s.date > addDays(today, -7) && s.date <= today);
   const planned = d.program.week.filter(Boolean).length;
@@ -44,6 +45,13 @@ export function weekNotes(d: Pick<AppData, 'sessions' | 'nights' | 'program' | '
   if (st.withWake) out.push(`Up on time ${st.onTime} of ${st.withWake} mornings.`);
   const ne = noteEffect(d.nights, today, noteTags);
   if (ne) out.push(`Nights you note “${ne.tag.toLowerCase()}” average ${hm(ne.less)} less sleep (last 4 weeks). Worth changing if you can.`);
+  // Measured in the last week: name what grew since the first entry.
+  const ms = d.profile?.measures ?? [];
+  if (ms.length >= 2 && ms[ms.length - 1].date > addDays(today, -7)) {
+    const up = MEASURES.flatMap(([k, name]) => { const c = measureChange(ms, k); return c && c.diff > 0 ? [`${name.toLowerCase()} +${c.diff} cm`] : []; });
+    const c0 = measureChange(ms, 'arm') ?? measureChange(ms, 'chest');
+    if (up.length) out.push(`Measured this week: ${up.join(', ')} since you started${c0?.days ? ` (${c0.days} days)` : ''}. That's muscle the scale doesn't show.`);
+  }
   if (deloadDue(d.sessions, d.program, today, weekStart, addDays)) out.push('Five steady weeks in a row: a lighter week is due, with fewer sets so your body catches up.');
   return out;
 }

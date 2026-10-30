@@ -454,6 +454,15 @@ describe('nextBadge', () => {
   });
 });
 
+describe('weekNotes and measurements', () => {
+  it('names what grew when measured in the last week', () => {
+    const measures = [{ date: '2026-10-01', arm: 27.2, waist: 70 }, { date: '2026-10-27', arm: 28.5, waist: 70 }];
+    const lines = weekNotes({ ...DEFAULT_DATA, profile: { ...DEFAULT_DATA.profile, measures } }, '2026-10-29');
+    expect(lines).toContain("Measured this week: arm +1.3 cm since you started (26 days). That's muscle the scale doesn't show.");
+    expect(weekNotes({ ...DEFAULT_DATA, profile: { ...DEFAULT_DATA.profile, measures } }, '2026-11-10').some((l) => l.startsWith('Measured'))).toBe(false);
+  });
+});
+
 describe('weekNotes and night notes', () => {
   it('mentions the note that goes with the least sleep', () => {
     const nights: Record<string, Night> = {};
