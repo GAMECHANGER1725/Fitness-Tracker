@@ -112,7 +112,15 @@ function Player({ onDone }: { onDone: (r: { session: Session; lines: string[]; r
   return (
     <main style={{ padding: '18px 16px 32px' }} className="stack">
       <div className="between" style={{ alignItems: 'center' }}>
-        <button className="btn icon" aria-label="Stop workout" onClick={() => confirm('Stop this workout without saving?') && (cancelWorkout(), go('today'))}>
+        <button className="btn icon" aria-label="Stop workout" onClick={() => {
+            const was = useStore.getState().active;
+            cancelWorkout();
+            go('today');
+            toast(a.sets.length ? `Workout stopped, ${a.sets.length} set${a.sets.length === 1 ? '' : 's'} not saved` : 'Workout stopped', {
+              label: 'Undo',
+              run: () => (useStore.setState({ active: was && { ...was, restEnd: null } }), go('workout')),
+            });
+          }}>
           <Icon name="close" />
         </button>
         <button className="label" style={{ background: 'none', border: 0, padding: '8px 4px', color: 'inherit', display: 'flex', alignItems: 'center', gap: 4 }} onClick={() => setList(true)} aria-label="All exercises in this workout">
