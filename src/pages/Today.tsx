@@ -42,6 +42,10 @@ export default function Today() {
   };
 
   const day = planned;
+  // Yesterday's planned workout, if nothing was done that day.
+  const yd = addDays(today, -1);
+  // Only once there's a history, so a new log doesn't start with "missed".
+  const missed = Object.keys(sessions).length && !Object.values(sessions).some((x) => x.date === yd) ? plannedDay(program, yd) : null;
   const next = nextPlanned(program, today);
   const slots = day ? slotsFor(program, day, today, easy) : [];
   const planAt = workoutTimeOn(useStore((s) => s.settings), today);
@@ -171,6 +175,14 @@ export default function Today() {
             <button className="btn block" onClick={() => setPick(!pick)}>
               Rest day. Train anyway?
             </button>
+          )}
+          {missed && !active && !doneToday.length && missed.id !== day?.id && (
+            <p className="small" style={{ opacity: 0.9 }}>
+              Missed {missed.name} yesterday ·{' '}
+              <button className="small bold" style={{ background: 'none', border: 0, padding: 0, color: 'inherit', textDecoration: 'underline' }} onClick={() => start(missed)}>
+                Do it now
+              </button>
+            </p>
           )}
           {(doneToday.length > 0 || !day) && !active && next && (
             <p className="small" style={{ opacity: 0.85 }}>
