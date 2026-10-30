@@ -3,7 +3,7 @@ import { useStore } from '../lib/store';
 import { EX, targetText } from '../lib/exercises';
 import { WEEKDAYS, inDeload, minutes, plannedDay, slotsFor } from '../lib/program';
 import { addDays, dateOf, fmtDate, weekStart } from '../lib/dates';
-import { QUALITY, clock12, clockOf, durationMin, hm, nightKey, onTime, toBedtime, wakeOffset } from '../lib/sleep';
+import { QUALITY, clock12, clockOf, durationMin, hm, nightKey, onTime, pastAt, toBedtime, wakeOffset } from '../lib/sleep';
 import { BAND_LABEL } from '../lib/readiness';
 import { weekSummary } from '../lib/game';
 import { useLayout } from '../lib/layout';
@@ -146,25 +146,28 @@ function WakeCard() {
   const hour = new Date().getHours();
   if (night?.wake == null) {
     if (hour >= 14) return null;
+    const up = (at?: number) => {
+      wokeUp(at);
+      const n = useStore.getState().nights[today];
+      toast(onTime(n, wakeTarget) ? 'Up on time. Nice.' : 'Logged. Aim for the target tomorrow.');
+    };
     return (
-      <button
-        className="card"
-        style={{ display: 'flex', alignItems: 'center', gap: 14, border: 0, textAlign: 'left', color: 'var(--ink)', width: '100%' }}
-        onClick={() => {
-          wokeUp();
-          const n = useStore.getState().nights[today];
-          toast(onTime(n, wakeTarget) ? 'Up on time. Nice.' : 'Logged. Aim for the target tomorrow.');
-        }}
-      >
-        <span style={{ width: 52, height: 52, borderRadius: 18, background: 'var(--sleep)', color: 'var(--on-sleep)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
-          <Icon name="sun" size={26} />
-        </span>
-        <span className="grow">
-          <span className="h2" style={{ display: 'block' }}>I’m up</span>
-          <span className="small mut">Target {clock12(wakeTarget)}{g.wake ? ` · ${g.wake}-day streak` : ''}</span>
-        </span>
-        <Icon name="right" />
-      </button>
+      <div className="card stack" style={{ gap: 10 }}>
+        <button
+          style={{ display: 'flex', alignItems: 'center', gap: 14, border: 0, padding: 0, background: 'none', textAlign: 'left', color: 'var(--ink)', width: '100%' }}
+          onClick={() => up()}
+        >
+          <span style={{ width: 52, height: 52, borderRadius: 18, background: 'var(--sleep)', color: 'var(--on-sleep)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
+            <Icon name="sun" size={26} />
+          </span>
+          <span className="grow">
+            <span className="h2" style={{ display: 'block' }}>I’m up</span>
+            <span className="small mut">Target {clock12(wakeTarget)}{g.wake ? ` · ${g.wake}-day streak` : ''}</span>
+          </span>
+          <Icon name="right" />
+        </button>
+        <EarlierTime label="Got up earlier? Pick the time" initial={wakeTarget} onPick={(t) => up(pastAt(t, Date.now()))} />
+      </div>
     );
   }
   // Evenings belong to the Going to sleep card; this morning's summary is still on Sleep.
@@ -249,6 +252,26 @@ function BedCard() {
         </span>
         <Icon name="right" />
       </button>
+      <EarlierTime label="Went to bed earlier? Pick the time" initial={bedtime} onPick={(t) => (goingToSleep(pastAt(t, Date.now())), toast(`Asleep since ${clock12(t)}. Up at ${clock12(wakeTarget)}.`))} />
+    </div>
+  );
+}
+
+/** "Forgot to tap" helper: a link that opens a time picker and logs that time instead of now. */
+function EarlierTime({ label, initial, onPick }: { label: string; initial: string; onPick: (hhmm: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [t, setT] = useState(initial);
+  if (!open)
+    return (
+      <button className="small mut" onClick={() => setOpen(true)} style={{ background: 'none', border: 0, padding: 0, textAlign: 'left', textDecoration: 'underline' }}>
+        {label}
+      </button>
+    );
+  return (
+    <div className="row" style={{ gap: 8 }}>
+      <input className="input" type="time" value={t} onChange={(e) => setT(e.target.value)} style={{ flex: 1, minHeight: 44 }} aria-label="Time" />
+      <button className="btn sm primary" disabled={!t} onClick={() => onPick(t)}>Save</button>
+      <button className="btn sm" onClick={() => setOpen(false)}>Cancel</button>
     </div>
   );
 }

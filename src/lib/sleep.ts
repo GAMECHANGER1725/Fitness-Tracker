@@ -271,3 +271,10 @@ export function windDownEffect(nights: Record<string, Night>, steps: string[], t
   const avg = (xs: number[]) => Math.round(xs.reduce((a, b) => a + b, 0) / xs.length);
   return { full: avg(full), partial: avg(partial) };
 }
+
+/** The last time the clock read `hhmm` at or before `now`: today, or yesterday if that's still to come. */
+export function pastAt(hhmmStr: string, now: number): number {
+  const today = keyOf(new Date(now));
+  const t = atOn(today, hhmmStr);
+  return t <= now ? t : atOn(addDays(today, -1), hhmmStr);
+}

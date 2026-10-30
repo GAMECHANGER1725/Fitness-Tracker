@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clock12, durationMin, guardBedtime, idealBedtime, mergeImported, nightKey, onTime, readCsv, samsungNights, samsungTime, sleepStats, wakeStreak, nightPos, toBedtime, windDownEffect } from '../src/lib/sleep';
+import { clock12, durationMin, guardBedtime, idealBedtime, mergeImported, nightKey, onTime, readCsv, samsungNights, samsungTime, sleepStats, wakeStreak, nightPos, toBedtime, windDownEffect, pastAt } from '../src/lib/sleep';
 import { addDays, atOn } from '../src/lib/dates';
 import type { Night } from '../src/lib/types';
 
@@ -146,5 +146,14 @@ describe('windDownEffect', () => {
     all['2026-10-25'] = n('2026-10-25', 7.5);
     expect(windDownEffect(all, steps, '2026-10-29')).toEqual({ full: 540, partial: 450 });
     expect(windDownEffect({ a: n('2026-10-25', 8) }, steps, '2026-10-29')).toBeNull();
+  });
+});
+
+describe('pastAt', () => {
+  it('picks today if that time has passed, else yesterday', () => {
+    const now = new Date(2026, 9, 29, 7, 30).getTime();
+    expect(new Date(pastAt('06:05', now)).getDate()).toBe(29);
+    expect(new Date(pastAt('22:40', now)).getDate()).toBe(28);
+    expect(new Date(pastAt('22:40', now)).getHours()).toBe(22);
   });
 });
