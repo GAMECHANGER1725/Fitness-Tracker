@@ -18,6 +18,8 @@ import type { PlanDay } from '../lib/types';
 
 const REST_DAY = ['An easy 10 to 15 min walk outside', '30 s each: hip flexor stretch, hamstring stretch, chest stretch on a doorway', '10 slow cat-cows and 10 deep breaths lying down'];
 
+const SKIP_KEY = 'fitness-skip';
+
 export default function Today() {
   const today = useToday();
   const program = useStore((s) => s.program);
@@ -44,6 +46,22 @@ export default function Today() {
   const day = planned;
   // Yesterday's planned workout, if nothing was done that day.
   const yd = addDays(today, -1);
+  // "Skip it" hides the offer for that day, on this device.
+  const [skipped, setSkippedState] = useState(() => {
+    try {
+      return localStorage.getItem(SKIP_KEY);
+    } catch {
+      return null;
+    }
+  });
+  const setSkipped = (d: string) => {
+    try {
+      localStorage.setItem(SKIP_KEY, d);
+    } catch {
+      /* shows again next time; harmless */
+    }
+    setSkippedState(d);
+  };
   // Only once there's a history, so a new log doesn't start with "missed".
   const missed = Object.keys(sessions).length && !Object.values(sessions).some((x) => x.date === yd) ? plannedDay(program, yd) : null;
   const next = nextPlanned(program, today);
@@ -176,11 +194,15 @@ export default function Today() {
               Rest day. Train anyway?
             </button>
           )}
-          {missed && !active && !doneToday.length && missed.id !== day?.id && (
+          {missed && !active && !doneToday.length && missed.id !== day?.id && skipped !== yd && (
             <p className="small" style={{ opacity: 0.9 }}>
               Missed {missed.name} yesterday ·{' '}
               <button className="small bold" style={{ background: 'none', border: 0, padding: 0, color: 'inherit', textDecoration: 'underline' }} onClick={() => start(missed)}>
                 Do it now
+              </button>{' '}
+              ·{' '}
+              <button className="small" style={{ background: 'none', border: 0, padding: 0, color: 'inherit', textDecoration: 'underline' }} onClick={() => setSkipped(yd)}>
+                Skip it
               </button>
             </p>
           )}
