@@ -8,6 +8,7 @@ import { friendlyError, hasAi } from '../lib/ai';
 import { beep, buzz, holdWakeLock, primeAudio, usePlayer } from '../lib/player';
 import { fmtDate, keyOf, todayKey } from '../lib/dates';
 import { FUEL_URL } from '../lib/fuel';
+import { hm } from '../lib/sleep';
 import { useFuelData } from '../components/data';
 import { Icon, Ring, Sheet, Stepper, go, shareText, toast, useNow } from '../components/ui';
 import type { Session, SetLog, Slot } from '../lib/types';
@@ -117,6 +118,8 @@ function Player({ onDone }: { onDone: (r: { session: Session; lines: string[]; r
   const total = a.slots.reduce((t, s) => t + s.sets, 0);
   const elapsed = Math.floor((now - a.start) / 60_000);
   const left = minutesLeft(a.slots, a.sets);
+  const lastAt = a.sets.reduce((m, x) => Math.max(m, x.at), a.start);
+  const idleMin = a.sets.length ? Math.floor((now - lastAt) / 60_000) : 0;
 
   return (
     <main style={{ padding: '18px 16px 32px' }} className="stack">
@@ -314,10 +317,12 @@ function Player({ onDone }: { onDone: (r: { session: Session; lines: string[]; r
       {finish && (
         <FinishSheet
           left={a.slots.map((x) => ({ name: EX[x.exerciseId]?.name ?? x.exerciseId, n: Math.max(0, x.sets - a.sets.filter((y) => y.exerciseId === x.exerciseId).length) })).filter((x) => x.n)}
+          idleMin={idleMin}
           onClose={() => setFinish(false)}
           onSave={(feel, note) => {
             const before = useStore.getState().sessions;
-            const r = finishWorkout(feel, note);
+            // Left open long after the last set: end it there, not now.
+            const r = finishWorkout(feel, note, idleMin > 30 ? lastAt + 60_000 : undefined);
             setFinish(false);
             if (!r) return go('today');
             const recs = newRecords(r.session, before).map((x) => `${EX[x.exerciseId]?.name}: ${x.reps}${EX[x.exerciseId]?.unit === 'secs' ? ' s' : ''}${x.loadKg ? ` @ ${x.loadKg} kg` : ''}`);
@@ -512,12 +517,13 @@ function SwapSheet({ slot, onClose }: { slot: Slot; onClose: () => void }) {
   );
 }
 
-function FinishSheet({ left, onClose, onSave }: { left: { name: string; n: number }[]; onClose: () => void; onSave: (feel: number | undefined, note: string) => void }) {
+function FinishSheet({ left, idleMin, onClose, onSave }: { left: { name: string; n: number }[]; idleMin: number; onClose: () => void; onSave: (feel: number | undefined, note: string) => void }) {
   const [feel, setFeel] = useState<number | undefined>();
   const [note, setNote] = useState('');
   const sets = left.reduce((t, x) => t + x.n, 0);
   return (
     <Sheet onClose={onClose} label="Finish workout">
+      {idleMin > 30 && <p className="small mut">Your last set was {hm(idleMin)} ago, so this saves the workout as ending then.</p>}
       {sets > 0 && (
         <div className="card soft stack" style={{ gap: 6 }}>
           <span className="bold">{sets} planned set{sets === 1 ? '' : 's'} not done yet</span>
