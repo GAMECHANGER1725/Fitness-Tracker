@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_DATA, exportCsv, exportJson, importJson, normalize } from '../src/lib/backup';
 import { DEFAULT_PROGRAM, copyDay, deleteDay, nextPlanned, minutes, moveSlot, plannedDay, slotsFor, warmupFor, weekdayOf } from '../src/lib/program';
 import { EX, EXERCISES, easier, harder } from '../src/lib/exercises';
-import { applySession, deloadDue, diffPrograms, guardProgram, newRecords, progressSlot, records, trendOf, moveSession, sessionText, weeklySets } from '../src/lib/progress';
+import { applySession, deloadDue, diffPrograms, guardProgram, newRecords, progressSlot, records, trendOf, moveSession, sessionText, vsLast, weeklySets } from '../src/lib/progress';
 import { readiness } from '../src/lib/readiness';
 import { weekNotes } from '../src/lib/notes';
 import { computeGame, weekSummary, workoutWeeks } from '../src/lib/game';
@@ -372,5 +372,16 @@ describe('nextPlanned', () => {
     expect(nextPlanned(p, '2026-10-26')).toMatchObject({ date: '2026-10-28', day: { id: 'upper-a' } });
     expect(nextPlanned(p, '2026-10-28')!.date).toBe('2026-11-04');
     expect(nextPlanned({ ...p, week: Array(7).fill(null) }, '2026-10-26')).toBeNull();
+  });
+});
+
+describe('vsLast', () => {
+  it('compares with the last session of the same plan day only', () => {
+    const a = sess('2026-10-20', 'upper-a', [['pushup', 10], ['pushup', 9]]);
+    const b = sess('2026-10-22', 'lower-a', [['squat', 20]]);
+    const c = sess('2026-10-27', 'upper-a', [['pushup', 12], ['pushup', 10], ['pushup', 8]]);
+    const all = { [a.id]: a, [b.id]: b, [c.id]: c };
+    expect(vsLast(c, all)).toEqual({ date: '2026-10-20', reps: 11, sets: 1 });
+    expect(vsLast(a, all)).toBeNull();
   });
 });

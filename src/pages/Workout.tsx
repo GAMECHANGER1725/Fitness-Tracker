@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../lib/store';
 import { warmupFor } from '../lib/program';
 import { EX, EXERCISES, PATTERN_LABEL, targetText, usable } from '../lib/exercises';
-import { historyOf, newRecords, sessionText } from '../lib/progress';
+import { historyOf, newRecords, sessionText, vsLast } from '../lib/progress';
 import { currentAi, postWorkout, suggestSwap } from '../lib/coach';
 import { friendlyError, hasAi } from '../lib/ai';
 import { beep, holdWakeLock, primeAudio, usePlayer } from '../lib/player';
@@ -540,6 +540,7 @@ function Summary({ session, lines, records }: { session: Session; lines: string[
       .finally(() => setBusy(false));
   }, []);
   const mins = Math.max(1, Math.round((session.end - session.start) / 60_000));
+  const cmp = vsLast(session, useStore.getState().sessions);
   return (
     <main className="page celebrate" style={{ paddingTop: 40, gap: 16 }}>
       <div style={{ width: 64, height: 64, borderRadius: 22, background: 'var(--acc)', color: 'var(--on-acc)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -560,6 +561,16 @@ function Summary({ session, lines, records }: { session: Session; lines: string[
           <span className="small mut">new bests</span>
         </div>
       </div>
+      {cmp && (
+        <p className="small" style={{ textAlign: 'center' }}>
+          vs your last {session.name} on {fmtDate(cmp.date, { weekday: 'short', day: 'numeric', month: 'short' })}:{' '}
+          <span className="bold" style={{ color: cmp.reps > 0 ? 'var(--acc)' : undefined }}>
+            {cmp.reps > 0 ? '+' : ''}{cmp.reps} reps
+          </span>
+          {cmp.sets ? `, ${cmp.sets > 0 ? '+' : ''}${cmp.sets} set${Math.abs(cmp.sets) === 1 ? '' : 's'}` : ''}
+          {cmp.reps < 0 ? '. Lighter days happen; sleep and food count too.' : ''}
+        </p>
+      )}
       {records.length > 0 && (
         <section className="card stack">
           <h2 className="h2">New bests</h2>

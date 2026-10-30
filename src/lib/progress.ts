@@ -307,3 +307,13 @@ export function sessionText(s: Session, when: string): string {
   });
   return [`${s.name} · ${when} · ${mins} min · ${s.sets.length} set${s.sets.length === 1 ? '' : 's'}`, ...lines, ...(s.note ? [`Note: ${s.note}`] : [])].join('\n');
 }
+
+/** This session against the last one of the same plan day: change in total reps (seconds count as reps) and sets. */
+export function vsLast(s: Session, all: Record<string, Session>): { date: string; reps: number; sets: number } | null {
+  const prev = Object.values(all)
+    .filter((x) => x.id !== s.id && x.dayId === s.dayId && x.start < s.start)
+    .sort((a, b) => b.start - a.start)[0];
+  if (!prev) return null;
+  const total = (x: Session) => x.sets.reduce((t, y) => t + y.reps, 0);
+  return { date: prev.date, reps: total(s) - total(prev), sets: s.sets.length - prev.sets.length };
+}
