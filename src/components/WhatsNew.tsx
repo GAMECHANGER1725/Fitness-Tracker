@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Sheet } from './ui';
 
 /** Bump when there is something new to show; the sheet opens once per device for each id. */
-export const NEWS_ID = '2026-10-30i';
+export const NEWS_ID = '2026-10-30j';
 const KEY = 'fitness-news';
 const EVENT = 'fitness-show-news';
 
@@ -12,7 +12,7 @@ export const showWhatsNew = () => window.dispatchEvent(new Event(EVENT));
 const NEWS: [title: string, body: string, href?: string][] = [
   ['Fixed: your plan saves', 'Changing which workout is on a weekday, or only an exercise’s rest time, now saves. Before, those changes were quietly lost. A workout left unfinished from an earlier day can now be saved or discarded instead of blocking today’s.', '#/train'],
   ['Evenings and mornings on Today', 'Tick your own wind-down checklist and tap Going to sleep; tap I’m up and rate the night in one tap. Forgot to tap? Pick an earlier time. See how much sleep you’d get if you went now, and add time awake and a one-tap note to any night (“phone in bed”, or your own list); Insights shows which ones cost you sleep.', '#/sleep'],
-  ['Better workouts', 'A warm-up first, last time’s reps on every set, a timer for holds, extra sets, fix or remove a logged set, notes per exercise, a beep when rest ends, and how many minutes are left. Today shows last time’s sets for each move and offers a workout you missed yesterday, the player shows your best set, and you can swap in a different workout from your plan. Swap shows the easier and harder versions first, and a workout you forgot to finish no longer counts as hours long (you can fix its length in History too).'],
+  ['Better workouts', 'A warm-up first, last time’s reps on every set, a timer for holds, extra sets, fix or remove a logged set, notes per exercise, a beep when rest ends, and how many minutes are left. Today asks how you feel (sore or tired picks the lighter version), shows last time’s sets for each move and offers a workout you missed yesterday, the player shows your best set, and you can swap in a different workout from your plan. Swap shows the easier and harder versions first, and a workout you forgot to finish no longer counts as hours long (you can fix its length in History too).'],
   ['Your plan, your way', 'Reorder, rename, copy or delete workouts, add a move straight from Exercises, change rest times as you go, see past plan changes, and start or end a lighter week.', '#/train'],
   ['See your progress', 'Month calendars for workouts and sleep, a chart per exercise (tap a bar for that day’s sets), when you last did each move, all-time totals, a search through your workouts and their notes, personal bests, body measurements (arm, chest, waist, thigh) with the change over time, your next badge (and a new Sleep diary badge), a weight chart on Fuel, and a recap of last week on Today each Monday.', '#/train?tab=history'],
   ['Coach without AI', 'Coach now opens with plain notes from your last week: what’s going up, what’s stuck, sleep and whether a lighter week is due.', '#/coach'],
