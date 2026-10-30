@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_DATA, exportCsv, exportJson, importJson, normalize } from '../src/lib/backup';
 import { DEFAULT_PROGRAM, copyDay, deleteDay, nextPlanned, minutes, minutesLeft, moveSlot, plannedDay, slotsFor, warmupFor, weekdayOf } from '../src/lib/program';
 import { EX, EXERCISES, bestText, easier, harder } from '../src/lib/exercises';
-import { applySession, deloadDue, diffPrograms, guardProgram, newRecords, progressSlot, records, trendOf, moveSession, sessionText, vsLast, weeklySets } from '../src/lib/progress';
+import { applySession, deloadDue, diffPrograms, guardProgram, matchSession, newRecords, progressSlot, records, trendOf, moveSession, sessionText, vsLast, weeklySets } from '../src/lib/progress';
 import { readiness } from '../src/lib/readiness';
 import { weekNotes } from '../src/lib/notes';
 import { backupDue } from '../src/lib/layout';
@@ -127,6 +127,16 @@ describe('minutesLeft', () => {
     expect(minutesLeft([s], [])).toBe(6);
     expect(minutesLeft([s], [{ exerciseId: 'pushup' }])).toBe(4);
     expect(minutesLeft([s], [1, 2, 3, 4].map(() => ({ exerciseId: 'pushup' })))).toBe(0);
+  });
+});
+
+describe('matchSession', () => {
+  it('needs every word in the name, a move or the note, any case', () => {
+    const a = sess('2026-10-26', 'Upper A', [['pushup', 10], ['pack-row', 12, 6]], { note: 'Wrist sore' });
+    expect(matchSession(a, '')).toBe(true);
+    expect(matchSession(a, 'upper')).toBe(true);
+    expect(matchSession(a, 'backpack WRIST')).toBe(true);
+    expect(matchSession(a, 'push squat')).toBe(false);
   });
 });
 

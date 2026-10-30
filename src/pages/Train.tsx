@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useStore } from '../lib/store';
 import { EX, EXERCISES, PATTERN_LABEL, bestText, easier, harder, targetText, usable } from '../lib/exercises';
 import { WEEKDAYS, copyDay, deleteDay, inDeload, minutes, moveSlot } from '../lib/program';
-import { PATTERN_CAP, newRecords, records, sessionText, trendOf, weeklySets } from '../lib/progress';
+import { PATTERN_CAP, matchSession, newRecords, records, sessionText, trendOf, weeklySets } from '../lib/progress';
 import { addDays, addMonths, daysBetween, fmtDate, monthGrid } from '../lib/dates';
 import { Bar, Head, Icon, ProfileLink, Sheet, Stepper, go, scrollMotion, shareText, toast, useGame, useRoute, useToday } from '../components/ui';
 import { useReadiness } from '../components/data';
@@ -328,11 +328,12 @@ function History() {
   const [open, setOpen] = useState<string | null>(null);
   const [edit, setEdit] = useState<Session | null>(null);
   const [only, setOnly] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
   // Personal bests set in each session (against everything before it), for the medal on its card.
   const bests = useMemo(() => Object.fromEntries(Object.values(sessions).map((x) => [x.id, new Set(newRecords(x, sessions).map((r) => r.exerciseId)).size])), [sessions]);
   const names = [...new Set(Object.values(sessions).map((x) => x.name))].sort();
   const list = Object.values(sessions)
-    .filter((x) => !only || x.name === only)
+    .filter((x) => (!only || x.name === only) && matchSession(x, query))
     .sort((a, b) => b.start - a.start);
   const [past, setPast] = useState(false);
   const add = (
@@ -341,7 +342,7 @@ function History() {
     </button>
   );
   const sheet = past && <PastSheet onClose={() => setPast(false)} />;
-  if (!list.length)
+  if (!Object.keys(sessions).length)
     return (
       <>
         <p className="empty">No workouts yet. Your finished workouts show up here.</p>
@@ -357,6 +358,7 @@ function History() {
         sessions={sessions}
         onPick={(id) => {
           setOnly(null);
+          setQuery('');
           setOpen(id);
           setTimeout(() => document.getElementById(`ses-${id}`)?.scrollIntoView({ behavior: scrollMotion(), block: 'center' }), 50);
         }}
@@ -369,6 +371,18 @@ function History() {
           ))}
         </div>
       )}
+      {Object.keys(sessions).length > 3 && (
+        <label className="search">
+          <Icon name="search" size={18} />
+          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Find a workout, move or note" aria-label="Find a workout" />
+          {query && (
+            <button className="btn sm icon" aria-label="Clear search" onClick={() => setQuery('')}>
+              <Icon name="close" size={16} />
+            </button>
+          )}
+        </label>
+      )}
+      {!list.length && <p className="empty">No workouts match{query ? ` “${query}”` : ''}.</p>}
       {list.map((s) => {
         const by = new Map<string, typeof s.sets>();
         for (const x of s.sets) by.set(x.exerciseId, [...(by.get(x.exerciseId) ?? []), x]);

@@ -295,6 +295,14 @@ export function deloadDue(sessions: Record<string, Session>, program: Program, t
   return true;
 }
 
+/** Does a workout match a History search? Every word has to appear in its name, an exercise name or its note. */
+export function matchSession(s: Session, query: string): boolean {
+  const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+  if (!words.length) return true;
+  const text = [s.name, s.note ?? '', ...new Set(s.sets.map((x) => EX[x.exerciseId]?.name ?? x.exerciseId))].join(' ').toLowerCase();
+  return words.every((w) => text.includes(w));
+}
+
 /** A plain-text summary of a workout for sharing: one line per exercise with its sets. */
 export function sessionText(s: Session, when: string): string {
   const by = new Map<string, SetLog[]>();
