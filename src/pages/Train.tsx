@@ -285,14 +285,14 @@ function SlotSheet({ program, dayId, idx, onClose, onSave }: { program: Program;
               <button
                 key={x.id}
                 className="chip"
-                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', minHeight: 48, textAlign: 'left' }}
+                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, minHeight: 48, textAlign: 'left', whiteSpace: 'normal', padding: '6px 14px' }}
                 onClick={() => {
                   setS({ ...s, exerciseId: x.id, loadKg: x.loadable ? s.loadKg : 0, ...(x.unit === 'secs' ? { low: 20, high: 40 } : EX[s.exerciseId]?.unit === 'secs' ? { low: 8, high: 12 } : {}) });
                   setPicking(false);
                 }}
               >
                 <span>{x.name}</span>
-                <span className="small" style={{ opacity: 0.7, textAlign: 'right' }}>{bestText(best[x.id], x) ?? x.muscles}</span>
+                <span className="small" style={{ opacity: 0.7, textAlign: 'right', minWidth: 0, maxWidth: '45%' }}>{bestText(best[x.id], x) ?? x.muscles}</span>
               </button>
             ))}
           </div>

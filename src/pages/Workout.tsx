@@ -494,13 +494,13 @@ function SwapSheet({ slot, onClose }: { slot: Slot; onClose: () => void }) {
       <span className="label">{ex ? PATTERN_LABEL[ex.pattern] : ''} exercises</span>
       <div className="stack" style={{ gap: 6 }}>
         {options.map((e) => (
-          <button key={e.id} className="chip" aria-pressed={pick === e.id} onClick={() => setPick(e.id)} style={{ justifyContent: 'space-between', display: 'flex', alignItems: 'center', gap: 8, minHeight: 48, textAlign: 'left' }}>
-            <span style={{ flex: 'none' }}>
+          <button key={e.id} className="chip" aria-pressed={pick === e.id} onClick={() => setPick(e.id)} style={{ justifyContent: 'space-between', display: 'flex', alignItems: 'center', gap: 8, minHeight: 48, textAlign: 'left', whiteSpace: 'normal', padding: '6px 14px' }}>
+            <span>
               {e.name}
               {e.id === down?.id && <span className="pill" style={{ marginLeft: 6, fontSize: 11 }}>Easier</span>}
               {e.id === up?.id && <span className="pill" style={{ marginLeft: 6, fontSize: 11 }}>Harder</span>}
             </span>
-            <span className="small" style={{ opacity: 0.7, textAlign: 'right', minWidth: 0, whiteSpace: 'normal' }}>{bestText(best[e.id], e) ?? e.muscles}</span>
+            <span className="small" style={{ opacity: 0.7, textAlign: 'right', minWidth: 0, maxWidth: '45%' }}>{bestText(best[e.id], e) ?? e.muscles}</span>
           </button>
         ))}
       </div>
