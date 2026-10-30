@@ -179,6 +179,8 @@ select.input { appearance: none; background-image: linear-gradient(45deg, transp
 
 /* ----- Fitness only ----- */
 .seg button { padding: 0 4px; }
+/* .btn.sm's side padding beat .btn.icon's padding: 0 and squeezed small icon buttons' icons to ~10px (same fix as Fuel Log's). */
+.btn.sm.icon { padding: 0; }
 /* Two steppers side by side, stacked when they'd be too narrow (Large text on a small phone). */
 .grid2.pair { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
 .grid2.pair .row { gap: 2px; }
