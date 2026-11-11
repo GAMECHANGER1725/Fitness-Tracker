@@ -15,6 +15,7 @@ const paths: Record<string, ReactNode> = {
   spark: <><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z" /><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z" /></>,
   user: <><circle cx="12" cy="9" r="4" /><path d="M4 20c1.5-3.5 4.5-5 8-5s6.5 1.5 8 5" /></>,
   play: <path d="M8 5v14l11-7z" />,
+  pause: <path d="M8 5v14M16 5v14" />,
   plus: <path d="M12 5v14M5 12h14" />,
   minus: <path d="M5 12h14" />,
   check: <path d="M5 12l5 5 9-10" />,

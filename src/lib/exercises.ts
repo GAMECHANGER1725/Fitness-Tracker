@@ -136,7 +136,7 @@ export const EXERCISES: Exercise[] = [
   // First strict pull-up ladder. The assisted machine and the lat pulldown are trained alongside it.
   E('chin-neg', 'Chin-up negative', 'pull', ['lats', 'biceps'], ['upperBack', 'forearms'], 'pullup', 1, ['Step up on a box so your chin starts over the bar, palms facing you', 'Lower yourself as slowly as you can: aim for 3–5 seconds', 'Step back up on the box for the next rep. Never jump down from the top'], {
     demo: 'chinup',
-    mistakes: ['Dropping fast in the second half', 'Shrugged shoulders: keep them away from your ears', 'Doing more reps once you can’t control the lowering'],
+    mistakes: ['Dropping fast in the second half', 'Can’t lower for 3 seconds yet? Skip these today and use the assisted machine', 'Shrugged shoulders: keep them away from your ears', 'Doing more reps once you can’t control the lowering'],
   }),
   E('chinup', 'Chin-up', 'pull', ['lats', 'biceps'], ['upperBack', 'forearms'], 'pullup', 2, ['Palms facing you, hands shoulder width', 'Start from a dead hang, pull your chest toward the bar', 'Chin over the bar, lower all the way under control'], {
     demo: 'chinup',
@@ -334,3 +334,27 @@ export function loadText(e: Exercise | undefined, kg: number): string {
 /** What the weight field means for this exercise. */
 export const loadLabel = (e: Exercise | undefined): string =>
   !e ? 'Weight kg' : e.load === 'assist' ? 'Help kg' : e.load === 'db' ? (e.perSide || e.id === 'goblet-squat' ? 'Dumbbell kg' : 'Each dumbbell kg') : e.load === 'pack' ? 'Backpack kg' : 'Weight kg';
+
+/** What the engine needs to know about the kit. */
+export interface Kit {
+  /** Smallest jump on machines and cables, kg. */
+  machineStepKg: number;
+  /** Home backpack limit, kg (old sessions only). */
+  packMaxKg: number;
+}
+export const DEFAULT_KIT: Kit = { machineStepKg: 5, packMaxKg: 15 };
+
+/** The smallest weight jump for an exercise at a weight: dumbbells 1 kg under 10 kg (2 kg for the first pair), then 2.5 kg; machines and cables as set in Profile. */
+export function stepKg(ex: Exercise, kg: number, kit: Kit = DEFAULT_KIT): number {
+  if (ex.load === 'db') return kg <= 0 ? 2 : kg < 10 ? 1 : 2.5;
+  if (ex.load === 'pack') return 2;
+  return kit.machineStepKg;
+}
+
+/** One jump lighter (or one jump more help on the assisted pull-up): a weight that exists on the rack or the stack. */
+export function lighterKg(ex: Exercise, kg: number, kit: Kit = DEFAULT_KIT): number {
+  if (!ex.loadable || kg <= 0) return 0;
+  if (ex.load === 'assist') return kg + stepKg(ex, kg, kit);
+  const down = stepKg(ex, Math.max(0, kg - 0.5), kit);
+  return Math.max(Math.min(kg, down), kg - down);
+}

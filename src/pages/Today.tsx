@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useStore } from '../lib/store';
 import { EX, loadText, targetText } from '../lib/exercises';
-import { WEEKDAYS, minutes, phaseOf, plannedDay, slotsFor } from '../lib/program';
+import { MAX_GYM_DAYS, WEEKDAYS, minutes, phaseOf, plannedDay, slotsFor } from '../lib/program';
 import { due } from '../lib/measures';
 import { REST_DAY, SAFETY } from '../lib/guide';
 import { addDays, dateOf, daysBetween, fmtDate, weekStart } from '../lib/dates';
@@ -39,6 +39,7 @@ export default function Today() {
   const phase = phaseOf(program, listDate);
   const measures = useStore((s) => s.measures);
   const check = due(measures, today);
+  const weekCount = Object.values(sessions).filter((x) => weekStart(x.date) === weekStart(today)).length;
   // The next gym day after today, for rest days.
   let next: { date: string; name: string } | null = null;
   for (let i = 1; i <= 7 && !next; i++) {
@@ -84,7 +85,8 @@ export default function Today() {
               Rest day{next ? ` · next: ${next.name}, ${fmtDate(next.date, { weekday: 'short' })}` : ''}
             </button>
           )}
-          {pick && !day && !notYet && (
+          {pick && !day && !notYet && weekCount >= MAX_GYM_DAYS && <p className="small bold">You’ve trained {weekCount} times this week. That’s the limit: rest today.</p>}
+          {pick && !day && !notYet && weekCount < MAX_GYM_DAYS && (
             <div className="row" style={{ flexWrap: 'wrap' }}>
               <span className="small bold" style={{ width: '100%' }}>Training anyway? Resting is part of the plan, but if you swapped days:</span>
               {program.days.map((d) => (

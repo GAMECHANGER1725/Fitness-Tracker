@@ -89,7 +89,7 @@ export const useStore = create<Store>()(
         ...DEFAULT_DATA,
 
         startWorkout: (day, easy = false, date = todayKey()) =>
-          set((s) => ({ active: { dayId: day.id, name: day.name, date, start: Date.now(), slots: slotsFor(s.program, day, date, easy), sets: [], idx: 0, restEnd: null } })),
+          set((s) => ({ active: { dayId: day.id, name: day.name, date, start: Date.now(), slots: slotsFor(s.program, day, date, easy, kitOf(s)), sets: [], idx: 0, restEnd: null } })),
         logSet: (x) => patchActive((a) => ({ sets: [...a.sets, { ...x, id: uid(), at: Date.now() }] })),
         undoSet: () => patchActive((a) => ({ sets: a.sets.slice(0, -1), restEnd: null })),
         editSet: (id, patch) => patchActive((a) => ({ sets: a.sets.map((x) => (x.id === id ? { ...x, ...patch } : x)) })),

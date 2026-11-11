@@ -77,7 +77,7 @@ describe('the plan built from the baselines', () => {
     for (const d of DEFAULT_PROGRAM.days)
       for (const s of d.slots) {
         const e = EX[s.exerciseId];
-        if (e.loadable && e.unit === 'reps' && e.load !== 'assist') {
+        if (e.loadable && e.unit === 'reps') {
           expect(s.low, e.id).toBeGreaterThanOrEqual(8);
           expect(s.high, e.id).toBeLessThanOrEqual(15);
         }
@@ -107,7 +107,8 @@ describe('block weeks', () => {
     expect(slotsFor(p, day, '2026-11-12').every((s) => s.sets <= 2)).toBe(true);
     const de = slotsFor(p, day, '2026-12-14');
     expect(de[0].sets).toBe(2);
-    expect(de[0].loadKg).toBe(18); // lat pulldown 20 → 18
+    expect(de[0].loadKg).toBe(15); // lat pulldown 20 → 15: one pin lighter, a weight the stack has
+    expect(de.find((s) => s.exerciseId === 'db-row')!.loadKg).toBe(5);
     const assist = slotsFor(p, p.days[0], '2026-12-14').find((s) => s.exerciseId === 'assisted-pullup')!;
     expect(assist.loadKg).toBeGreaterThan(40); // more help, not less
   });

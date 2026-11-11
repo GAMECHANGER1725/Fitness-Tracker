@@ -80,7 +80,7 @@ upper days. With 2 or 3 gym days the plan switches to two full-body days (A/B). 
 
 | Day | Exercises (sets × reps) |
 | --- | --- |
-| Upper A (Mon) | Pull-up ladder step (chin-up negatives or chin-ups) 3 · Assisted pull-up 2×6–10 · Chest press machine 3×8–12 · Seated cable row 2×10–12 · Push-up ladder step 2×8–15 · One-arm DB curl 3×10–15 · Triceps pushdown 2×10–15 |
+| Upper A (Mon) | Pull-up ladder step (chin-up negatives or chin-ups) 3 · Assisted pull-up 2×8–12 · Chest press machine 3×8–12 · Seated cable row 2×10–12 · Push-up ladder step 2×8–15 · One-arm DB curl 3×10–15 · Triceps pushdown 2×10–15 |
 | Lower A (Tue) | Goblet squat 3×8–12 · Leg press 3×10–15 · DB Romanian deadlift 3×10–12 · Seated leg curl 2×10–15 · Calf raise 2×12–15 · Plank ladder step 3 · Dead bug 2×8–12 |
 | Upper B (Thu) | Lat pulldown 3×10–12 · Shoulder press machine 3×8–12 · One-arm DB row 3×10–12 · Incline DB press 2×8–12 · One-arm cable curl 2×10–15 · Hammer curl 2×10–15 · Overhead rope extension 2×10–15 |
 | Lower B (Fri) | Leg press 3×10–15 · DB split squat 2×8–12 · Back extension 2×10–15 · Leg extension 2×10–15 · Seated leg curl 2×10–15 · Calf raise 2×12–15 · Pallof press 2×8–12 · Side plank 2×20–40 s |
@@ -145,3 +145,21 @@ sleep/eating/protein notes live in `guide.ts` and show on Today, in the logger a
 9. Fuel leaves the bottom bar to make room for Progress.
 10. The AI coach keeps working with the gym library and the same code guards; it never sees the home moves.
 11. Maximum 4 gym days a week.
+
+## 7. Results (checked 11 Nov 2026)
+
+- **Tests:** 145 logic tests pass, in UTC and in `Australia/Sydney` (progression engine, block weeks, guards,
+  migration, sync, measurements, rig and demos).
+- **Browser walkthrough** (`scripts/e2e.mjs`, 390×844, Sydney time): a realistic home save from 27 Oct is
+  migrated (9 workouts and 11 nights kept, backup copy written), onboarding is clicked through, a full Upper B
+  session is logged on Thu 12 Nov (14 sets with reps in reserve and left/right reps), and the next week shows
+  "last time" and a target built from it. No console errors.
+- **3D budget** (`scripts/perf-3d.mjs`, 4× CPU throttle, software WebGL): form demos 26–30 draw calls, about
+  3,900 triangles, 60 fps, first frame about 1.2–1.4 s after opening; body model 49 draw calls, about 17,500
+  triangles, no frames drawn while idle; 20 demos opened in a row leave 1 scene alive. Today, Plan, Progress and
+  the logger download no 3D code.
+- **Bundle:** three.js and the scenes are a lazy chunk of about 125 kB gzip (budget 200 kB).
+- **Safety review of the programme:** every loaded exercise sits at 8–15 reps (the assisted pull-up was moved
+  from 6–10 to 8–12 in this review); reps in reserve never drop below 1; holds stop at 2:00; deload weights are
+  one real jump lighter (so the stack has them); no more than 4 gym days, and "train anyway" stops at 4 a week;
+  the coach prompt no longer allows any supplement and gives no calorie or protein numbers of its own.

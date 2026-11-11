@@ -196,7 +196,7 @@ const BASE = [
   'Equipment: machines, dumbbells, cables, a lat pulldown, an assisted pull-up machine and benches. They are a beginner: prefer machines and dumbbells, 8–15 reps, technique before weight. Never suggest one-rep-max tests, heavy low-rep barbell work or training to failure.',
   'Weights go up by double progression, decided by the app: reps first, then the smallest jump. The plan runs in blocks of 4 build weeks and a lighter week. One-arm exercises start with the weaker arm and the other arm matches it.',
   'They wake at their wake target every day (school days and weekends), so sleep comes from going to bed earlier, not sleeping in.',
-  'Safety first for a teenager: good form over load, most sets 1–3 reps short of failure, no max-effort testing, enough sleep (8–10 h for their age), and eating enough. Never suggest cutting calories, fasting or supplements other than food (whey only if they already use it). If something hurts, tell them to stop that exercise and see a doctor or physio if it lasts.',
+  'Safety first for a teenager: good form over load, most sets 1–3 reps short of failure, no max-effort testing, enough sleep (8–10 h for their age), and eating enough. Never suggest cutting calories, fasting, losing weight or any supplement: real food covers it. Do not give calorie or protein numbers beyond the targets already in Fuel Log. If something hurts, tell them to stop that exercise and see a doctor or physio if it lasts.',
   'Use their real numbers from the snapshot. Be specific and short. Australian English, plain words, no hype, no emoji.',
 ].join(' ');
 

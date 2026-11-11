@@ -5,7 +5,7 @@
 
 import type { PlanDay, Program, Slot } from './types';
 import { addDays, dateOf, daysBetween, weekStart } from './dates';
-import { EX } from './exercises';
+import { DEFAULT_KIT, EX, lighterKg, type Kit } from './exercises';
 
 const S = (exerciseId: string, sets: number, low: number, high: number, restS = 90, loadKg = EX[exerciseId]?.startKg ?? 0): Slot => ({ exerciseId, sets, low, high, restS, loadKg });
 
@@ -50,7 +50,7 @@ function days(b: Baselines): Record<string, PlanDay> {
     'upper-a': {
       id: 'upper-a',
       name: 'Upper A',
-      slots: [pullupSlot(b), S('assisted-pullup', 2, 6, 10, 120), S('chest-press', 3, 8, 12, 120), S('seated-row', 2, 10, 12, 90), pushupSlot(b), S('db-curl', 3, 10, 15, 75), S('triceps-pushdown', 2, 10, 15, 75)],
+      slots: [pullupSlot(b), S('assisted-pullup', 2, 8, 12, 120), S('chest-press', 3, 8, 12, 120), S('seated-row', 2, 10, 12, 90), pushupSlot(b), S('db-curl', 3, 10, 15, 75), S('triceps-pushdown', 2, 10, 15, 75)],
     },
     'lower-a': {
       id: 'lower-a',
@@ -160,20 +160,18 @@ export function nextDeload(p: Program, date: string): string | null {
   return null;
 }
 
-const dropKg = (kg: number) => (kg <= 0 ? 0 : Math.max(1, Math.round(kg * 0.9 * 2) / 2));
-
 /**
  * Today's version of a day.
  *  - Intro week: 2 sets of everything.
- *  - Deload: about 60% of the sets, about 10% lighter (more help on the assisted pull-up), top of the range lowered.
+ *  - Deload: about 60% of the sets, one weight jump lighter (one more of help on the assisted pull-up), top of the range lowered.
  *  - Easy day (readiness): about 25% fewer sets.
  */
-export function slotsFor(p: Program, day: PlanDay, date: string, easy = false): Slot[] {
+export function slotsFor(p: Program, day: PlanDay, date: string, easy = false, kit: Kit = DEFAULT_KIT): Slot[] {
   const ph = phaseOf(p, date).kind;
   return day.slots.map((s) => {
     const e = EX[s.exerciseId];
     if (ph === 'deload') {
-      const loadKg = e?.load === 'assist' ? Math.round(s.loadKg * 1.1 * 2) / 2 : dropKg(s.loadKg);
+      const loadKg = e ? lighterKg(e, s.loadKg, kit) : s.loadKg;
       return { ...s, sets: Math.max(1, Math.round(s.sets * 0.6)), loadKg, high: Math.max(s.low, s.high - Math.round((s.high - s.low) / 2)) };
     }
     if (ph === 'intro') return { ...s, sets: Math.min(2, s.sets) };

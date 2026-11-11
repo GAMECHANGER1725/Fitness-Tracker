@@ -14,7 +14,9 @@
 //    at most 20 hard sets a week per movement pattern, and total weekly volume up by at most 20% at a time.
 
 import type { AppData, Exercise, Pattern, PlanDay, Program, Session, SetLog, Slot } from './types';
-import { EX, easier, harder, loadText, usable } from './exercises';
+import { DEFAULT_KIT, EX, easier, harder, loadText, stepKg, usable, type Kit } from './exercises';
+
+export { DEFAULT_KIT, stepKg, type Kit };
 import { HOLD_CAP_S, type Phase } from './program';
 
 export const MAX_SETS = 4;
@@ -24,26 +26,11 @@ export const MAX_GROWTH = 1.2;
 export const MIN_LOADED_REPS = 5;
 const RANGE = { reps: [1, 30], secs: [10, HOLD_CAP_S] } as const;
 
-/** What the engine needs to know about the kit. */
-export interface Kit {
-  /** Smallest jump on machines and cables, kg. */
-  machineStepKg: number;
-  /** Home backpack limit, kg (old sessions only). */
-  packMaxKg: number;
-}
-export const DEFAULT_KIT: Kit = { machineStepKg: 5, packMaxKg: 15 };
 export const kitOf = (d: Pick<AppData, 'profile' | 'settings'>): Kit => ({ machineStepKg: d.settings.machineStepKg, packMaxKg: d.profile.packMaxKg });
 
 const round1 = (n: number) => Math.round(n * 2) / 2;
 const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n));
 const avg = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
-
-/** The smallest weight jump for an exercise at a weight: dumbbells 1 kg under 10 kg (2 kg for the first pair), then 2.5 kg; machines and cables as set in Profile. */
-export function stepKg(ex: Exercise, kg: number, kit: Kit = DEFAULT_KIT): number {
-  if (ex.load === 'db') return kg <= 0 ? 2 : kg < 10 ? 1 : 2.5;
-  if (ex.load === 'pack') return 2;
-  return kit.machineStepKg;
-}
 
 /** Reps that count for a set: one-arm work counts the lower arm. */
 export const countReps = (s: SetLog) => (s.repsR == null ? s.reps : Math.min(s.reps, s.repsR));
