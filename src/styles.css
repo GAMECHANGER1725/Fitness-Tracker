@@ -205,6 +205,26 @@ select.input { appearance: none; background-image: linear-gradient(45deg, transp
 .setrow.next { box-shadow: inset 0 0 0 1.5px var(--line2); }
 .celebrate { animation: pop 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.3); }
 
+/* Gym rebuild */
+.chip.tall { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 2px; min-height: 56px; padding: 8px 16px; border-radius: 18px; text-align: left; white-space: normal; width: 100%; }
+.chip.tall .small { opacity: 0.7; font-weight: 500; }
+.week.pick button { display: flex; align-items: center; justify-content: center; aspect-ratio: 1; min-height: 44px; border: 0; border-radius: 14px; background: var(--s2); color: var(--ink); font-weight: 700; font-size: 13px; padding: 0; }
+.week.pick button[aria-pressed='true'] { background: var(--acc); color: var(--on-acc); }
+.onb { min-height: 100dvh; display: flex; flex-direction: column; padding-top: 18px; }
+.onb .page { flex: 1; padding-bottom: 24px; }
+.onb-foot, .logbar { position: sticky; bottom: 0; z-index: 10; background: var(--bg); padding: 12px 16px calc(14px + env(safe-area-inset-bottom)); box-shadow: 0 -1px 0 var(--line); }
+.onb-foot { display: flex; gap: 10px; }
+.logger { min-height: 100dvh; display: flex; flex-direction: column; margin-bottom: calc(-108px - env(safe-area-inset-bottom)); }
+.logger-body { flex: 1; padding: 18px 16px 20px; }
+.logbar { display: flex; flex-direction: column; gap: 10px; border-radius: 24px 24px 0 0; background: var(--s1); box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.25); }
+.rir { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+.rir .chip { min-height: 48px; padding: 0; font-size: 16px; font-weight: 700; }
+.rir .chip[aria-pressed='true'] { background: var(--acc); color: var(--on-acc); }
+.lastrow { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 14px; background: var(--s2); font-size: 14px; color: var(--mut); }
+.lastrow .bold { color: var(--ink); }
+button.setrow { border: 0; width: 100%; color: var(--ink); font: inherit; }
+button.setrow:disabled { opacity: 1; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }

@@ -80,15 +80,14 @@ upper days. With 2 or 3 gym days the plan switches to two full-body days (A/B). 
 
 | Day | Exercises (sets × reps) |
 | --- | --- |
-| Upper A (Mon) | Pull-up ladder step (chin-up negatives or chin-ups) 3 · Assisted pull-up 2×6–10 · Chest press machine 3×8–12 · Seated cable row 3×10–12 · Push-up ladder step 2×6–12 · One-arm DB curl 3×10–15 · Triceps pushdown 2×10–15 |
+| Upper A (Mon) | Pull-up ladder step (chin-up negatives or chin-ups) 3 · Assisted pull-up 2×6–10 · Chest press machine 3×8–12 · Seated cable row 2×10–12 · Push-up ladder step 2×8–15 · One-arm DB curl 3×10–15 · Triceps pushdown 2×10–15 |
 | Lower A (Tue) | Goblet squat 3×8–12 · Leg press 3×10–15 · DB Romanian deadlift 3×10–12 · Seated leg curl 2×10–15 · Calf raise 2×12–15 · Plank ladder step 3 · Dead bug 2×8–12 |
-| Upper B (Thu) | Lat pulldown 3×10–12 · Shoulder press machine 3×8–12 · One-arm DB row 3×10–12 · Incline DB press 2×8–12 · One-arm cable curl 3×10–15 · Hammer curl 2×10–15 · Overhead rope extension 2×10–15 · Face pull 2×12–15 |
+| Upper B (Thu) | Lat pulldown 3×10–12 · Shoulder press machine 3×8–12 · One-arm DB row 3×10–12 · Incline DB press 2×8–12 · One-arm cable curl 2×10–15 · Hammer curl 2×10–15 · Overhead rope extension 2×10–15 |
 | Lower B (Fri) | Leg press 3×10–15 · DB split squat 2×8–12 · Back extension 2×10–15 · Leg extension 2×10–15 · Seated leg curl 2×10–15 · Calf raise 2×12–15 · Pallof press 2×8–12 · Side plank 2×20–40 s |
 
-Weekly hard sets: push about 12, pull about 16, legs about 23 over two days (quads, hamstrings, calves),
-direct biceps 8, direct triceps 4, core about 9. Everything is under the existing cap of 20 per pattern
-except legs, which is split across more muscles; the guard is now per pattern and keeps the same 20 cap, so the
-default plan is tuned to sit inside it.
+Weekly hard sets by pattern: push 14, pull 20, legs 17, hips and hamstrings 9, core 9 (69 in all, about 17 a
+session). Pull is the biggest on purpose: it holds the pull-up work and the 7 direct biceps sets. Everything
+sits at or under the guard's cap of 20 per pattern. The face pull stays in the library as a swap.
 
 **Ladders (built from the baselines):**
 

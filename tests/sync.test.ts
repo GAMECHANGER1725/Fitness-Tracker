@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyDoc, mergeDocs, nightTomb, parseDoc, sameDoc, toDoc } from '../src/lib/syncdoc';
+import { applyDoc, measureTomb, mergeDocs, nightTomb, parseDoc, sameDoc, toDoc } from '../src/lib/syncdoc';
 import { DEFAULT_DATA } from '../src/lib/backup';
 import { aiConfig, fuelAi, fuelToken, mergeFuel, parseFuelGist, parseFuelStore, weightOf } from '../src/lib/fuel';
 import type { AppData, Session } from '../src/lib/types';
@@ -14,6 +14,7 @@ describe('sync doc', () => {
     const text = JSON.stringify(doc);
     expect(text).not.toContain('"aiKey"');
     expect(text).not.toContain('"theme"');
+    expect(text).not.toContain('"view3d"');
     expect(text).not.toContain('"active"');
   });
   it('is canonical, so equal data compares equal', () => {
@@ -40,6 +41,13 @@ describe('sync doc', () => {
     const a = toDoc(data({ tomb: { [nightTomb('2026-10-26')]: NOW - 500 } }));
     const b = toDoc(data({ nights: { '2026-10-26': { date: '2026-10-26', bed: 1, wake: 2, source: 'tap', m: NOW - 100 } } }));
     expect(Object.keys(mergeDocs(a, b, NOW).nights)).toEqual(['2026-10-26']);
+  });
+  it('merges measurements per date, and keeps deleted ones deleted', () => {
+    const a = toDoc(data({ measures: { '2026-11-11': { date: '2026-11-11', weightKg: 60, m: 5 }, '2026-11-18': { date: '2026-11-18', weightKg: 60.4, m: 5 } }, tomb: { [measureTomb('2026-11-25')]: NOW } }));
+    const b = toDoc(data({ measures: { '2026-11-11': { date: '2026-11-11', weightKg: 60, armL: 26, armR: 27, m: 9 }, '2026-11-25': { date: '2026-11-25', weightKg: 61, m: NOW - 5 } } }));
+    const m = mergeDocs(a, b, NOW);
+    expect(Object.keys(m.measures).sort()).toEqual(['2026-11-11', '2026-11-18']);
+    expect(m.measures['2026-11-11'].armL).toBe(26);
   });
   it('takes the newer night per date', () => {
     const a = toDoc(data({ nights: { d: { date: 'd', bed: 1, wake: 2, source: 'tap', m: 5 } } }));

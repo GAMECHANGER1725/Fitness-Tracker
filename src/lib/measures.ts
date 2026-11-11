@@ -16,7 +16,10 @@ export const METRIC_LABEL: Record<Metric, string> = { weightKg: 'Bodyweight', ar
 
 /** "1:30" for a plank, "3.5" push-ups, "60.2 kg", "27.5 cm". */
 export function fmtMetric(metric: Metric, v: number): string {
-  if (metric === 'plankS') return `${Math.floor(v / 60)}:${String(Math.round(v % 60)).padStart(2, '0')}`;
+  if (metric === 'plankS') {
+    const t = Math.round(v); // Round first, so 59.6 s is "1:00" and never "0:60".
+    return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
+  }
   if (metric === 'weightKg') return `${+v.toFixed(1)} kg`;
   if (metric === 'armL' || metric === 'armR') return `${+v.toFixed(1)} cm`;
   return String(+v.toFixed(1));
@@ -69,7 +72,7 @@ export function armGaps(measures: Record<string, Measure>): Gap[] {
 /** "Closing", "about the same" or "widening", comparing the first and the latest gap (by size, whichever arm is bigger). */
 export function gapTrend(gaps: Gap[]): 'closing' | 'same' | 'widening' | null {
   if (gaps.length < 2) return null;
-  const d = Math.abs(gaps.at(-1)!.gap) - Math.abs(gaps[0].gap);
+  const d = +(Math.abs(gaps.at(-1)!.gap) - Math.abs(gaps[0].gap)).toFixed(1); // Rounded: 0.8 − 1 is −0.19999… in floating point.
   return d <= -0.2 ? 'closing' : d >= 0.2 ? 'widening' : 'same';
 }
 

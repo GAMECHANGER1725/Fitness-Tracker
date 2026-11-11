@@ -70,12 +70,12 @@ function days(b: Baselines): Record<string, PlanDay> {
     'full-a': {
       id: 'full-a',
       name: 'Full body A',
-      slots: [pullupSlot(b), S('leg-press', 3, 10, 15, 120), S('chest-press', 3, 8, 12, 120), S('seated-row', 3, 10, 12, 90), S('db-rdl', 2, 10, 12, 120), S('db-curl', 3, 10, 15, 75), S('triceps-pushdown', 2, 10, 15, 75), plankSlot(b)],
+      slots: [pullupSlot(b), S('leg-press', 3, 10, 15, 120), S('chest-press', 3, 8, 12, 120), S('seated-row', 2, 10, 12, 90), S('db-rdl', 2, 10, 12, 90), S('db-curl', 2, 10, 15, 75), S('triceps-pushdown', 2, 10, 15, 75), { ...plankSlot(b), sets: 2 }],
     },
     'full-b': {
       id: 'full-b',
       name: 'Full body B',
-      slots: [S('lat-pulldown', 3, 10, 12, 120), S('goblet-squat', 3, 8, 12, 120), S('shoulder-press-machine', 3, 8, 12, 120), S('db-row', 3, 10, 12, 75), S('leg-curl', 2, 10, 15, 90), pushupSlot(b), S('cable-curl', 3, 10, 15, 75), S('dead-bug', 2, 8, 12, 60)],
+      slots: [S('lat-pulldown', 3, 10, 12, 120), S('goblet-squat', 3, 8, 12, 120), S('shoulder-press-machine', 3, 8, 12, 120), S('db-row', 2, 10, 12, 75), S('leg-curl', 2, 10, 15, 75), pushupSlot(b), S('cable-curl', 2, 10, 15, 75), S('dead-bug', 2, 8, 12, 60)],
     },
   };
 }

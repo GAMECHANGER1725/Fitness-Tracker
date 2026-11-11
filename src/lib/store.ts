@@ -94,7 +94,7 @@ export const useStore = create<Store>()(
         undoSet: () => patchActive((a) => ({ sets: a.sets.slice(0, -1), restEnd: null })),
         editSet: (id, patch) => patchActive((a) => ({ sets: a.sets.map((x) => (x.id === id ? { ...x, ...patch } : x)) })),
         setWarm: (done) => patchActive(() => ({ warm: done })),
-        goTo: (idx) => patchActive((a) => ({ idx: Math.max(0, Math.min(a.slots.length - 1, idx)), restEnd: null })),
+        goTo: (idx) => patchActive((a) => ({ idx: Math.max(0, Math.min(a.slots.length - 1, idx)) })),
         setRest: (end) => patchActive(() => ({ restEnd: end })),
         cancelWorkout: () => set({ active: null }),
         finishWorkout: (feel, note) => {

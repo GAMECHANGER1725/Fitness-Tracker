@@ -29,6 +29,10 @@ export function migrate(v: unknown, now = Date.now()): unknown {
     ...d,
     v: 2,
     onboarded: false,
+    // The numbers given for the gym start (11 Nov 2026): 14 years old, 60 kg. Onboarding shows both to confirm.
+    profile: { ...obj(d.profile), age: 14, weightKg: 60 },
+    // Gym sessions are in the morning; the home plan's 4:30 pm reminder would be wrong. Editable in onboarding.
+    settings: { ...obj(d.settings), workoutTime: '06:30' },
     measures: {},
     home: hadPlan ? { program: d.program, programLog: Array.isArray(d.programLog) ? d.programLog : [], at: now } : null,
     program: DEFAULT_PROGRAM,

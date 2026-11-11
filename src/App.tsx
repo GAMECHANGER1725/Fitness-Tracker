@@ -4,6 +4,8 @@ import { Icon, Toast, toast, useGame, useRoute, useToday } from './components/ui
 import Today from './pages/Today';
 import Workout from './pages/Workout';
 import Train from './pages/Train';
+import Progress from './pages/Progress';
+import Onboarding from './pages/Onboarding';
 import Sleep from './pages/Sleep';
 import Fuel from './pages/Fuel';
 import Coach from './pages/Coach';
@@ -20,6 +22,7 @@ const Lab3d = lazy(() => import('./pages/Lab3d'));
 export default function App() {
   const theme = useStore((s) => s.settings.theme);
   const unlocked = useAuth((s) => s.unlocked);
+  const onboarded = useStore((s) => s.onboarded);
   const { path } = useRoute();
 
   useEffect(() => {
@@ -47,7 +50,7 @@ export default function App() {
   const today = useToday();
   const synced = !sync.conn || (sync.status !== 'syncing' && (!!sync.last || sync.status === 'error'));
   useEffect(() => {
-    if (!unlocked || !hasAi(currentAi()) || !synced || !autoDue(today)) return;
+    if (!unlocked || !onboarded || !hasAi(currentAi()) || !synced || !autoDue(today)) return;
     const t = setTimeout(() => {
       if (!autoDue(today)) return;
       useCoach.getState().set({ tried: Date.now() });
@@ -56,12 +59,23 @@ export default function App() {
         .catch(() => {}); // Tried again in a few hours.
     }, 4000);
     return () => clearTimeout(t);
-  }, [unlocked, synced, auto, today]);
+  }, [unlocked, onboarded, synced, auto, today]);
 
   if (!unlocked) return <Lock />;
+  // First run of the gym version (or a fresh device): baselines, goal and gym days. With sync on, wait for the
+  // first sync so a phone that's already set up doesn't ask twice.
+  if (!onboarded && path !== 'lab') {
+    if (!synced) return <div className="app"><p className="mut" style={{ padding: 40, textAlign: 'center' }}>Checking your other devices…</p></div>;
+    return (
+      <div className="app" style={{ paddingBottom: 0 }}>
+        <Onboarding />
+        <Toast />
+      </div>
+    );
+  }
 
   const page =
-    path === 'lab' ? <Suspense fallback={null}><Lab3d /></Suspense> : path === 'workout' ? <Workout /> : path === 'train' ? <Train /> : path === 'sleep' ? <Sleep /> : path === 'fuel' ? <Fuel /> : path === 'coach' ? <Coach /> : path === 'profile' ? <ProfilePage /> : <Today />;
+    path === 'lab' ? <Suspense fallback={null}><Lab3d /></Suspense> : path === 'workout' ? <Workout /> : path === 'train' ? <Train /> : path === 'progress' ? <Progress /> : path === 'sleep' ? <Sleep /> : path === 'fuel' ? <Fuel /> : path === 'coach' ? <Coach /> : path === 'profile' ? <ProfilePage /> : <Today />;
 
   return (
     <div className="app">
@@ -81,7 +95,7 @@ export default function App() {
 
 function Nav({ path }: { path: string }) {
   const link = (to: string, icon: string, label: string, cls = '') => (
-    <a href={`#/${to}`} className={cls} aria-current={path === to || (to === 'today' && !['train', 'sleep', 'fuel', 'coach'].includes(path)) ? 'page' : undefined} aria-label={label}>
+    <a href={`#/${to}`} className={cls} aria-current={path === to || (to === 'today' && !['train', 'progress', 'sleep', 'coach'].includes(path)) ? 'page' : undefined} aria-label={label}>
       <Icon name={icon} />
       <span>{label}</span>
     </a>
@@ -91,8 +105,8 @@ function Nav({ path }: { path: string }) {
       <div>
         {link('today', 'home', 'Today')}
         {link('train', 'train', 'Train')}
+        {link('progress', 'chart', 'Progress')}
         {link('sleep', 'moon', 'Sleep', 'sleep')}
-        {link('fuel', 'flame', 'Fuel', 'fuel')}
         {link('coach', 'spark', 'Coach')}
       </div>
     </nav>

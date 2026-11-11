@@ -1,6 +1,6 @@
 // Morning readiness, 0–100, from three things you already log:
 //   sleep last night (40), yesterday's food from Fuel Log (30) and recent training load (30).
-// Missing data counts as average, not as bad. Go hard ≥ 75, Normal 55–74, Easy < 55
+// Missing data counts as average, not as bad. Good to go ≥ 75, Normal 55–74, Easy < 55
 // (an Easy day plans about 25% fewer sets; see program.slotsFor).
 
 import type { Night, Session } from './types';
@@ -9,7 +9,7 @@ import { addDays } from './dates';
 import { durationMin } from './sleep';
 
 export type Band = 'hard' | 'normal' | 'easy';
-export const BAND_LABEL: Record<Band, string> = { hard: 'Go hard', normal: 'Normal day', easy: 'Take it easy' };
+export const BAND_LABEL: Record<Band, string> = { hard: 'Good to go', normal: 'Normal day', easy: 'Take it easy' };
 
 export interface Readiness {
   score: number;

@@ -16,9 +16,10 @@ import type { AppData, Night, Pattern, Session, Slot } from './types';
 import type { FuelData, Macros } from './fuel';
 import { aiConfig, fuelAi, FUEL_STORE, weightOf } from './fuel';
 import { AiError, complete, jsonRule, parseJson, type AiConfig, type Body, type Msg } from './ai';
-import { EX, EXERCISES, PATTERN_LABEL, usable } from './exercises';
-import { WEEKDAYS, inDeload, plannedDay } from './program';
-import { deloadDue, diffPrograms, guardProgram, records, weeklySets } from './progress';
+import { EX, EXERCISES, PATTERN_LABEL, loadText, usable } from './exercises';
+import { WEEKDAYS, inDeload, phaseOf, plannedDay } from './program';
+import { countReps, deloadDue, diffPrograms, guardProgram, kitOf, records, weeklySets } from './progress';
+import { armGaps, latest } from './measures';
 import { durationMin, guardBedtime, idealBedtime, sleepStats, wakeStreak } from './sleep';
 import { readiness, type Readiness } from './readiness';
 import { addDays, daysBetween, fmtDate, keyOf, todayKey, weekStart } from './dates';
@@ -40,9 +41,10 @@ function sessionLine(s: Session): { date: string; workout: string; minutes: numb
   const exercises = [...by.entries()].map(([id, sets]) => {
     const e = EX[id];
     const unit = e?.unit === 'secs' ? 's' : '';
-    const load = sets.some((x) => x.loadKg) ? ` @${sets[0].loadKg} kg` : '';
+    const load = sets.some((x) => x.loadKg) ? ` @${loadText(e, sets[0].loadKg) || `${sets[0].loadKg} kg`}` : '';
     const rpe = sets.map((x) => x.rpe).filter(Boolean);
-    return `${e?.name ?? id}: ${sets.map((x) => `${x.reps}${unit}`).join(', ')}${load}${rpe.length ? ` (RPE ${rpe.join('/')})` : ''}`;
+    const rir = sets.map((x) => x.rir).filter((x) => x != null);
+    return `${e?.name ?? id}: ${sets.map((x) => `${countReps(x)}${unit}`).join(', ')}${load}${rir.length ? ` (reps in reserve ${rir.join('/')})` : rpe.length ? ` (RPE ${rpe.join('/')})` : ''}`;
   });
   return { date: s.date, workout: s.name, minutes: Math.round((s.end - s.start) / 60_000), feel: s.feel ?? null, exercises };
 }
@@ -64,9 +66,9 @@ export interface Snapshot {
   today: string;
   now: string;
   weekday: string;
-  profile: { age: number; sex: string; heightCm: number; weightKg: number; goal: string; equipment: string };
+  profile: { age: number; sex: string; heightCm: number; weightKg: number; goal: string; equipment: string; benchmarks: Record<string, number | null>; armGapCm: number | null };
   schedule: { wakeTarget: string; bedtime: string; sleepGoalHours: number; workoutTime: string };
-  program: { week: string[]; days: { id: string; name: string; slots: (Slot & { name: string; unit: string })[] }[]; deloadUntil: string | null; weeklySetsByPattern: Record<Pattern, number> };
+  program: { week: string[]; days: { id: string; name: string; slots: (Slot & { name: string; unit: string })[] }[]; deloadUntil: string | null; thisWeek: string; weeklySetsByPattern: Record<Pattern, number> };
   todayPlan: string;
   sessions: ReturnType<typeof sessionLine>[];
   sessionsPerWeek: { week: string; count: number }[];
@@ -134,14 +136,17 @@ export function snapshot(d: AppData, fuel: FuelData | null, now = new Date()): S
       sex: d.profile.sex,
       heightCm: d.profile.heightCm,
       weightKg,
-      goal: 'Build muscle on a vegetarian bulk (eggs and dairy OK), gaining 0.25–0.5 kg a week',
-      equipment: `Bodyweight, a backpack loaded up to ${d.profile.packMaxKg} kg${d.profile.hasGrip ? ', a forearm trainer' : ''}. No bar, bench or dumbbells.`,
+      goal: `Build muscle and gain weight slowly on a vegetarian lean bulk (eggs and dairy OK). Wants bigger arms${d.profile.weakArm === 'none' ? '' : `; the ${d.profile.weakArm} arm is smaller, so one-arm work starts with it and the other arm matches its reps`}.`,
+      equipment: 'A commercial gym: machines, dumbbells, cables, lat pulldown, assisted pull-up machine, benches. A beginner there (first session 12 Nov 2026); trained at home with a backpack before that.',
+      benchmarks: Object.fromEntries((['pushups', 'plankS', 'chinups', 'pullups', 'armL', 'armR'] as const).map((k) => [k, latest(d.measures, k)?.v ?? null])),
+      armGapCm: armGaps(d.measures).at(-1)?.gap ?? null,
     },
     schedule: { wakeTarget: s.wakeTarget, bedtime: s.bedtime, sleepGoalHours: s.sleepGoalH, workoutTime: s.workoutTime },
     program: {
       week: d.program.week.map((id, i) => `${WEEKDAYS[i]}: ${d.program.days.find((x) => x.id === id)?.name ?? 'rest'}`),
       days: d.program.days.map((day) => ({ id: day.id, name: day.name, slots: day.slots.map((x) => ({ ...x, name: EX[x.exerciseId]?.name ?? x.exerciseId, unit: EX[x.exerciseId]?.unit ?? 'reps' })) })),
       deloadUntil: d.program.deloadUntil,
+      thisWeek: phaseOf(d.program, today).label,
       weeklySetsByPattern: wkSets,
     },
     todayPlan: plan ? `${plan.name}${inDeload(d.program, today) ? ' (lighter week)' : ''}` : 'Rest day',
@@ -187,8 +192,9 @@ export function snapshot(d: AppData, fuel: FuelData | null, now = new Date()): S
 // ----- Prompts and schemas -------------------------------------------------------------
 
 const BASE = [
-  'You are a friendly, practical coach for a 15-year-old in Australia who trains at home and is on a vegetarian bulk (eggs and dairy OK, no meat or fish).',
-  'Equipment: bodyweight, a backpack loaded with books or water bottles, and a forearm trainer. No bar, no bench, no dumbbells, no gym.',
+  'You are a friendly, practical coach for a teenager in Australia (age in the snapshot) who has just started at a commercial gym and is on a vegetarian lean bulk (eggs and dairy OK, no meat or fish).',
+  'Equipment: machines, dumbbells, cables, a lat pulldown, an assisted pull-up machine and benches. They are a beginner: prefer machines and dumbbells, 8–15 reps, technique before weight. Never suggest one-rep-max tests, heavy low-rep barbell work or training to failure.',
+  'Weights go up by double progression, decided by the app: reps first, then the smallest jump. The plan runs in blocks of 4 build weeks and a lighter week. One-arm exercises start with the weaker arm and the other arm matches it.',
   'They wake at their wake target every day (school days and weekends), so sleep comes from going to bed earlier, not sleeping in.',
   'Safety first for a teenager: good form over load, most sets 1–3 reps short of failure, no max-effort testing, enough sleep (8–10 h for their age), and eating enough. Never suggest cutting calories, fasting or supplements other than food (whey only if they already use it). If something hurts, tell them to stop that exercise and see a doctor or physio if it lasts.',
   'Use their real numbers from the snapshot. Be specific and short. Australian English, plain words, no hype, no emoji.',
@@ -196,8 +202,8 @@ const BASE = [
 
 export const REVIEW_PROMPT = [
   BASE,
-  'Task: the weekly check-in. Look at the last two weeks of workouts (reps, loads, RPE, how they felt), the program, progression so far, sleep (bed and wake times, hours, quality, consistency, weekend drift) and food from Fuel Log (calories and protein vs targets, training days vs rest days, how late the last meal is).',
-  'Then return the program for next week. Keep the same day ids and the weekly schedule. Only use exercise ids from the library in the request. Change only what the data supports: swap an exercise that has stalled for 3+ sessions, add or remove a set, adjust a rep range or backpack load. Most weeks need few or no changes. Do not raise total weekly sets by more than about 10%.',
+  'Task: the weekly check-in. Look at the last two weeks of workouts (reps, weights, reps in reserve, how they felt), the program, progression so far, sleep (bed and wake times, hours, quality, consistency, weekend drift) and food from Fuel Log (calories and protein vs targets, training days vs rest days, how late the last meal is).',
+  'Then return the program for next week. Keep the same day ids and the weekly schedule. Only use exercise ids from the library in the request. Change only what the data supports: swap an exercise that has stalled for 3+ sessions, add or remove a set, or adjust a rep range. Leave the weights to the app. Most weeks need few or no changes. Do not raise total weekly sets by more than about 10%.',
   'Set "deload" true only when deloadDue is true or they are clearly worn down (several short nights, low feel scores, falling reps).',
   'Sleep: give a status, a bedtime (HH:MM, 24 h) that gives them their sleep goal before the wake target, and 3 concrete habits for this week based on their own pattern (e.g. screens off time, last meal time, keeping weekend bedtime the same).',
   'summary: 2–3 sentences on the week. focus: 3 short, specific things for training and food this week.',
@@ -260,8 +266,8 @@ export const SWAP_SCHEMA = { type: 'object', properties: { exerciseId: { type: '
 
 export const CHAT_PROMPT = [BASE, 'Task: answer their question about training, sleep or food in at most 5 short sentences, using the snapshot. If the question needs a doctor, say so.'].join('\n');
 
-const library = (d: AppData) =>
-  EXERCISES.filter((e) => usable(e, d.profile.hasGrip)).map((e) => `${e.id} | ${e.name} | ${PATTERN_LABEL[e.pattern]} | ${e.unit}${e.loadable ? ' | backpack ok' : ''}${e.perSide ? ' | per side' : ''} | ladder ${e.ladder} step ${e.step}`);
+const library = () =>
+  EXERCISES.filter((e) => usable(e)).map((e) => `${e.id} | ${e.name} | ${PATTERN_LABEL[e.pattern]} | ${e.unit}${e.loadable ? ` | ${e.load}` : ' | bodyweight'}${e.perSide ? ' | per side' : ''} | ladder ${e.ladder} step ${e.step}`);
 
 const req = (system: string, schema: object, user: string): Body => ({ messages: [{ role: 'system', content: `${system}\n\n${jsonRule(schema)}` }, { role: 'user', content: user }], json: true });
 
@@ -285,7 +291,7 @@ export interface Review {
 
 export function parseReview(raw: string, d: AppData, today: string, model: string): Review {
   const r = parseJson(raw) as Record<string, unknown>;
-  let program = guardProgram(d.program, r.program, d.profile);
+  let program = guardProgram(d.program, r.program, kitOf(d));
   // A lighter week only if it's been at least 3 weeks since the last one.
   const recentDeload = d.program.deloadUntil && daysBetween(d.program.deloadUntil, today) < 21;
   if (r.deload === true && !recentDeload) program = { ...program, deloadUntil: addDays(today, 6) };
@@ -335,12 +341,12 @@ export function parseTonight(raw: string, date: string, bedtime: string): Tonigh
   return { date, screensOff: okOff ? off! : fallback, lastFood: str(r.lastFood, 300), plan: str(r.plan, 500) };
 }
 
-export function parseSwap(raw: string, d: AppData, from: string): { exerciseId: string; why: string } {
+export function parseSwap(raw: string, _d: AppData, from: string): { exerciseId: string; why: string } {
   const r = parseJson(raw) as Record<string, unknown>;
   const id = str(r.exerciseId, 40);
   const e = EX[id];
   const f = EX[from];
-  if (!e || id === from || !usable(e, d.profile.hasGrip) || (f && e.pattern !== f.pattern)) throw new AiError('bad-reply', 'Not a usable swap');
+  if (!e || id === from || !usable(e) || (f && e.pattern !== f.pattern)) throw new AiError('bad-reply', 'Not a usable swap');
   return { exerciseId: id, why: str(r.why, 300) };
 }
 
@@ -384,7 +390,7 @@ export function autoDue(today: string, now = Date.now()): boolean {
 
 export async function checkIn(): Promise<Review> {
   const { d, snap } = ctx();
-  const [raw, model] = await complete(currentAi(), req(REVIEW_PROMPT, REVIEW_SCHEMA, `Snapshot:\n${JSON.stringify(snap)}\n\nLibrary (id | name | pattern | unit | notes):\n${library(d).join('\n')}`));
+  const [raw, model] = await complete(currentAi(), req(REVIEW_PROMPT, REVIEW_SCHEMA, `Snapshot:\n${JSON.stringify(snap)}\n\nLibrary (id | name | pattern | unit | notes):\n${library().join('\n')}`));
   let review: Review;
   try {
     review = parseReview(raw, d, snap.today, model);
@@ -450,7 +456,7 @@ export async function suggestSwap(from: string, reason: string): Promise<{ exerc
   const { d, snap } = ctx();
   const [raw] = await complete(
     currentAi(),
-    req(SWAP_PROMPT, SWAP_SCHEMA, `Swap: ${EX[from]?.name ?? from} (${from})\nReason: ${reason}\n\nLibrary:\n${library(d).join('\n')}\n\nSnapshot:\n${JSON.stringify({ profile: snap.profile, sessions: snap.sessions.slice(0, 4) })}`),
+    req(SWAP_PROMPT, SWAP_SCHEMA, `Swap: ${EX[from]?.name ?? from} (${from})\nReason: ${reason}\n\nLibrary:\n${library().join('\n')}\n\nSnapshot:\n${JSON.stringify({ profile: snap.profile, sessions: snap.sessions.slice(0, 4) })}`),
   );
   return parseSwap(raw, d, from);
 }

@@ -82,9 +82,9 @@ function tick() {
   }
   const day = plannedDay(s.program, today);
   const trained = Object.values(s.sessions).some((x) => x.date === today);
-  if (day && !trained && !s.active && dueAt(now, minsOf(s.settings.workoutTime), r.workoutDate, 120)) {
+  if (day && s.onboarded && (!s.program.start || today >= s.program.start) && !trained && !s.active && dueAt(now, minsOf(s.settings.workoutTime), r.workoutDate, 120)) {
     patch({ workoutDate: today });
-    notify(`${day.name} today`, `${day.slots.length} exercises, about 40 minutes. Tap to start.`, 'workout', 'today');
+    notify(`${day.name} today`, `${day.slots.length} exercises, about an hour with the warm-up. Tap to start.`, 'workout', 'today');
   }
   if (s.nights[today]?.wake == null && dueAt(now, minsOf(s.settings.wakeTarget) + 15, r.wakeDate, 60)) {
     patch({ wakeDate: today });
