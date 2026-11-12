@@ -9,8 +9,8 @@ A personal, mobile-first PWA for **home workouts**, **waking up at 6 am** and **
 - **Today:** an **I'm up** button (on time = within 15 min of 6:00, with a streak), a **readiness score** (sleep last night + yesterday's food from Fuel Log + recent training) that says Go hard, Normal or Take it easy, the coach's morning briefing, today's workout with **Start**, what's left to eat, and the week at a glance.
 - **Train:**
   - **Plan:** an upper/lower split on Mon, Tue, Thu and Fri, about 40 minutes each. Change the days, sets, rep ranges, backpack weight and rest, add or swap exercises, and undo the last change.
-  - **History** of every workout, **Exercises** (about 40 moves with form cues and your best set), and **Badges**.
-  - **Workout player:** guided sets, reps (or seconds) and backpack kg, how hard each set felt, a rest timer that buzzes, swap an exercise (or ask the coach for a swap, e.g. "my wrist hurts"), and a summary with new bests.
+  - **History** of every workout, **Exercises** (about 40 moves with form cues and your best set; the main 18 have an animated 3D form demo), and **Badges**.
+  - **Workout player:** guided sets, reps (or seconds) and backpack kg, how hard each set felt, a rest timer that buzzes, swap an exercise (or ask the coach for a swap, e.g. "my wrist hurts"), **Watch the form** (the 3D demo), and a summary with new bests.
 - **Sleep:** **Going to sleep** and **I'm up** buttons, editable nights, a 1–5 rating, Samsung Health import (stages and sleep score from your Galaxy Watch), the last 7 nights against your goal, insights (sleep debt, bedtime consistency, weekend drift, late meals from Fuel Log vs sleep quality, sleep after workouts) and **Tonight's plan** from the coach.
 - **Fuel:** today's calories, protein, carbs and fat from Fuel Log, protein per kg, your weight trend, training days vs rest days, and the last 7 days, with a button to open Fuel Log.
 - **Coach:** the weekly check-in, today's briefing and **Ask your coach**.
@@ -28,6 +28,12 @@ Every exercise works without a bar, bench or dumbbells. A loaded backpack (books
 3. if neither is possible, the rep range moves up.
 
 Two sessions in a row under the range step back. Every fifth week of steady training, a lighter week is suggested.
+
+## Form demos
+
+18 of the main exercises have a short 3D demo: a mannequin doing the move at the right speed (2 seconds down, 1 up), split into phases (Start, Lower, Bottom, Press…) with one cue each. Tap a phase to stop on it. They're in **Train → Exercises** and behind **Watch the form** in the workout player.
+
+The mannequin and the gear (mat, chair, bed, stair, backpack) are drawn in code with three.js, nothing downloaded, and only load when you open a demo, so the rest of the app stays as fast as before. On a phone that can't run 3D smoothly, or that's set to reduce motion, the demo shows the same poses as flat pictures you step through. **Profile → Look → Form demos** switches between Auto, 3D and 2D.
 
 ## The AI coach
 
@@ -85,6 +91,7 @@ npm install
 npm run dev          # http://localhost:5173
 npm test             # logic tests
 npm run build && npm run preview   # http://localhost:4173/Fitness-Tracker/
+node scripts/perf-3d.mjs http://localhost:5173   # 3D speed check at phone size (needs Playwright + Chromium)
 ```
 
 ## Design

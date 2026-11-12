@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { useStore } from '../lib/store';
 import { EX, EXERCISES, PATTERN_LABEL, targetText, usable } from '../lib/exercises';
 import { historyOf, newRecords } from '../lib/progress';
@@ -6,6 +6,9 @@ import { currentAi, postWorkout, suggestSwap } from '../lib/coach';
 import { friendlyError, hasAi } from '../lib/ai';
 import { Icon, Ring, Sheet, Stepper, go, toast, useNow } from '../components/ui';
 import type { Session, Slot } from '../lib/types';
+
+// The form demo (and its 3D code) loads only when "Form" is tapped, so the player never waits for it.
+const FormDemo = lazy(() => import('../components/FormDemo').then((m) => ({ default: m.FormDemo })));
 
 const FEEL = ['Rough', 'Meh', 'OK', 'Good', 'Great'];
 const EFFORT: [number, string][] = [
@@ -45,6 +48,7 @@ function Player({ onDone }: { onDone: (r: { session: Session; lines: string[]; r
   const [load, setLoad] = useState(slot.loadKg);
   const [rpe, setRpe] = useState<number | null>(null);
   const [swap, setSwap] = useState(false);
+  const [form, setForm] = useState(false);
   const [finish, setFinish] = useState(false);
   const allDone = done.length >= slot.sets;
 
@@ -110,6 +114,11 @@ function Player({ onDone }: { onDone: (r: { session: Session; lines: string[]; r
         <ul className="small mut" style={{ margin: 0, paddingLeft: 18 }}>
           {ex?.cues.map((c) => <li key={c}>{c}</li>)}
         </ul>
+        {ex?.demo && (
+          <button className="btn sm" style={{ alignSelf: 'flex-start' }} onClick={() => setForm(true)}>
+            <Icon name="play" size={16} fill /> Watch the form
+          </button>
+        )}
       </section>
 
       {rest > 0 ? (
@@ -197,6 +206,15 @@ function Player({ onDone }: { onDone: (r: { session: Session; lines: string[]; r
       </div>
 
       {swap && <SwapSheet slot={slot} onClose={() => setSwap(false)} />}
+      {form && ex?.demo && (
+        <Sheet onClose={() => setForm(false)} label={`How to do ${ex.name}`}>
+          <h2 className="h2">{ex.name}</h2>
+          <Suspense fallback={<p className="mut">Loading…</p>}>
+            <FormDemo demo={ex.demo} />
+          </Suspense>
+          <p className="small mut">Stop if anything hurts.</p>
+        </Sheet>
+      )}
       {finish && (
         <FinishSheet
           onClose={() => setFinish(false)}

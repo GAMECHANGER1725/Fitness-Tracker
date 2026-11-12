@@ -8,7 +8,7 @@
 import type { AppData, Night, Profile, Program, ProgramChange, Session, Settings } from './types';
 import { DEFAULT_DATA, normalize } from './backup';
 
-export type SyncedSettings = Omit<Settings, 'aiKey' | 'aiModel' | 'geminiKey' | 'geminiModel' | 'aiFirst' | 'theme'>;
+export type SyncedSettings = Omit<Settings, 'aiKey' | 'aiModel' | 'geminiKey' | 'geminiModel' | 'aiFirst' | 'theme' | 'view3d'>;
 
 export interface SmallData {
   profile: Profile;
@@ -39,7 +39,7 @@ function sortKeys<T>(v: T): T {
 export const sameDoc = (a: SyncDoc, b: SyncDoc) => JSON.stringify(a) === JSON.stringify(b);
 
 export function toDoc(d: AppData): SyncDoc {
-  const { aiKey: _k, aiModel: _m, geminiKey: _gk, geminiModel: _gm, aiFirst: _f, theme: _t, ...settings } = d.settings;
+  const { aiKey: _k, aiModel: _m, geminiKey: _gk, geminiModel: _gm, aiFirst: _f, theme: _t, view3d: _v, ...settings } = d.settings;
   return sortKeys({ v: 1 as const, sessions: d.sessions, nights: d.nights, tomb: d.tomb, mod: d.mod, small: { profile: d.profile, settings, program: d.program, programLog: d.programLog } });
 }
 
@@ -76,11 +76,11 @@ export function mergeDocs(a: SyncDoc, b: SyncDoc, now = Date.now()): SyncDoc {
 
 /** Put a merged doc back into app data, keeping this device's own fields. */
 export function applyDoc(local: AppData, doc: SyncDoc): AppData {
-  const { aiKey, aiModel, geminiKey, geminiModel, aiFirst, theme } = local.settings;
+  const { aiKey, aiModel, geminiKey, geminiModel, aiFirst, theme, view3d } = local.settings;
   return {
     ...local,
     profile: doc.small.profile,
-    settings: { ...doc.small.settings, aiKey, aiModel, geminiKey, geminiModel, aiFirst, theme },
+    settings: { ...doc.small.settings, aiKey, aiModel, geminiKey, geminiModel, aiFirst, theme, view3d },
     program: doc.small.program,
     programLog: doc.small.programLog,
     sessions: doc.sessions,

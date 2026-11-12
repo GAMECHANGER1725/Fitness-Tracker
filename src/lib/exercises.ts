@@ -5,6 +5,31 @@
 
 import type { Equip, Exercise, Pattern } from './types';
 
+/** Exercises with a form demo (demos.ts), and which one. Variations share their closest demo. */
+const DEMO_OF: Record<string, string> = {
+  'incline-pushup': 'incline-pushup',
+  pushup: 'pushup',
+  'pack-pushup': 'pushup',
+  'diamond-pushup': 'diamond-pushup',
+  'chair-dip': 'chair-dip',
+  'pike-pushup': 'pike-pushup',
+  'elevated-pike': 'pike-pushup',
+  'pack-row': 'pack-row',
+  'one-arm-row': 'one-arm-row',
+  'pack-curl': 'pack-curl',
+  squat: 'squat',
+  'pack-squat': 'squat',
+  'split-squat': 'split-squat',
+  bulgarian: 'bulgarian',
+  'wall-sit': 'wall-sit',
+  'calf-raise': 'calf-raise',
+  'glute-bridge': 'glute-bridge',
+  'single-leg-bridge': 'single-leg-bridge',
+  'pack-rdl': 'rdl',
+  plank: 'plank',
+  'dead-bug': 'dead-bug',
+};
+
 const E = (
   id: string,
   name: string,
@@ -14,7 +39,7 @@ const E = (
   step: number,
   cues: string[],
   o: { equip?: Equip[]; unit?: 'reps' | 'secs'; perSide?: boolean; loadable?: boolean } = {},
-): Exercise => ({ id, name, pattern, muscles, ladder, step, cues, equip: o.equip ?? ['bw'], unit: o.unit ?? 'reps', perSide: o.perSide, loadable: o.loadable });
+): Exercise => ({ id, name, pattern, muscles, ladder, step, cues, equip: o.equip ?? ['bw'], unit: o.unit ?? 'reps', perSide: o.perSide, loadable: o.loadable, demo: DEMO_OF[id] });
 
 export const EXERCISES: Exercise[] = [
   // Push: horizontal

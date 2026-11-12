@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { Suspense, lazy, useEffect } from 'react';
 import { useStore } from './lib/store';
 import { Icon, Toast, toast, useGame, useRoute, useToday } from './components/ui';
 import Today from './pages/Today';
@@ -14,6 +14,8 @@ import { startSync, useSync } from './lib/sync';
 import { autoDue, checkIn, currentAi, useCoach } from './lib/coach';
 import { hasAi } from './lib/ai';
 import { startReminders } from './lib/reminders';
+
+const Lab3d = lazy(() => import('./pages/Lab3d'));
 
 export default function App() {
   const theme = useStore((s) => s.settings.theme);
@@ -59,7 +61,7 @@ export default function App() {
   if (!unlocked) return <Lock />;
 
   const page =
-    path === 'workout' ? <Workout /> : path === 'train' ? <Train /> : path === 'sleep' ? <Sleep /> : path === 'fuel' ? <Fuel /> : path === 'coach' ? <Coach /> : path === 'profile' ? <ProfilePage /> : <Today />;
+    path === 'lab' ? <Suspense fallback={null}><Lab3d /></Suspense> : path === 'workout' ? <Workout /> : path === 'train' ? <Train /> : path === 'sleep' ? <Sleep /> : path === 'fuel' ? <Fuel /> : path === 'coach' ? <Coach /> : path === 'profile' ? <ProfilePage /> : <Today />;
 
   return (
     <div className="app">
