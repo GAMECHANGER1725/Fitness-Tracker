@@ -16,7 +16,7 @@ export default defineConfig(({ command, isPreview }) => ({
       manifest: {
         name: 'Fitness Tracker',
         short_name: 'Fitness',
-        description: 'Gym plan, workout logger, progress, wake-up and sleep tracker with an AI coach, linked to Fuel Log.',
+        description: 'Home workouts, wake-up and sleep tracker with an AI coach, linked to Fuel Log.',
         theme_color: '#0C1013',
         background_color: '#0C1013',
         display: 'standalone',

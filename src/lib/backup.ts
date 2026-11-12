@@ -1,26 +1,21 @@
 // Defaults, backup export and import. Anything loaded from storage, a backup or the gist goes through
 // normalize(), which re-validates every field and fills gaps from DEFAULT_DATA.
 
-import type { ActiveWorkout, AppData, HomeArchive, Measure, Night, PlanDay, Program, ProgramChange, Session, SetLog, Slot } from './types';
+import type { ActiveWorkout, AppData, Night, PlanDay, Program, ProgramChange, Session, SetLog, Slot } from './types';
 import { DEFAULT_GEMINI_MODEL, DEFAULT_MODEL } from './ai';
 import { DEFAULT_PROGRAM } from './program';
 import { EX } from './exercises';
 import { isKey } from './dates';
-import { migrate } from './migrate';
 
-// Personal app: starts set up for its one user. Onboarding confirms the numbers and the gym days.
+// Personal app: starts set up for its one user (same stats as Fuel Log).
 export const DEFAULT_DATA: AppData = {
-  v: 2,
-  onboarded: false,
-  profile: { name: 'Vaidik', age: 14, sex: 'male', heightCm: 182, weightKg: 60, packMaxKg: 15, hasGrip: true, goal: 'bulk', weakArm: 'left' },
+  v: 1,
+  profile: { name: 'Vaidik', age: 15, sex: 'male', heightCm: 182, weightKg: 58.3, packMaxKg: 15, hasGrip: true },
   settings: {
     wakeTarget: '06:00',
     sleepGoalH: 8.5,
     bedtime: '21:15',
-    workoutTime: '06:30',
-    sessionMin: 60,
-    machineStepKg: 5,
-    view3d: 'auto',
+    workoutTime: '16:30',
     theme: 'auto',
     aiKey: '',
     aiModel: DEFAULT_MODEL,
@@ -32,8 +27,6 @@ export const DEFAULT_DATA: AppData = {
   programLog: [],
   sessions: {},
   nights: {},
-  measures: {},
-  home: null,
   active: null,
   seen: { badges: [] },
   tomb: {},
@@ -57,10 +50,10 @@ function slot(v: unknown): Slot | null {
   const id = str(s.exerciseId, 40);
   if (!EX[id]) return null;
   const low = Math.round(num(s.low, 8, 1, 300));
-  return { exerciseId: id, sets: Math.round(num(s.sets, 3, 1, 10)), low, high: Math.round(num(s.high, low, low, 300)), restS: Math.round(num(s.restS, 60, 0, 600)), loadKg: num(s.loadKg, 0, 0, 300) };
+  return { exerciseId: id, sets: Math.round(num(s.sets, 3, 1, 10)), low, high: Math.round(num(s.high, low, low, 300)), restS: Math.round(num(s.restS, 60, 0, 600)), loadKg: num(s.loadKg, 0, 0, 60) };
 }
 
-function program(v: unknown, fallback: Program | null = DEFAULT_PROGRAM): Program | null {
+function program(v: unknown): Program {
   const p = obj(v);
   const days = arr(p.days)
     .slice(0, 7)
@@ -71,20 +64,18 @@ function program(v: unknown, fallback: Program | null = DEFAULT_PROGRAM): Progra
       return id && slots.length ? { id, name: str(x.name, 30) || 'Workout', slots } : null;
     })
     .filter((d): d is PlanDay => !!d);
-  if (!days.length) return fallback;
+  if (!days.length) return DEFAULT_PROGRAM;
   const ids = new Set(days.map((d) => d.id));
   const wk = arr(p.week);
   const week = Array.from({ length: 7 }, (_, i) => (typeof wk[i] === 'string' && ids.has(wk[i] as string) ? (wk[i] as string) : null));
-  return { days, week, deloadUntil: isKey(p.deloadUntil) ? p.deloadUntil : null, start: isKey(p.start) ? p.start : null };
+  return { days, week, deloadUntil: isKey(p.deloadUntil) ? p.deloadUntil : null };
 }
 
 function setLog(v: unknown): SetLog | null {
   const s = obj(v);
   const id = str(s.exerciseId, 40);
   if (!id) return null;
-  const repsR = opt(s.repsR, 0, 1000);
-  const rir = opt(s.rir, 0, 4);
-  return { id: str(s.id, 40) || uid(), exerciseId: id, reps: Math.round(num(s.reps, 0, 0, 1000)), repsR: repsR == null ? undefined : Math.round(repsR), loadKg: num(s.loadKg, 0, 0, 300), rpe: opt(s.rpe, 1, 10), rir: rir == null ? undefined : Math.round(rir), at: num(s.at, 0, 0, MS) };
+  return { id: str(s.id, 40) || uid(), exerciseId: id, reps: Math.round(num(s.reps, 0, 0, 1000)), loadKg: num(s.loadKg, 0, 0, 100), rpe: opt(s.rpe, 1, 10), at: num(s.at, 0, 0, MS) };
 }
 
 function session(v: unknown): Session | null {
@@ -118,30 +109,6 @@ function night(k: string, v: unknown): Night | null {
   return out;
 }
 
-/** A measurement entry, or null when nothing on it is filled in. */
-function measure(k: string, v: unknown): Measure | null {
-  const x = obj(v);
-  if (!isKey(k)) return null;
-  const out: Measure = { date: k, m: num(x.m, 0, 0, MS) };
-  const lim = { weightKg: [25, 250], armL: [10, 70], armR: [10, 70], pushups: [0, 500], plankS: [0, 3600], chinups: [0, 200], pullups: [0, 200] } as const;
-  let any = false;
-  for (const f of Object.keys(lim) as (keyof typeof lim)[]) {
-    const val = opt(x[f], lim[f][0], lim[f][1]);
-    if (val != null) {
-      out[f] = Math.round(val * 10) / 10;
-      any = true;
-    }
-  }
-  return any ? out : null;
-}
-
-function homeArchive(v: unknown): HomeArchive | null {
-  const h = obj(v);
-  const p = program(h.program, null);
-  if (!p) return null;
-  return { program: p, programLog: arr(h.programLog).slice(-20).map(change).filter((c): c is ProgramChange => !!c), at: num(h.at, 0, 0, MS) };
-}
-
 function active(v: unknown): ActiveWorkout | null {
   const a = obj(v);
   if (!isKey(a.date)) return null;
@@ -156,19 +123,18 @@ function active(v: unknown): ActiveWorkout | null {
     sets: arr(a.sets).map(setLog).filter((x): x is SetLog => !!x),
     idx: Math.round(num(a.idx, 0, 0, slots.length - 1)),
     restEnd: a.restEnd == null ? null : num(a.restEnd, 0, 0, MS),
-    warm: a.warm === true,
   };
 }
 
 function change(v: unknown): ProgramChange | null {
   const c = obj(v);
   if (!c.before) return null;
-  return { at: num(c.at, 0, 0, MS), by: c.by === 'coach' || c.by === 'me' ? c.by : 'auto', why: str(c.why, 600), lines: arr(c.lines).slice(0, 30).map((l) => str(l, 120)), before: program(c.before) ?? DEFAULT_PROGRAM };
+  return { at: num(c.at, 0, 0, MS), by: c.by === 'coach' || c.by === 'me' ? c.by : 'auto', why: str(c.why, 600), lines: arr(c.lines).slice(0, 30).map((l) => str(l, 120)), before: program(c.before) };
 }
 
-/** Validate data from storage, a backup or the gist, filling anything missing from the defaults. A v1 (home) save is migrated first. */
+/** Validate data from storage, a backup or the gist, filling anything missing from the defaults. */
 export function normalize(v: unknown): AppData {
-  const d = obj(migrate(v));
+  const d = obj(v);
   const p = obj(d.profile);
   const s = obj(d.settings);
   const D = DEFAULT_DATA;
@@ -182,16 +148,10 @@ export function normalize(v: unknown): AppData {
     const n = night(k, x);
     if (n) nights[k] = n;
   }
-  const measures: Record<string, Measure> = {};
-  for (const [k, x] of Object.entries(obj(d.measures))) {
-    const m = measure(k, x);
-    if (m) measures[k] = m;
-  }
   const tomb: Record<string, number> = {};
   for (const [k, x] of Object.entries(obj(d.tomb))) if (k.length <= 60) tomb[k] = num(x, 0, 0, MS);
   return {
-    v: 2,
-    onboarded: d.onboarded === true,
+    v: 1,
     profile: {
       name: str(p.name, 40) || D.profile.name,
       age: Math.round(num(p.age, D.profile.age, 10, 99)),
@@ -200,17 +160,12 @@ export function normalize(v: unknown): AppData {
       weightKg: num(p.weightKg, D.profile.weightKg, 25, 250),
       packMaxKg: num(p.packMaxKg, D.profile.packMaxKg, 0, 40),
       hasGrip: typeof p.hasGrip === 'boolean' ? p.hasGrip : D.profile.hasGrip,
-      goal: p.goal === 'fit' ? 'fit' : 'bulk',
-      weakArm: p.weakArm === 'right' || p.weakArm === 'none' ? p.weakArm : 'left',
     },
     settings: {
       wakeTarget: time(s.wakeTarget, D.settings.wakeTarget),
       sleepGoalH: num(s.sleepGoalH, D.settings.sleepGoalH, 6, 11),
       bedtime: time(s.bedtime, D.settings.bedtime),
       workoutTime: time(s.workoutTime, D.settings.workoutTime),
-      sessionMin: Math.round(num(s.sessionMin, D.settings.sessionMin, 20, 120)),
-      machineStepKg: num(s.machineStepKg, D.settings.machineStepKg, 1, 10),
-      view3d: s.view3d === 'on' || s.view3d === 'off' ? s.view3d : 'auto',
       theme: s.theme === 'dark' || s.theme === 'light' ? s.theme : 'auto',
       aiKey: str(s.aiKey, 300),
       aiModel: str(s.aiModel, 80) || D.settings.aiModel,
@@ -218,12 +173,10 @@ export function normalize(v: unknown): AppData {
       geminiModel: str(s.geminiModel, 80) || D.settings.geminiModel,
       aiFirst: s.aiFirst === 'gemini' ? 'gemini' : 'deepseek',
     },
-    program: (d.program ? program(d.program) : null) ?? D.program,
+    program: d.program ? program(d.program) : D.program,
     programLog: arr(d.programLog).slice(-20).map(change).filter((c): c is ProgramChange => !!c),
     sessions,
     nights,
-    measures,
-    home: d.home ? homeArchive(d.home) : null,
     active: d.active ? active(d.active) : null,
     seen: { badges: arr(obj(d.seen).badges).map((b) => str(b, 30)).filter(Boolean) },
     tomb,
@@ -233,7 +186,7 @@ export function normalize(v: unknown): AppData {
 
 export function exportJson(d: AppData): string {
   const { aiKey: _k, geminiKey: _g, ...settings } = d.settings;
-  return JSON.stringify({ app: 'fitness-tracker', v: 2, exportedAt: new Date().toISOString(), data: { ...d, settings } }, null, 1);
+  return JSON.stringify({ app: 'fitness-tracker', v: 1, exportedAt: new Date().toISOString(), data: { ...d, settings } }, null, 1);
 }
 
 /** Read a backup file. Throws a friendly message if it isn't one. */

@@ -11,8 +11,6 @@ import { clock12, idealBedtime } from '../lib/sleep';
 import { todayKey } from '../lib/dates';
 import { Head, Icon, Stepper, Switch, go, toast } from '../components/ui';
 import { useWeight } from '../components/data';
-import { EX } from '../lib/exercises';
-import { NOT_MEDICAL } from '../lib/guide';
 
 export default function ProfilePage() {
   return (
@@ -28,7 +26,6 @@ export default function ProfilePage() {
       />
       <div className="page">
         <Me />
-        <Gym />
         <SleepGoals />
         <AiCard />
         <SyncCard />
@@ -38,7 +35,6 @@ export default function ProfilePage() {
         <button className="btn block ghost" onClick={() => useAuth.getState().lock()}>
           Log out
         </button>
-        <p className="small dim" style={{ textAlign: 'center' }}>{NOT_MEDICAL}</p>
         <p className="small dim" style={{ textAlign: 'center' }}>Fitness Tracker · pairs with Fuel Log</p>
       </div>
     </main>
@@ -71,74 +67,16 @@ function Me() {
         </label>
       </div>
       {weight !== p.weightKg && <p className="small mut">Using {weight} kg, your latest weigh-in from Fuel Log.</p>}
-      <div className="field">
-        <span>Smaller arm (goes first in one-arm work)</span>
-        <div className="seg" role="group" aria-label="Smaller arm">
-          {(['left', 'right', 'none'] as const).map((a) => (
-            <button key={a} aria-pressed={p.weakArm === a} onClick={() => set({ weakArm: a })}>
-              {a === 'none' ? 'Neither' : a === 'left' ? 'Left' : 'Right'}
-            </button>
-          ))}
-        </div>
+      <h2 className="h2" style={{ marginTop: 6 }}>Equipment</h2>
+      <label className="field">
+        <span>Heaviest you can pack the backpack (kg)</span>
+        <Stepper value={p.packMaxKg} onChange={(v) => set({ packMaxKg: v })} label="backpack maximum" step={1} max={40} unit="kg" />
+      </label>
+      <div className="row" style={{ justifyContent: 'space-between' }}>
+        <span>I have a forearm trainer</span>
+        <Switch on={p.hasGrip} onChange={(v) => set({ hasGrip: v })} label="Forearm trainer" />
       </div>
-    </section>
-  );
-}
-
-function Gym() {
-  const s = useStore((x) => x.settings);
-  const set = useStore((x) => x.setSettings);
-  const home = useStore((x) => x.home);
-  const homeSessions = useStore((x) => Object.values(x.sessions).filter((w) => home && w.start < home.at).length);
-  const [open, setOpen] = useState(false);
-  return (
-    <section className="card stack" style={{ gap: 12 }}>
-      <h2 className="h2">Gym</h2>
-      <div className="field">
-        <span>Smallest jump on machines and cables</span>
-        <div className="seg" role="group" aria-label="Smallest machine jump">
-          {[2.5, 5].map((k) => (
-            <button key={k} aria-pressed={s.machineStepKg === k} onClick={() => set({ machineStepKg: k })}>
-              {k} kg
-            </button>
-          ))}
-        </div>
-        <p className="small mut">Check the pin stack at your gym. Dumbbells go up 1 kg at a time under 10 kg, then 2.5 kg.</p>
-      </div>
-      <div className="field">
-        <span>3D body and form demos</span>
-        <div className="seg" role="group" aria-label="3D views">
-          {(['auto', 'on', 'off'] as const).map((k) => (
-            <button key={k} aria-pressed={s.view3d === k} onClick={() => (k !== 'off' && localStorage.removeItem('fitness-3d-slow'), set({ view3d: k }))}>
-              {k === 'auto' ? 'Auto' : k === 'on' ? '3D' : '2D'}
-            </button>
-          ))}
-        </div>
-        <p className="small mut">Auto uses flat 2D pictures if this phone struggles with 3D or is set to reduce motion.</p>
-      </div>
-      <button className="btn" onClick={() => confirm('Run the setup again? Your workouts and measurements stay; the plan is rebuilt from your answers.') && useStore.setState({ onboarded: false })}>
-        Redo setup (baselines and gym days)
-      </button>
-      {home && (
-        <div className="stack" style={{ gap: 6 }}>
-          <button className="between" style={{ background: 'none', border: 0, padding: 0, color: 'var(--ink)', alignItems: 'center', minHeight: 44 }} onClick={() => setOpen(!open)} aria-expanded={open}>
-            <span className="bold">Your home plan (before the gym)</span>
-            <Icon name={open ? 'minus' : 'plus'} size={18} />
-          </button>
-          {open && (
-            <>
-              <p className="small mut">
-                Kept as it was on {new Date(home.at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}. Your {homeSessions} home workout{homeSessions === 1 ? '' : 's'} are in Train → History.
-              </p>
-              {home.program.days.map((d) => (
-                <p key={d.id} className="small">
-                  <span className="bold">{d.name}</span> <span className="mut">{d.slots.map((x) => `${EX[x.exerciseId]?.name ?? x.exerciseId} ${x.sets}×${x.low}–${x.high}${x.loadKg ? ` @ ${x.loadKg} kg` : ''}`).join(' · ')}</span>
-                </p>
-              ))}
-            </>
-          )}
-        </div>
-      )}
+      <p className="small mut">Water bottles are easy to weigh: 1 L = 1 kg. Books are about 1 kg each.</p>
     </section>
   );
 }
@@ -156,7 +94,7 @@ function SleepGoals() {
           <input className="input" type="time" value={s.wakeTarget} onChange={(e) => e.target.value && set({ wakeTarget: e.target.value })} />
         </label>
         <label className="field">
-          <span>Gym start time</span>
+          <span>Workout reminder</span>
           <input className="input" type="time" value={s.workoutTime} onChange={(e) => e.target.value && set({ workoutTime: e.target.value })} />
         </label>
       </div>

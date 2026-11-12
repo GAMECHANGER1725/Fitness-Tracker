@@ -1,10 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useStore } from '../lib/store';
-import { EX, loadText, targetText } from '../lib/exercises';
-import { MAX_GYM_DAYS, WEEKDAYS, minutes, phaseOf, plannedDay, slotsFor } from '../lib/program';
-import { due } from '../lib/measures';
-import { REST_DAY, SAFETY } from '../lib/guide';
-import { addDays, dateOf, daysBetween, fmtDate, weekStart } from '../lib/dates';
+import { EX, targetText } from '../lib/exercises';
+import { WEEKDAYS, inDeload, minutes, plannedDay, slotsFor } from '../lib/program';
+import { addDays, dateOf, fmtDate, weekStart } from '../lib/dates';
 import { clock12, clockOf, durationMin, hm, onTime, wakeOffset } from '../lib/sleep';
 import { BAND_LABEL } from '../lib/readiness';
 import { currentAi, morningBriefing, useCoach } from '../lib/coach';
@@ -31,26 +29,11 @@ export default function Today() {
   };
 
   const day = planned;
-  const notYet = !!program.start && today < program.start;
-  // Before the first session, show what that session will be.
-  const listDate = notYet ? program.start! : today;
-  const listDay = notYet ? plannedDay(program, listDate) : day;
-  const slots = listDay ? slotsFor(program, listDay, listDate, easy && !notYet) : [];
-  const phase = phaseOf(program, listDate);
-  const measures = useStore((s) => s.measures);
-  const check = due(measures, today);
-  const weekCount = Object.values(sessions).filter((x) => weekStart(x.date) === weekStart(today)).length;
-  // The next gym day after today, for rest days.
-  let next: { date: string; name: string } | null = null;
-  for (let i = 1; i <= 7 && !next; i++) {
-    const k = addDays(today, i);
-    const d = plannedDay(program, k);
-    if (d && (!program.start || k >= program.start)) next = { date: k, name: d.name };
-  }
+  const slots = day ? slotsFor(program, day, today, easy) : [];
 
   return (
     <main>
-      <Head over={fmtDate(today, { weekday: 'long', day: 'numeric', month: 'long' })} title={doneToday.length ? 'Done for today' : day && !notYet ? day.name : notYet ? 'Gym starts soon' : 'Rest day'} right={<ProfileLink />} />
+      <Head over={fmtDate(today, { weekday: 'long', day: 'numeric', month: 'long' })} title={doneToday.length ? 'Done for today' : day ? day.name : 'Rest day'} right={<ProfileLink />} />
       <div className="page">
         <WakeCard />
 
@@ -60,10 +43,7 @@ export default function Today() {
               <span className="small bold" style={{ opacity: 0.75 }}>Readiness</span>
               <p className="num" style={{ fontSize: 48, lineHeight: 1 }}>{ready.score}</p>
             </div>
-            <span className="row" style={{ flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-              <span className="pill">{phase.label}</span>
-              <span className="pill">{BAND_LABEL[ready.band]}</span>
-            </span>
+            <span className="pill">{BAND_LABEL[ready.band]}</span>
           </div>
           <Briefing fallback={ready.notes.slice(0, 2).join('. ') + (ready.notes.length ? '.' : '')} />
           {active ? (
@@ -72,23 +52,17 @@ export default function Today() {
             </button>
           ) : doneToday.length ? (
             <p className="bold">{doneToday.map((s) => s.name).join(' and ')} done. Eat well and get to bed on time.</p>
-          ) : notYet ? (
-            <p className="bold">
-              First gym session: {next ? `${next.name}, ` : ''}{fmtDate(program.start!, { weekday: 'long', day: 'numeric', month: 'short' })}{daysBetween(today, program.start!) === 1 ? ' (tomorrow)' : ''}. Pack a water bottle and a towel.
-            </p>
           ) : day ? (
             <button className="btn block" onClick={() => start(day)}>
               <Icon name="play" size={18} fill /> Start workout · {minutes(slots)} min{easy ? ', lighter' : ''}
             </button>
           ) : (
             <button className="btn block" onClick={() => setPick(!pick)}>
-              Rest day{next ? ` · next: ${next.name}, ${fmtDate(next.date, { weekday: 'short' })}` : ''}
+              Rest day. Train anyway?
             </button>
           )}
-          {pick && !day && !notYet && weekCount >= MAX_GYM_DAYS && <p className="small bold">You’ve trained {weekCount} times this week. That’s the limit: rest today.</p>}
-          {pick && !day && !notYet && weekCount < MAX_GYM_DAYS && (
+          {pick && !day && (
             <div className="row" style={{ flexWrap: 'wrap' }}>
-              <span className="small bold" style={{ width: '100%' }}>Training anyway? Resting is part of the plan, but if you swapped days:</span>
               {program.days.map((d) => (
                 <button key={d.id} className="chip" onClick={() => start(d)}>{d.name}</button>
               ))}
@@ -96,35 +70,9 @@ export default function Today() {
           )}
         </section>
 
-        {(check.weekly || check.retest) && (
-          <a href={`#/progress?log=${check.retest ? 'retest' : 'weekly'}`} className="card tight" style={{ display: 'flex', alignItems: 'center', gap: 14, color: 'var(--ink)', textDecoration: 'none' }}>
-            <span style={{ width: 46, height: 46, borderRadius: 16, background: 'var(--acc-soft)', color: 'var(--acc)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
-              <Icon name="chart" />
-            </span>
-            <span className="grow">
-              <span className="bold" style={{ display: 'block' }}>{check.retest ? '4-week retest is due' : 'Weekly check-in'}</span>
-              <span className="small mut">{check.retest ? 'Push-ups, plank, chin-ups, weight and arms' : 'Weigh in and measure both arms'}</span>
-            </span>
-            <Icon name="right" />
-          </a>
-        )}
-
-        {(notYet || (!day && !doneToday.length)) && (
-          <section className="card stack" style={{ gap: 10 }} aria-label={notYet ? 'Before your first session' : 'Rest day'}>
-            <h2 className="h2">{notYet ? 'Before your first session' : REST_DAY.title}</h2>
-            {(notYet ? SAFETY : REST_DAY).lines.map((l) => (
-              <div key={l} className="row" style={{ alignItems: 'flex-start', gap: 10 }}>
-                <span className="acc" style={{ marginTop: 1 }}><Icon name="check" size={18} stroke={3} /></span>
-                <span className="small">{l}</span>
-              </div>
-            ))}
-            <a href="#/train?tab=guide" className="small bold" style={{ textDecoration: 'none' }}>More in the guide</a>
-          </section>
-        )}
-
-        {listDay && !doneToday.length && (
-          <section className="card" style={{ padding: '6px 18px' }} aria-label={notYet ? 'Your first session' : 'Today’s exercises'}>
-            <p className="small mut" style={{ paddingTop: 12 }}>{notYet ? `Your first session, ${listDay.name}: ` : ''}{phase.note}</p>
+        {day && !doneToday.length && (
+          <section className="card" style={{ padding: '6px 18px' }} aria-label="Today's exercises">
+            {inDeload(program, today) && <p className="small mut" style={{ paddingTop: 12 }}>Lighter week: fewer sets so your body can catch up.</p>}
             {slots.map((s) => {
               const e = EX[s.exerciseId];
               return (
@@ -132,7 +80,7 @@ export default function Today() {
                   <span className="grow bold">{e?.name ?? s.exerciseId}</span>
                   <span className="small mut" style={{ textAlign: 'right' }}>
                     {s.sets} × {targetText(e, s.low, s.high)}
-                    {s.loadKg ? ` · ${loadText(e, s.loadKg)}` : ''}
+                    {s.loadKg ? ` · ${s.loadKg} kg` : ''}
                   </span>
                 </div>
               );

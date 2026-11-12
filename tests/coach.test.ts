@@ -9,17 +9,15 @@ const days = (patch: (slots: typeof DEFAULT_PROGRAM.days[0]['slots']) => unknown
 
 describe('weekly check-in reply', () => {
   it('keeps allowed changes and the bedtime inside its limits', () => {
-    const raw = `Sure! {"summary":"Good week.","focus":["Eat more on rest days","a","b","c"],"program":${JSON.stringify(days((s) => s.map((x) => (x.exerciseId === 'chest-press' ? { ...x, exerciseId: 'pec-fly', loadKg: 60 } : x))))},"deload":false,"sleep":{"status":"late","bedtime":"20:00","habits":["Screens off by 8:30"],"note":"Weekends drift."}}`;
+    const raw = `Sure! {"summary":"Good week.","focus":["Eat more on rest days","a","b","c"],"program":${JSON.stringify(days((s) => s.map((x) => (x.exerciseId === 'pike-pushup' ? { ...x, exerciseId: 'elevated-pike' } : x))))},"deload":false,"sleep":{"status":"late","bedtime":"20:00","habits":["Screens off by 8:30"],"note":"Weekends drift."}}`;
     const r = parseReview(raw, d, '2026-10-26', 'm');
-    expect(r.lines).toEqual(['Upper A: Chest press machine → Pec fly machine']);
-    // A new exercise starts at its cautious first weight, whatever the AI asked for.
-    expect(r.program.days[0].slots.find((x) => x.exerciseId === 'pec-fly')?.loadKg).toBe(10);
+    expect(r.lines).toEqual(['Upper A: Pike push-up → Feet-up pike push-up']);
     expect(r.focus).toHaveLength(3);
     expect(r.sleep).toMatchObject({ status: 'late', bedtime: '20:45', prevBedtime: '21:15' });
     expect(r.applied).toBe(false);
   });
   it('ignores made-up exercises and unknown statuses', () => {
-    const raw = JSON.stringify({ summary: '', focus: 'x', program: days((s) => [...s, { exerciseId: 'barbell-bench-1rm', sets: 5, low: 1, high: 1 }, { exerciseId: 'pack-row', sets: 3, low: 8, high: 12 }]), deload: false, sleep: { status: 'great', bedtime: 'late', habits: [], note: '' } });
+    const raw = JSON.stringify({ summary: '', focus: 'x', program: days((s) => [...s, { exerciseId: 'bench-press', sets: 5, low: 5, high: 5 }]), deload: false, sleep: { status: 'great', bedtime: 'late', habits: [], note: '' } });
     const r = parseReview(raw, d, '2026-10-26', 'm');
     expect(r.lines).toEqual([]);
     expect(r.sleep.status).toBe('need-data');
@@ -48,10 +46,9 @@ describe('other coach replies', () => {
   });
   it('only swaps to a library exercise of the same pattern', () => {
     expect(parseSwap('{"exerciseId":"incline-pushup","why":"wrist"}', d, 'pushup').exerciseId).toBe('incline-pushup');
-    expect(() => parseSwap('{"exerciseId":"leg-press","why":""}', d, 'pushup')).toThrow();
-    expect(() => parseSwap('{"exerciseId":"barbell-bench","why":""}', d, 'pushup')).toThrow();
-    // The old home moves are history only.
-    expect(() => parseSwap('{"exerciseId":"pack-pushup","why":""}', d, 'pushup')).toThrow();
+    expect(() => parseSwap('{"exerciseId":"pack-squat","why":""}', d, 'pushup')).toThrow();
+    expect(() => parseSwap('{"exerciseId":"dumbbell-press","why":""}', d, 'pushup')).toThrow();
+    expect(() => parseSwap('{"exerciseId":"grip-hold","why":""}', { ...d, profile: { ...d.profile, hasGrip: false } }, 'grip-squeeze')).toThrow();
   });
 });
 

@@ -1,37 +1,19 @@
-// App state: one zustand store saved to localStorage on this device (`fitness-v1`; the key keeps its name
-// so the save from the home version is found and migrated).
+// App state: one zustand store saved to localStorage on this device (`fitness-v1`).
 // Mutations that should sync bump the right stamp: Session.upd, Night.m, or `mod` for profile/settings/program;
-// Measure.m for measurements; deletions go into `tomb`.
+// deletions go into `tomb`.
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { ActiveWorkout, AppData, Measure, Night, PlanDay, Profile, Program, ProgramChange, Session, SetLog, Settings } from './types';
+import type { ActiveWorkout, AppData, Night, PlanDay, Profile, Program, ProgramChange, Session, SetLog, Settings } from './types';
 import { DEFAULT_DATA, normalize } from './backup';
-import { applyDoc, measureTomb, nightTomb, type SyncDoc } from './syncdoc';
-import { applySession, diffPrograms, kitOf } from './progress';
-import { buildProgram, dayById, inDeload, slotsFor, type Baselines } from './program';
-import { keepHomeBackup } from './migrate';
-import { hasAny } from './measures';
+import { applyDoc, nightTomb, type SyncDoc } from './syncdoc';
+import { applySession, diffPrograms } from './progress';
+import { dayById, slotsFor } from './program';
 import { mergeImported, nightKey } from './sleep';
 import { keyOf, todayKey } from './dates';
 
 /** Settings that stay on one device and so don't count as a change worth syncing. */
-export const LOCAL_ONLY = ['aiKey', 'aiModel', 'geminiKey', 'geminiModel', 'aiFirst', 'theme', 'view3d'] as const satisfies readonly (keyof Settings)[];
-
-export const STORE_KEY = 'fitness-v1';
-
-/** What onboarding collects. */
-export interface Onboarding {
-  profile: Partial<Profile>;
-  settings: Partial<Settings>;
-  baselines: Baselines;
-  /** Weight and arms measured on the day, if given. */
-  measure: Partial<Measure>;
-  /** Monday = 0. */
-  gymDays: number[];
-  /** First gym session. */
-  start: string;
-}
+export const LOCAL_ONLY = ['aiKey', 'aiModel', 'geminiKey', 'geminiModel', 'aiFirst', 'theme'] as const satisfies readonly (keyof Settings)[];
 
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 const LOG_KEEP = 20;
@@ -42,13 +24,6 @@ interface Actions {
   undoSet: () => void;
   goTo: (idx: number) => void;
   setRest: (end: number | null) => void;
-  setWarm: (done: boolean) => void;
-  /** Change a set already logged in the workout in progress. */
-  editSet: (id: string, patch: Partial<Pick<SetLog, 'reps' | 'repsR' | 'loadKg' | 'rir'>>) => void;
-  /** Add or change today's (or another date's) measurements; empty fields are left as they were. */
-  setMeasure: (date: string, patch: Partial<Measure>) => void;
-  deleteMeasure: (date: string) => void;
-  finishOnboarding: (o: Onboarding) => void;
   cancelWorkout: () => void;
   /** Saves the session and runs progression. Returns the session and what progression changed. */
   finishWorkout: (feel?: number, note?: string) => { session: Session; lines: string[] } | null;
@@ -72,9 +47,6 @@ interface Actions {
 
 export type Store = AppData & Actions;
 
-// Before the store first loads (and rewrites) a home-version save, keep an untouched copy of it.
-if (typeof localStorage !== 'undefined') keepHomeBackup(localStorage, STORE_KEY);
-
 export const useStore = create<Store>()(
   persist(
     (set, get) => {
@@ -89,12 +61,10 @@ export const useStore = create<Store>()(
         ...DEFAULT_DATA,
 
         startWorkout: (day, easy = false, date = todayKey()) =>
-          set((s) => ({ active: { dayId: day.id, name: day.name, date, start: Date.now(), slots: slotsFor(s.program, day, date, easy, kitOf(s)), sets: [], idx: 0, restEnd: null } })),
+          set((s) => ({ active: { dayId: day.id, name: day.name, date, start: Date.now(), slots: slotsFor(s.program, day, date, easy), sets: [], idx: 0, restEnd: null } })),
         logSet: (x) => patchActive((a) => ({ sets: [...a.sets, { ...x, id: uid(), at: Date.now() }] })),
         undoSet: () => patchActive((a) => ({ sets: a.sets.slice(0, -1), restEnd: null })),
-        editSet: (id, patch) => patchActive((a) => ({ sets: a.sets.map((x) => (x.id === id ? { ...x, ...patch } : x)) })),
-        setWarm: (done) => patchActive(() => ({ warm: done })),
-        goTo: (idx) => patchActive((a) => ({ idx: Math.max(0, Math.min(a.slots.length - 1, idx)) })),
+        goTo: (idx) => patchActive((a) => ({ idx: Math.max(0, Math.min(a.slots.length - 1, idx)), restEnd: null })),
         setRest: (end) => patchActive(() => ({ restEnd: end })),
         cancelWorkout: () => set({ active: null }),
         finishWorkout: (feel, note) => {
@@ -107,7 +77,7 @@ export const useStore = create<Store>()(
           }
           const now = Date.now();
           const session: Session = { id: uid(), date: a.date, dayId: a.dayId, name: a.name, start: a.start, end: now, sets: a.sets, feel, note: note?.trim() || undefined, upd: now };
-          const { program, lines } = dayById(s.program, a.dayId) ? applySession(s.program, session, s.sessions, kitOf(s), { planned: a.slots, hold: inDeload(s.program, a.date) }) : { program: s.program, lines: [] };
+          const { program, lines } = dayById(s.program, a.dayId) ? applySession(s.program, session, s.sessions, s.profile) : { program: s.program, lines: [] };
           set({
             active: null,
             sessions: { ...s.sessions, [session.id]: session },
@@ -146,38 +116,10 @@ export const useStore = create<Store>()(
           return count;
         },
 
-        setMeasure: (date, patch) =>
-          set((s) => {
-            const { date: _d, m: _m, ...fields } = patch;
-            const next: Measure = { ...(s.measures[date] ?? { date, m: 0 }), date, m: Date.now() };
-            for (const [k, v] of Object.entries(fields)) {
-              if (v == null || !Number.isFinite(v)) delete (next as unknown as Record<string, unknown>)[k];
-              else (next as unknown as Record<string, unknown>)[k] = v;
-            }
-            if (!hasAny(next)) return {};
-            // Keep the profile weight in step with the newest weigh-in.
-            const newest = Object.keys(s.measures).every((k) => k <= date || s.measures[k].weightKg == null);
-            return { measures: { ...s.measures, [date]: next }, ...(next.weightKg != null && newest ? { profile: { ...s.profile, weightKg: next.weightKg }, mod: Date.now() } : {}) };
-          }),
-        deleteMeasure: (date) =>
-          set((s) => {
-            const { [date]: _gone, ...rest } = s.measures;
-            return { measures: rest, tomb: { ...s.tomb, [measureTomb(date)]: Date.now() } };
-          }),
-        finishOnboarding: (o) =>
-          set((s) => {
-            const now = Date.now();
-            const today = todayKey();
-            const b = o.baselines;
-            const entry: Measure = { ...(s.measures[today] ?? {}), ...o.measure, pushups: b.pushups, plankS: b.plankS, chinups: b.chinups, pullups: b.pullups, date: today, m: now };
-            const profile = { ...s.profile, ...o.profile, ...(entry.weightKg != null ? { weightKg: entry.weightKg } : {}) };
-            return { onboarded: true, profile, settings: { ...s.settings, ...o.settings }, program: buildProgram(b, o.gymDays, o.start), programLog: [], measures: { ...s.measures, [today]: entry }, active: null, mod: now };
-          }),
-
         setProgram: (p, by, why) => {
           const s = get();
           const lines = diffPrograms(s.program, p);
-          if (!lines.length && p.deloadUntil === s.program.deloadUntil && p.start === s.program.start) return [];
+          if (!lines.length && p.deloadUntil === s.program.deloadUntil) return [];
           set(pushChange(s, p, by, why, lines));
           return lines;
         },
@@ -198,7 +140,7 @@ export const useStore = create<Store>()(
         importData: (d) =>
           set((s) => {
             const gone = Object.keys(s.sessions).filter((id) => !(id in d.sessions));
-            const goneNights = [...Object.keys(s.nights).filter((k) => !(k in d.nights)).map(nightTomb), ...Object.keys(s.measures).filter((k) => !(k in d.measures)).map(measureTomb)];
+            const goneNights = Object.keys(s.nights).filter((k) => !(k in d.nights)).map(nightTomb);
             const now = Date.now();
             return {
               ...d,
@@ -210,17 +152,15 @@ export const useStore = create<Store>()(
         reset: () =>
           set((s) => {
             const now = Date.now();
-            const dead = [...Object.keys(s.sessions), ...Object.keys(s.nights).map(nightTomb), ...Object.keys(s.measures).map(measureTomb)];
+            const dead = [...Object.keys(s.sessions), ...Object.keys(s.nights).map(nightTomb)];
             const { aiKey, aiModel, geminiKey, geminiModel, aiFirst } = s.settings;
             return { ...DEFAULT_DATA, settings: { ...DEFAULT_DATA.settings, aiKey, aiModel, geminiKey, geminiModel, aiFirst }, tomb: { ...s.tomb, ...Object.fromEntries(dead.map((k) => [k, now])) }, mod: now };
           }),
       };
     },
     {
-      name: STORE_KEY,
-      // v2 = the gym rebuild. The old save is handed to merge() as it is; normalize() migrates it (migrate.ts).
-      version: 2,
-      migrate: (persisted) => persisted as AppData,
+      name: 'fitness-v1',
+      version: 1,
       partialize: (s) => dataOf(s),
       merge: (persisted, current) => (persisted ? { ...current, ...normalize(persisted) } : current),
     },
@@ -229,6 +169,6 @@ export const useStore = create<Store>()(
 
 /** Plain data snapshot (no actions). */
 export const dataOf = (s: AppData & Partial<Actions>): AppData => {
-  const { v, onboarded, profile, settings, program, programLog, sessions, nights, measures, home, active, seen, tomb, mod } = s;
-  return { v, onboarded, profile, settings, program, programLog, sessions, nights, measures, home, active, seen, tomb, mod };
+  const { v, profile, settings, program, programLog, sessions, nights, active, seen, tomb, mod } = s;
+  return { v, profile, settings, program, programLog, sessions, nights, active, seen, tomb, mod };
 };
