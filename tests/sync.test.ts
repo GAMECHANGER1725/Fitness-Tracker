@@ -54,6 +54,13 @@ describe('sync doc', () => {
     const local = applyDoc(data({ settings: { ...DEFAULT_DATA.settings, aiKey: 'mine', theme: 'dark' } }), m);
     expect(local.settings).toMatchObject({ bedtime: '21:30', aiKey: 'mine', theme: 'dark' });
   });
+  it('reads a sync file written by the gym version, with the home plan put back', () => {
+    const homePlan = { ...DEFAULT_DATA.program, days: DEFAULT_DATA.program.days.map((d) => ({ ...d, name: `${d.name} (mine)` })) };
+    const gym = { v: 2, sessions: { x: S('x', 1) }, nights: {}, measures: {}, tomb: {}, mod: 5, small: { profile: DEFAULT_DATA.profile, settings: DEFAULT_DATA.settings, program: { days: [{ id: 'upper-b', name: 'Upper B', slots: [{ exerciseId: 'lat-pulldown', sets: 3, low: 10, high: 12 }] }], week: [] }, programLog: [], onboarded: true, home: { program: homePlan, programLog: [], at: 1 } } };
+    const doc = parseDoc(JSON.stringify(gym));
+    expect(Object.keys(doc.sessions)).toEqual(['x']);
+    expect(doc.small.program.days[0].name).toBe('Upper A (mine)');
+  });
   it('refuses a file that is not ours', () => {
     expect(() => parseDoc('{"v":1,"days":{}}')).toThrow();
   });

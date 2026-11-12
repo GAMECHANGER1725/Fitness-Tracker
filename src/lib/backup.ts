@@ -132,9 +132,19 @@ function change(v: unknown): ProgramChange | null {
   return { at: num(c.at, 0, 0, MS), by: c.by === 'coach' || c.by === 'me' ? c.by : 'auto', why: str(c.why, 600), lines: arr(c.lines).slice(0, 30).map((l) => str(l, 120)), before: program(c.before) };
 }
 
+/**
+ * Data written by the short-lived gym version (v2, 12 Nov 2026) keeps every session, night and setting in the same
+ * shape; it moved the home plan to `home`. Put the home plan back so nothing is lost after going back to home workouts.
+ */
+function fromGym(d: Record<string, unknown>): Record<string, unknown> {
+  if (d.v !== 2) return d;
+  const home = obj(d.home);
+  return home.program ? { ...d, program: home.program, programLog: home.programLog } : { ...d, program: undefined, programLog: [] };
+}
+
 /** Validate data from storage, a backup or the gist, filling anything missing from the defaults. */
 export function normalize(v: unknown): AppData {
-  const d = obj(v);
+  const d = fromGym(obj(v));
   const p = obj(d.profile);
   const s = obj(d.settings);
   const D = DEFAULT_DATA;

@@ -46,9 +46,9 @@ export function toDoc(d: AppData): SyncDoc {
 /** Read a doc from untrusted text (the gist could have been edited by hand). Throws if it isn't one. */
 export function parseDoc(text: string): SyncDoc {
   const raw = JSON.parse(text) as Record<string, unknown> | null;
-  if (!raw || typeof raw !== 'object' || raw.v !== 1 || typeof raw.sessions !== 'object') throw new Error('Not a Fitness Tracker sync file');
+  if (!raw || typeof raw !== 'object' || (raw.v !== 1 && raw.v !== 2) || typeof raw.sessions !== 'object') throw new Error('Not a Fitness Tracker sync file');
   const small = (raw.small ?? {}) as Record<string, unknown>;
-  return toDoc(normalize({ ...small, settings: { ...DEFAULT_DATA.settings, ...(small.settings as object) }, sessions: raw.sessions, nights: raw.nights, tomb: raw.tomb, mod: raw.mod }));
+  return toDoc(normalize({ ...small, v: raw.v, settings: { ...DEFAULT_DATA.settings, ...(small.settings as object) }, sessions: raw.sessions, nights: raw.nights, tomb: raw.tomb, mod: raw.mod }));
 }
 
 export function mergeDocs(a: SyncDoc, b: SyncDoc, now = Date.now()): SyncDoc {

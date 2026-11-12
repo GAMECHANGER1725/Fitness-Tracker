@@ -197,6 +197,14 @@ describe('backup', () => {
     expect(back.program).toEqual(DEFAULT_DATA.program);
     expect(back.settings.aiKey).toBe('');
   });
+  it('reads a save from the gym version without losing anything', () => {
+    const s = sess('2026-11-12', 'upper-b', [['lat-pulldown', 10, 20]]);
+    const d = normalize({ v: 2, onboarded: true, sessions: { [s.id]: s }, nights: { '2026-11-12': { wake: atOn('2026-11-12', '06:02'), m: 1 } }, measures: {}, program: { days: [{ id: 'upper-b', name: 'Upper B', slots: [{ exerciseId: 'lat-pulldown' }] }] }, home: { program: DEFAULT_PROGRAM, programLog: [], at: 1 } });
+    expect(Object.keys(d.sessions)).toEqual([s.id]);
+    expect(Object.keys(d.nights)).toEqual(['2026-11-12']);
+    expect(d.program).toEqual(DEFAULT_PROGRAM);
+    expect(d.v).toBe(1);
+  });
   it('rejects other files and repairs bad fields', () => {
     expect(() => importJson('{"app":"fuel-log","data":{}}')).toThrow(/Fitness Tracker/);
     const d = normalize({ settings: { wakeTarget: '25:99', sleepGoalH: 30 }, program: { days: [{ id: 'x', slots: [{ exerciseId: 'nope' }] }] }, nights: { bad: {}, '2026-10-26': { wake: 5, quality: 9 } } });

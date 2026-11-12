@@ -161,6 +161,8 @@ export const useStore = create<Store>()(
     {
       name: 'fitness-v1',
       version: 1,
+      // A save from the gym version (persist version 2) is read as it is; normalize() puts the home plan back.
+      migrate: (persisted) => persisted as AppData,
       partialize: (s) => dataOf(s),
       merge: (persisted, current) => (persisted ? { ...current, ...normalize(persisted) } : current),
     },
