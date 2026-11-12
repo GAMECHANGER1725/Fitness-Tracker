@@ -15,6 +15,7 @@ const paths: Record<string, ReactNode> = {
   spark: <><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z" /><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z" /></>,
   user: <><circle cx="12" cy="9" r="4" /><path d="M4 20c1.5-3.5 4.5-5 8-5s6.5 1.5 8 5" /></>,
   play: <path d="M8 5v14l11-7z" />,
+  pause: <path d="M8 5v14M16 5v14" />,
   plus: <path d="M12 5v14M5 12h14" />,
   minus: <path d="M5 12h14" />,
   check: <path d="M5 12l5 5 9-10" />,
@@ -31,6 +32,11 @@ const paths: Record<string, ReactNode> = {
   clock: <><circle cx="12" cy="12" r="8" /><path d="M12 8v4l3 2" /></>,
   medal: <><circle cx="12" cy="14" r="6" /><path d="M8 3l4 5 4-5" /></>,
   undo: <path d="M9 14L4 9l5-5M4 9h10a6 6 0 010 12h-3" />,
+  chart: <path d="M4 20V10M10 20V4M16 20v-7M21 20H3" />,
+  body: <><circle cx="12" cy="4.5" r="2.2" /><path d="M5 9h14M12 9v6M9 21l3-6 3 6" /></>,
+  info: <><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 7.6v.2" /></>,
+  alert: <><path d="M12 4l9 16H3z" /><path d="M12 10v4M12 17v.2" /></>,
+  book: <path d="M5 4h11a3 3 0 013 3v13H8a3 3 0 01-3-3zM5 17a3 3 0 013-3h11" />,
 };
 
 export function Icon({ name, size = 22, stroke = 2, fill = false }: { name: keyof typeof paths | string; size?: number; stroke?: number; fill?: boolean }) {
@@ -88,18 +94,22 @@ export function Sheet({ onClose, children, label }: { onClose: () => void; child
 }
 
 /** − / + around a number you can also type. */
-export function Stepper({ value, onChange, step = 1, min = 0, max = 999, label, unit }: { value: number; onChange: (v: number) => void; step?: number; min?: number; max?: number; label: string; unit?: string }) {
-  const set = (v: number) => onChange(Math.min(max, Math.max(min, Math.round(v * 2) / 2)));
+export function Stepper({ value, onChange, step = 1, min = 0, max = 999, label, unit, round = 0.5, big = false, show }: { value: number; onChange: (v: number) => void; step?: number; min?: number; max?: number; label: string; unit?: string; /** Values snap to this. */ round?: number; /** Larger buttons for the workout logger. */ big?: boolean; /** Show the value some other way (e.g. 90 → "1:30"); the field is then read-only. */ show?: (v: number) => string }) {
+  const set = (v: number) => onChange(Math.min(max, Math.max(min, Math.round(v / round) * round)));
+  const side = big ? 56 : 44;
   const [text, setText] = useState(String(value));
   useEffect(() => {
     if (parseFloat(text) !== value) setText(String(value));
   }, [value]);
   return (
     <div className="row" style={{ background: 'var(--s2)', borderRadius: 999, padding: 5, justifyContent: 'space-between' }}>
-      <button className="btn sm icon" style={{ background: 'var(--s3)', minHeight: 44, width: 44 }} aria-label={`Less ${label}`} onClick={() => set(value - step)}>
+      <button className="btn sm icon" style={{ background: 'var(--s3)', minHeight: side, width: side }} aria-label={`Less ${label}`} onClick={() => set(value - step)}>
         <Icon name="minus" />
       </button>
-      <span className="row" style={{ gap: 4, justifyContent: 'center' }}>
+      <span className="row" style={{ gap: 4, justifyContent: 'center', minWidth: 0 }}>
+        {show ? (
+          <span className="num" aria-label={label} style={{ fontSize: big ? 30 : 26 }}>{show(value)}</span>
+        ) : (
         <input
           className="num"
           type="text"
@@ -111,17 +121,49 @@ export function Stepper({ value, onChange, step = 1, min = 0, max = 999, label, 
             const t = e.target.value.replace(',', '.').replace(/[^\d.]/g, '');
             setText(t);
             const v = parseFloat(t);
-            if (v >= 0) set(v);
+            if (v >= 0) onChange(Math.min(max, Math.max(min, v)));
           }}
-          onBlur={() => setText(String(value))}
-          style={{ width: '3.2ch', textAlign: 'center', fontSize: 26, background: 'transparent', border: 0, color: 'var(--ink)' }}
+          onBlur={() => {
+            set(value);
+            setText(String(Math.min(max, Math.max(min, Math.round(value / round) * round))));
+          }}
+          style={{ width: '4ch', textAlign: 'center', fontSize: big ? 30 : 26, background: 'transparent', border: 0, color: 'var(--ink)', padding: 0 }}
         />
+        )}
         {unit && <span className="mut small bold">{unit}</span>}
       </span>
-      <button className="btn sm icon" style={{ background: 'var(--s3)', minHeight: 44, width: 44 }} aria-label={`More ${label}`} onClick={() => set(value + step)}>
+      <button className="btn sm icon" style={{ background: 'var(--s3)', minHeight: side, width: side }} aria-label={`More ${label}`} onClick={() => set(value + step)}>
         <Icon name="plus" />
       </button>
     </div>
+  );
+}
+
+/** "1:30" from seconds. */
+export const mmss = (s: number) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}`;
+
+/** A plain number box that can be empty (returns null). */
+export function NumInput({ value, onChange, label, placeholder, max = 999 }: { value: number | null; onChange: (v: number | null) => void; label: string; placeholder?: string; max?: number }) {
+  const [text, setText] = useState(value == null ? '' : String(value));
+  useEffect(() => {
+    if ((text === '' ? null : parseFloat(text)) !== value) setText(value == null ? '' : String(value));
+  }, [value]);
+  return (
+    <input
+      className="input"
+      type="text"
+      inputMode="decimal"
+      aria-label={label}
+      placeholder={placeholder}
+      value={text}
+      onFocus={(e) => e.target.select()}
+      onChange={(e) => {
+        const t = e.target.value.replace(',', '.').replace(/[^\d.]/g, '');
+        setText(t);
+        const v = parseFloat(t);
+        onChange(Number.isFinite(v) ? Math.min(max, Math.max(0, v)) : null);
+      }}
+    />
   );
 }
 

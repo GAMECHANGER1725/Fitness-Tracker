@@ -1,0 +1,17 @@
+/* Body map and form demos. */
+.bodymap { display: flex; flex-direction: column; gap: 8px; }
+.bodymap-stage { position: relative; width: 100%; }
+.bodymap-stage > * { position: absolute; inset: 0; width: 100%; height: 100%; }
+.bodymap-box canvas, .demo-canvas canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.bodymap-canvas { display: block; touch-action: pan-y; cursor: grab; }
+.bodymap-svg ellipse { transition: fill 0.2s; }
+.bodymap-cap { font-size: 0.055px; font-weight: 700; fill: var(--mut); text-anchor: middle; font-family: var(--font); }
+.bodymap-legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 12px; font-size: 12px; font-weight: 600; color: var(--mut); }
+.bodymap-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.bodymap-legend i { width: 12px; height: 12px; border-radius: 4px; display: inline-block; }
+.demo { display: flex; flex-direction: column; gap: 10px; }
+.demo-stage { position: relative; width: 100%; aspect-ratio: 4 / 3; border-radius: 18px; background: var(--s2); overflow: hidden; }
+.demo-stage > .demo-canvas, .demo-stage svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.demo-play { position: absolute; right: 10px; bottom: 10px; }
+.demo-tag { position: absolute; left: 12px; top: 10px; }
+.demo-cue { min-height: 42px; }
