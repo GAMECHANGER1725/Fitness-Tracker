@@ -282,6 +282,7 @@ function Reminders() {
 
 function Look() {
   const theme = useStore((s) => s.settings.theme);
+  const view3d = useStore((s) => s.settings.view3d);
   const set = useStore((s) => s.setSettings);
   return (
     <section className="card stack" style={{ gap: 10 }}>
@@ -293,6 +294,15 @@ function Look() {
           </button>
         ))}
       </div>
+      <span className="label">Form demos</span>
+      <div className="seg" role="group" aria-label="Form demos">
+        {(['auto', 'on', 'off'] as const).map((k) => (
+          <button key={k} aria-pressed={view3d === k} onClick={() => (k !== 'off' && localStorage.removeItem('fitness-3d-slow'), set({ view3d: k }))}>
+            {k === 'auto' ? 'Auto' : k === 'on' ? '3D' : '2D'}
+          </button>
+        ))}
+      </div>
+      <p className="small mut">Auto shows flat 2D steps if this phone struggles with 3D or is set to reduce motion.</p>
     </section>
   );
 }

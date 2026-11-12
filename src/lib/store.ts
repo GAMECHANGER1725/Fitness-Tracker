@@ -13,7 +13,7 @@ import { mergeImported, nightKey } from './sleep';
 import { keyOf, todayKey } from './dates';
 
 /** Settings that stay on one device and so don't count as a change worth syncing. */
-export const LOCAL_ONLY = ['aiKey', 'aiModel', 'geminiKey', 'geminiModel', 'aiFirst', 'theme'] as const satisfies readonly (keyof Settings)[];
+export const LOCAL_ONLY = ['aiKey', 'aiModel', 'geminiKey', 'geminiModel', 'aiFirst', 'theme', 'view3d'] as const satisfies readonly (keyof Settings)[];
 
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 const LOG_KEEP = 20;

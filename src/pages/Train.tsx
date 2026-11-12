@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { Suspense, lazy, useState } from 'react';
 import { useStore } from '../lib/store';
 import { EX, EXERCISES, PATTERN_LABEL, targetText, usable } from '../lib/exercises';
 import { WEEKDAYS, minutes } from '../lib/program';
@@ -7,6 +7,8 @@ import { fmtDate } from '../lib/dates';
 import { Head, Icon, ProfileLink, Sheet, Stepper, go, toast, useGame, useRoute } from '../components/ui';
 import { useReadiness } from '../components/data';
 import type { Pattern, PlanDay, Program, Slot } from '../lib/types';
+
+const FormDemo = lazy(() => import('../components/FormDemo').then((m) => ({ default: m.FormDemo })));
 
 const TABS = [
   ['plan', 'Plan'],
@@ -297,11 +299,19 @@ function Moves() {
                       <span className="small mut">{e.muscles}{e.equip.includes('pack') ? ' · backpack' : ''}{e.equip.includes('grip') ? ' · forearm trainer' : ''}</span>
                     </span>
                     {b && <span className="pill">{b.reps}{e.unit === 'secs' ? ' s' : ''}{b.loadKg ? ` @ ${b.loadKg} kg` : ''}</span>}
+                    {e.demo && <span className="acc" aria-label="Has a form demo"><Icon name="play" size={14} fill /></span>}
                   </button>
                   {open === e.id && (
-                    <ul className="small mut" style={{ margin: 0, paddingLeft: 18 }}>
-                      {e.cues.map((c) => <li key={c}>{c}</li>)}
-                    </ul>
+                    <>
+                      {e.demo && (
+                        <Suspense fallback={<p className="small mut">Loading…</p>}>
+                          <FormDemo demo={e.demo} />
+                        </Suspense>
+                      )}
+                      <ul className="small mut" style={{ margin: 0, paddingLeft: 18 }}>
+                        {e.cues.map((c) => <li key={c}>{c}</li>)}
+                      </ul>
+                    </>
                   )}
                 </div>
               );

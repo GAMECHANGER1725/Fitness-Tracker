@@ -23,6 +23,8 @@ export interface Exercise {
   ladder: string;
   step: number;
   cues: string[];
+  /** Form demo id in demos.ts, if it has one. */
+  demo?: string;
 }
 
 /** One exercise in a plan day: sets × [low, high] reps (or seconds), with backpack load. */
@@ -134,6 +136,8 @@ export interface Settings {
   /** Lights-out target, "HH:mm". The sleep coach can move it a little each week. */
   bedtime: string;
   workoutTime: string;
+  /** 3D form demos on this device: auto falls back to 2D when the phone struggles or asks for less motion. */
+  view3d: 'auto' | 'on' | 'off';
   theme: 'auto' | 'dark' | 'light';
   /** Own AI keys; empty = use Fuel Log's. */
   aiKey: string;
